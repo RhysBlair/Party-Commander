@@ -476,3 +476,127 @@ body {
   color: #e2b96f;
   font-weight: bold;
 }
+
+/* 장비 탭 */
+.eq-section-title {
+  font-size: 12px;
+  font-weight: bold;
+  color: #e2b96f;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+  border-bottom: 1px solid #1a2a3a;
+  padding-bottom: 3px;
+}
+
+.equip-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.equip-slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.equip-slot-label {
+  width: 42px;
+  font-size: 11px;
+  color: #888;
+  flex-shrink: 0;
+}
+
+.equip-slot-item {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background: #0a1525;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  min-height: 28px;
+}
+
+.equip-stat-text {
+  font-size: 10px;
+  color: #666;
+  flex: 1;
+}
+
+.equip-remove {
+  margin-left: auto;
+  padding: 1px 6px;
+  border: 1px solid #5a2020;
+  border-radius: 3px;
+  background: #2a0d0d;
+  color: #e07070;
+  cursor: pointer;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.equip-remove:hover {
+  background: #4a1515;
+}
+
+.inv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.inv-item {
+  padding: 5px 8px;
+  border: 1px solid #1a2a3a;
+  border-radius: 4px;
+  background: #0a1525;
+  font-size: 12px;
+}
+
+.shop-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.shop-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid #1a2a3a;
+  border-radius: 4px;
+  background: #0a1525;
+  font-size: 12px;
+}
+
+.shop-item-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.shop-item-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.shop-cost {
+  color: #e2b96f;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.shop-req {
+  font-size: 10px;
+  color: #5b9bd5;
+}

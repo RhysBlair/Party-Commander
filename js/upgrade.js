@@ -45,8 +45,46 @@ function tryAdvanceJob(charId, classId) {
   if (char.autoAssign) autoAssignStats(char);
 }
 
-function tryBuyEquipment(_equipId) {
-  // 7단계에서 구현
+// 장비 구매 요건 체크 (UI에서도 사용)
+function canEquipItem(char, equipId) {
+  const e = EQUIPMENT[equipId];
+  if (!e) return false;
+  if (e.req.level   && char.level   < e.req.level)   return false;
+  if (e.req.classId && char.classId !== e.req.classId) return false;
+  return true;
+}
+
+function tryBuyEquipment(equipId) {
+  const e = EQUIPMENT[equipId];
+  if (!e || e.cost === 0) return;
+  if (gameState.gold < e.cost) return;
+  gameState.gold -= e.cost;
+  gameState.equipmentInventory.push(equipId);
+}
+
+// 인벤토리 → 캐릭터 슬롯으로 장착 (기존 슬롯 아이템은 인벤토리로)
+function tryEquipItem(charId, equipId) {
+  const char = gameState.characters.find(c => c.id === charId);
+  if (!char || !canEquipItem(char, equipId)) return;
+  const idx = gameState.equipmentInventory.indexOf(equipId);
+  if (idx === -1) return;
+
+  const slot = EQUIPMENT[equipId].type; // weapon | armor | accessory
+  const prev = char.equipment[slot];
+  if (prev && prev !== 'beginner_sword') gameState.equipmentInventory.push(prev);
+
+  gameState.equipmentInventory.splice(idx, 1);
+  char.equipment[slot] = equipId;
+}
+
+// 장착 해제 → 인벤토리로
+function tryUnequipItem(charId, slot) {
+  const char = gameState.characters.find(c => c.id === charId);
+  if (!char) return;
+  const equipId = char.equipment[slot];
+  if (!equipId || equipId === 'beginner_sword') return;
+  gameState.equipmentInventory.push(equipId);
+  char.equipment[slot] = null;
 }
 
 function tryEnhanceEquipment(_uid) {

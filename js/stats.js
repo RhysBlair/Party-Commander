@@ -1,48 +1,61 @@
-// 스탯 계산 모듈 (스텁 — 단계적으로 채워진다)
+// 장비 슬롯 합산 헬퍼
+function sumEquipStat(char, stat) {
+  let total = 0;
+  for (const slot of ['weapon', 'armor', 'accessory']) {
+    const id = char.equipment?.[slot];
+    if (!id) continue;
+    const e = EQUIPMENT[id];
+    if (e) total += e[stat] ?? 0;
+  }
+  return total;
+}
 
 // 캐릭터의 최종 전투 스탯 계산
 function calcFinalStats(char) {
   const cls = CLASSES[char.classId];
-  const s = char.stats;
+  const s   = char.stats;
 
-  // 장비 공격력
-  const weaponId = char.equipment?.weapon;
-  const weaponAtk = weaponId ? (EQUIPMENT[weaponId]?.atk ?? 0) : 0;
+  // 장비 ATK / 방어 보너스
+  const eqAtk     = sumEquipStat(char, 'atk');
+  const eqPhysDef = sumEquipStat(char, 'physDef');
+  const eqMagDef  = sumEquipStat(char, 'magicDef');
 
-  // STR 기본 공격력 보너스 (직업 무관, 1포인트당 +0.5)
-  const strAtkBonus = (s.STR ?? 0) * 0.5;
-  const baseAtk = 5 + weaponAtk + strAtkBonus;
+  // 장비 스탯 보너스 적용 후 유효 스탯
+  const effSTR = (s.STR ?? 0) + sumEquipStat(char, 'bonusSTR');
+  const effDEX = (s.DEX ?? 0) + sumEquipStat(char, 'bonusDEX');
+  const effINT = (s.INT ?? 0) + sumEquipStat(char, 'bonusINT');
+  const effLUK = (s.LUK ?? 0) + sumEquipStat(char, 'bonusLUK');
+  const eff    = { STR: effSTR, DEX: effDEX, INT: effINT, LUK: effLUK };
 
-  // 주스탯 보정 (전사=STR배율, 궁수=DEX배율 등)
-  const primaryStat = cls.primary ? (s[cls.primary] ?? 0) : 0;
+  // 공격력: 기본5 + 장비ATK + STR보너스 (직업 주스탯 배율 적용)
+  const strAtkBonus  = effSTR * 0.5;
+  const baseAtk      = 5 + eqAtk + strAtkBonus;
+  const primaryStat  = cls.primary ? eff[cls.primary] : 0;
   const atkMultiplier = 1 + PRIMARY_STAT_DMG_COEFF * primaryStat;
 
-  // 공통 스탯 효과
-  const physDef   = (s.STR ?? 0) * STAT_EFFECTS.STR.physDef;
-  const magicDef  = (s.INT ?? 0) * STAT_EFFECTS.INT.magicDef;
-  const accuracy  = 80 + (s.DEX ?? 0) * STAT_EFFECTS.DEX.accuracy;
-  const evade     = (s.DEX ?? 0) * STAT_EFFECTS.DEX.evade
-                  + (s.LUK ?? 0) * STAT_EFFECTS.LUK.evade;
+  // 방어 / 명중 / 회피
+  const physDef  = effSTR * STAT_EFFECTS.STR.physDef  + eqPhysDef;
+  const magicDef = effINT * STAT_EFFECTS.INT.magicDef + eqMagDef;
+  const accuracy = 80 + effDEX * STAT_EFFECTS.DEX.accuracy;
+  const evade    = effDEX * STAT_EFFECTS.DEX.evade + effLUK * STAT_EFFECTS.LUK.evade;
 
   return {
-    atk: Math.floor(baseAtk * atkMultiplier),
-    physDef: Math.floor(physDef),
+    atk:      Math.floor(baseAtk * atkMultiplier),
+    physDef:  Math.floor(physDef),
     magicDef: Math.floor(magicDef),
-    accuracy: Math.min(accuracy, 99),   // 최대 99%
-    evade: Math.min(evade, 60),         // 최대 60%
+    accuracy: Math.min(accuracy, 99),
+    evade:    Math.min(evade, 60),
   };
 }
 
-// 자동 스탯 분배: 주스탯 위주, 부스탯 소량
+// 자동 스탯 분배: 5포인트당 주스탯4 : 부스탯1
 function autoAssignStats(char) {
   if (char.unspentPoints <= 0) return;
   const cls = CLASSES[char.classId];
   if (!cls.primary) {
-    // 모험가: STR에 몰아줌
     char.stats.STR += char.unspentPoints;
   } else {
-    const pts = char.unspentPoints;
-    // 5포인트마다 주스탯4 : 부스탯1 비율
+    const pts         = char.unspentPoints;
     const toSecondary = Math.floor(pts / 5);
     const toPrimary   = pts - toSecondary;
     char.stats[cls.primary]   = (char.stats[cls.primary]   ?? 0) + toPrimary;

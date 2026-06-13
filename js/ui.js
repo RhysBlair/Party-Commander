@@ -49,8 +49,9 @@ function renderActiveTab() {
   if (!activeBtn) return;
   const tab = activeBtn.dataset.tab;
   if (tab === 'characters') renderCharacterTab();
-  else if (tab === 'stats')  renderStatsTab();
-  else if (tab === 'stage')  renderStageTab();
+  else if (tab === 'stats')      renderStatsTab();
+  else if (tab === 'equipment')  renderEquipmentTab();
+  else if (tab === 'stage')      renderStageTab();
 }
 
 // ── 캐릭터 탭 ──────────────────────────────────────────────
@@ -220,6 +221,123 @@ function updateStatDisplay(charId) {
       <span>명중 <strong>${fs.accuracy.toFixed(0)}%</strong></span>
       <span>회피 <strong>${fs.evade.toFixed(0)}%</strong></span>`;
   }
+}
+
+// ── 장비 탭 ────────────────────────────────────────────────
+const SLOT_NAMES = { weapon: '무기', armor: '방어구', accessory: '장신구' };
+
+function equipStatText(e) {
+  const parts = [];
+  if (e.atk)      parts.push(`ATK+${e.atk}`);
+  if (e.physDef)  parts.push(`물방+${e.physDef}`);
+  if (e.magicDef) parts.push(`마방+${e.magicDef}`);
+  if (e.bonusSTR) parts.push(`STR+${e.bonusSTR}`);
+  if (e.bonusDEX) parts.push(`DEX+${e.bonusDEX}`);
+  if (e.bonusINT) parts.push(`INT+${e.bonusINT}`);
+  if (e.bonusLUK) parts.push(`LUK+${e.bonusLUK}`);
+  return parts.join(' · ') || '—';
+}
+
+function renderEquipmentTab() {
+  const el = document.getElementById('tab-equipment');
+  if (gameState.characters.length === 0) {
+    el.innerHTML = '<p style="color:#888">캐릭터가 없습니다.</p>';
+    return;
+  }
+
+  // ── 장착 중 ─────────────────────────────────────────────
+  const charCards = gameState.characters.map(char => {
+    const slots = ['weapon', 'armor', 'accessory'].map(slot => {
+      const id = char.equipment[slot];
+      const e  = id ? EQUIPMENT[id] : null;
+      const col = e ? (GRADE_COLORS[e.grade] || '#aaa') : '#333';
+      const removeBtn = e && id !== 'beginner_sword'
+        ? `<button class="equip-remove" onclick="tryUnequipItem(${char.id},'${slot}');renderEquipmentTab();">✕</button>`
+        : '';
+      return `
+        <div class="equip-slot">
+          <div class="equip-slot-label">${SLOT_NAMES[slot]}</div>
+          <div class="equip-slot-item" style="border-color:${col}">
+            ${e
+              ? `<span style="color:${col}">${e.name}</span>
+                 <span class="equip-stat-text">${equipStatText(e)}</span>`
+              : `<span style="color:#444">— 없음 —</span>`}
+            ${removeBtn}
+          </div>
+        </div>`;
+    }).join('');
+    return `
+      <div class="char-card">
+        <h3 style="color:${CLASS_COLORS[char.classId]||'#aaa'};margin-bottom:8px">
+          ${charClassName(char.classId)} Lv.${char.level}
+        </h3>
+        <div class="equip-slots">${slots}</div>
+      </div>`;
+  }).join('');
+
+  // ── 인벤토리 ─────────────────────────────────────────────
+  const inv = gameState.equipmentInventory;
+  const invHtml = inv.length === 0
+    ? '<div style="color:#555;font-size:12px;padding:6px 0">보유 장비 없음</div>'
+    : inv.map((id, idx) => {
+        const e = EQUIPMENT[id];
+        if (!e) return '';
+        const col = GRADE_COLORS[e.grade] || '#aaa';
+        const btns = gameState.characters.map(char =>
+          canEquipItem(char, id)
+            ? `<button class="assign-btn" onclick="tryEquipItem(${char.id},'${id}');renderEquipmentTab();">
+                 ${charClassName(char.classId)[0]} 장착
+               </button>`
+            : ''
+        ).join('');
+        return `
+          <div class="inv-item">
+            <span style="color:${col}">${e.name}</span>
+            <span class="equip-stat-text">${equipStatText(e)}</span>
+            <div style="display:flex;gap:4px;margin-top:4px">${btns}</div>
+          </div>`;
+      }).join('');
+
+  // ── 상점 ─────────────────────────────────────────────────
+  const shopRows = Object.entries(EQUIPMENT)
+    .filter(([id]) => id !== 'beginner_sword')
+    .sort((a, b) => (a[1].req.level || 0) - (b[1].req.level || 0))
+    .map(([id, e]) => {
+      const col       = GRADE_COLORS[e.grade] || '#aaa';
+      const owned     = inv.filter(x => x === id).length
+                      + gameState.characters.filter(c => Object.values(c.equipment).includes(id)).length;
+      const canAfford = gameState.gold >= e.cost;
+      const reqParts  = [];
+      if (e.req.level)   reqParts.push(`Lv.${e.req.level}`);
+      if (e.req.classId) reqParts.push(charClassName(e.req.classId) + ' 전용');
+      const reqStr = reqParts.join(' · ');
+
+      return `
+        <div class="shop-item">
+          <div class="shop-item-left">
+            <span style="color:${col};font-weight:bold">${e.name}</span>
+            <span style="color:${col};font-size:10px">[${e.grade}]</span>
+            <span class="equip-stat-text">${equipStatText(e)}</span>
+            ${reqStr ? `<span class="shop-req">${reqStr}</span>` : ''}
+          </div>
+          <div class="shop-item-right">
+            <span class="shop-cost">${e.cost.toLocaleString()}G</span>
+            ${owned ? `<span style="color:#555;font-size:11px">×${owned} 보유</span>` : ''}
+            <button class="small-btn ${canAfford ? '' : 'disabled'}"
+                    onclick="tryBuyEquipment('${id}');renderEquipmentTab();">구매</button>
+          </div>
+        </div>`;
+    }).join('');
+
+  el.innerHTML = `
+    <div class="eq-section-title">장착 중</div>
+    ${charCards}
+    <div class="eq-section-title" style="margin-top:10px">인벤토리</div>
+    <div class="inv-list">${invHtml}</div>
+    <div class="eq-section-title" style="margin-top:10px">
+      상점 <span style="color:#e2b96f;font-size:11px">골드: ${gameState.gold.toLocaleString()}</span>
+    </div>
+    <div class="shop-list">${shopRows}</div>`;
 }
 
 // ── 스테이지 탭 ────────────────────────────────────────────

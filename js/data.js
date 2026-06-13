@@ -30,8 +30,36 @@ const STAT_POINTS_PER_LEVEL = 5;
 
 // 장비 정의
 const EQUIPMENT = {
-  beginner_sword: { name: "초보자의 검", type: "weapon", grade: "노멀", atk: 3, req: {}, cost: 0 },
+  // ── 스타터 ──────────────────────────────────────────────
+  beginner_sword:  { name: "초보자의 검",   type: "weapon",    grade: "노멀", atk: 3,                       req: {},                              cost: 0    },
+
+  // ── 무기 (공용) ─────────────────────────────────────────
+  iron_sword:      { name: "철검",           type: "weapon",    grade: "노멀", atk: 8,                       req: { level: 5 },                    cost: 200  },
+  steel_sword:     { name: "강철검",         type: "weapon",    grade: "노멀", atk: 16,                      req: { level: 10 },                   cost: 600  },
+
+  // ── 무기 (직업 전용) ────────────────────────────────────
+  knight_sword:    { name: "기사검",         type: "weapon",    grade: "레어", atk: 28,                      req: { level: 15, classId: "warrior" }, cost: 1500 },
+  long_bow:        { name: "장궁",           type: "weapon",    grade: "노멀", atk: 12,                      req: { level: 5,  classId: "archer"  }, cost: 280  },
+  compound_bow:    { name: "복합궁",         type: "weapon",    grade: "레어", atk: 22,                      req: { level: 10, classId: "archer"  }, cost: 750  },
+  magic_staff:     { name: "마법 지팡이",    type: "weapon",    grade: "노멀", atk: 5,  bonusINT: 5,         req: { level: 5,  classId: "mage"    }, cost: 280  },
+  great_staff:     { name: "대마법 지팡이",  type: "weapon",    grade: "레어", atk: 8,  bonusINT: 10,        req: { level: 10, classId: "mage"    }, cost: 750  },
+  dagger:          { name: "단검",           type: "weapon",    grade: "노멀", atk: 11,                      req: { level: 5,  classId: "rogue"   }, cost: 260  },
+  shadow_blade:    { name: "그림자 검",      type: "weapon",    grade: "레어", atk: 20,                      req: { level: 10, classId: "rogue"   }, cost: 720  },
+
+  // ── 방어구 ──────────────────────────────────────────────
+  leather_armor:   { name: "가죽 갑옷",      type: "armor",     grade: "노멀", physDef: 5,                   req: { level: 5 },                    cost: 200  },
+  chain_mail:      { name: "사슬 갑옷",      type: "armor",     grade: "노멀", physDef: 12,                  req: { level: 10 },                   cost: 600  },
+  plate_armor:     { name: "판금 갑옷",      type: "armor",     grade: "레어", physDef: 22,                  req: { level: 15, classId: "warrior" }, cost: 1500 },
+  mage_robe:       { name: "마법사 로브",    type: "armor",     grade: "노멀", magicDef: 10, bonusINT: 3,    req: { level: 5,  classId: "mage"    }, cost: 250  },
+
+  // ── 장신구 ──────────────────────────────────────────────
+  lucky_ring:      { name: "행운의 반지",    type: "accessory", grade: "노멀", bonusLUK: 5,                  req: { level: 5 },                    cost: 300  },
+  str_ring:        { name: "힘의 반지",      type: "accessory", grade: "노멀", bonusSTR: 5,                  req: { level: 5 },                    cost: 300  },
+  dex_bracelet:    { name: "민첩의 팔찌",    type: "accessory", grade: "레어", bonusDEX: 8,                  req: { level: 10 },                   cost: 700  },
+  int_necklace:    { name: "지성의 목걸이",  type: "accessory", grade: "레어", bonusINT: 8,                  req: { level: 10 },                   cost: 700  },
 };
+
+const GRADE_COLORS = { "노멀": "#aaa", "레어": "#5b9bd5", "에픽": "#9b59b6", "유니크": "#e2b96f" };
 
 // 스킬 정의
 const SKILLS = {
