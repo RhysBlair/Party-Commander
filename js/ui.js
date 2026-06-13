@@ -131,6 +131,17 @@ const STAT_LABELS = {
   LUK: '회피 +0.3% · (도적) 추가 배율',
 };
 
+// 장비로 인한 스탯 보너스 (bonusSTR 등)
+function equipStatBonus(char, stat) {
+  return sumEquipStat(char, 'bonus' + stat); // bonusSTR, bonusDEX, bonusINT, bonusLUK
+}
+
+// "10(+7)" 형식 스탯 문자열
+function statValHtml(base, bonus) {
+  if (bonus <= 0) return `${base}`;
+  return `${base}<span class="stat-equip-bonus">(+${bonus})</span>`;
+}
+
 function renderStatsTab() {
   const el = document.getElementById('tab-stats');
   if (gameState.characters.length === 0) {
@@ -144,15 +155,18 @@ function renderStatsTab() {
     const canReset = gameState.gold >= resetCost;
     const hasPoints = char.unspentPoints > 0;
 
-    const statRows = ['STR', 'DEX', 'INT', 'LUK'].map(stat => `
+    const statRows = ['STR', 'DEX', 'INT', 'LUK'].map(stat => {
+      const bonus = equipStatBonus(char, stat);
+      return `
       <div class="stat-row">
         <span class="stat-label" title="${STAT_LABELS[stat]}">${stat}</span>
-        <span class="stat-val" id="sv-${char.id}-${stat}">${char.stats[stat]}</span>
+        <span class="stat-val" id="sv-${char.id}-${stat}">${statValHtml(char.stats[stat], bonus)}</span>
         <button class="stat-plus-btn" id="sb-${char.id}-${stat}"
                 style="${hasPoints ? '' : 'display:none'}"
                 onclick="tryAddStatPoint(${char.id}, '${stat}'); updateStatDisplay(${char.id});">＋</button>
         <span class="stat-desc">${STAT_LABELS[stat]}</span>
-      </div>`).join('');
+      </div>`;
+    }).join('');
 
     return `
       <div class="char-card">
@@ -191,7 +205,6 @@ function renderStatsTab() {
 }
 
 // ── 스탯 인플레이스 업데이트 (DOM 재빌드 없음) ──────────────
-// + 버튼 클릭마다 이걸 호출 → 버튼이 DOM에서 사라지지 않아 빠른 연속 클릭 가능
 function updateStatDisplay(charId) {
   const char = gameState.characters.find(c => c.id === charId);
   if (!char) return;
@@ -199,7 +212,7 @@ function updateStatDisplay(charId) {
 
   ['STR', 'DEX', 'INT', 'LUK'].forEach(stat => {
     const valEl = document.getElementById(`sv-${charId}-${stat}`);
-    if (valEl) valEl.textContent = char.stats[stat];
+    if (valEl) valEl.innerHTML = statValHtml(char.stats[stat], equipStatBonus(char, stat));
     const btnEl = document.getElementById(`sb-${charId}-${stat}`);
     if (btnEl) btnEl.style.display = hasPoints ? '' : 'none';
   });
