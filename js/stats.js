@@ -42,8 +42,9 @@ function autoAssignStats(char) {
     char.stats.STR += char.unspentPoints;
   } else {
     const pts = char.unspentPoints;
-    const toPrimary   = Math.ceil(pts * 0.8);
-    const toSecondary = pts - toPrimary;
+    // 5포인트마다 주스탯4 : 부스탯1 비율
+    const toSecondary = Math.floor(pts / 5);
+    const toPrimary   = pts - toSecondary;
     char.stats[cls.primary]   = (char.stats[cls.primary]   ?? 0) + toPrimary;
     char.stats[cls.secondary] = (char.stats[cls.secondary] ?? 0) + toSecondary;
   }

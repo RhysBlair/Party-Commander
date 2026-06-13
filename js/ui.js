@@ -100,7 +100,7 @@ function renderCharacterTab() {
           INT ${char.stats.INT} &nbsp; LUK ${char.stats.LUK}
         </div>
         ${char.unspentPoints > 0
-          ? `<div class="points-badge">${hasPoints ? '⬆ 스탯 배분 가능' : '⬆ 자동 배분 중'} (${char.unspentPoints}pt)</div>`
+          ? `<div class="points-badge">⬆ 잔여 포인트 (${char.unspentPoints}pt)${char.autoAssign ? ' · 레벨업 시 자동 배분' : ''}</div>`
           : ''}
         ${jobSection}
       </div>`;
@@ -128,7 +128,7 @@ function renderStatsTab() {
     const fs = calcFinalStats(char);
     const resetCost = 100 * char.level;
     const canReset = gameState.gold >= resetCost;
-    const hasPoints = char.unspentPoints > 0 && !char.autoAssign;
+    const hasPoints = char.unspentPoints > 0;
 
     const statRows = ['STR', 'DEX', 'INT', 'LUK'].map(stat => `
       <div class="stat-row">
@@ -153,7 +153,7 @@ function renderStatsTab() {
         <div class="points-badge" id="sp-${char.id}"
              style="margin-bottom:8px${char.unspentPoints === 0 ? ';display:none' : ''}">
           잔여 포인트: <strong id="spv-${char.id}">${char.unspentPoints}</strong>
-          ${char.autoAssign ? '<span style="color:#aaa;font-size:11px"> (자동배분 ON — 수동 배분하려면 OFF로)</span>' : ''}
+          ${char.autoAssign ? '<span style="color:#aaa;font-size:11px"> (자동배분 ON · 레벨업 시 자동 배분)</span>' : ''}
         </div>
 
         <div class="stat-grid">${statRows}</div>
@@ -181,7 +181,7 @@ function renderStatsTab() {
 function updateStatDisplay(charId) {
   const char = gameState.characters.find(c => c.id === charId);
   if (!char) return;
-  const hasPoints = char.unspentPoints > 0 && !char.autoAssign;
+  const hasPoints = char.unspentPoints > 0;
 
   ['STR', 'DEX', 'INT', 'LUK'].forEach(stat => {
     const valEl = document.getElementById(`sv-${charId}-${stat}`);
