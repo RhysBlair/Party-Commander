@@ -106,10 +106,10 @@ function renderStatsTab() {
   }
 
   const STAT_LABELS = {
-    STR: { label: 'STR', desc: '물리방어 +0.5, (전사) 공격력↑' },
-    DEX: { label: 'DEX', desc: '명중 +0.5%, 회피 +0.1% (궁수) 공격력↑' },
-    INT: { label: 'INT', desc: '마법방어 +0.5 (마법사) 공격력↑' },
-    LUK: { label: 'LUK', desc: '회피 +0.3% (도적) 공격력↑' },
+    STR: { label: 'STR', desc: '공격력 +0.5 · 물리방어 +0.5 · (전사) 추가 배율' },
+    DEX: { label: 'DEX', desc: '명중 +0.5% · 회피 +0.1% · (궁수) 추가 배율' },
+    INT: { label: 'INT', desc: '마법방어 +0.5 · (마법사) 추가 배율' },
+    LUK: { label: 'LUK', desc: '회피 +0.3% · (도적) 추가 배율' },
   };
 
   const html = gameState.characters.map(char => {
@@ -123,7 +123,7 @@ function renderStatsTab() {
         <span class="stat-label" title="${STAT_LABELS[stat].desc}">${stat}</span>
         <span class="stat-val">${char.stats[stat]}</span>
         ${hasPoints
-          ? `<button class="stat-plus-btn" onclick="tryAddStatPoint(${char.id}, '${stat}')">＋</button>`
+          ? `<button class="stat-plus-btn" onclick="tryAddStatPoint(${char.id}, '${stat}'); renderStatsTab();">＋</button>`
           : `<span class="stat-plus-placeholder"></span>`}
         <span class="stat-desc">${STAT_LABELS[stat].desc}</span>
       </div>`).join('');
@@ -133,7 +133,7 @@ function renderStatsTab() {
         <div class="stat-card-header">
           <h3>${charClassName(char.classId)} Lv.${char.level}</h3>
           <button class="toggle-btn ${char.autoAssign ? 'active' : ''}"
-                  onclick="tryToggleAutoAssign(${char.id})">
+                  onclick="tryToggleAutoAssign(${char.id}); renderStatsTab();">
             자동배분 ${char.autoAssign ? 'ON' : 'OFF'}
           </button>
         </div>

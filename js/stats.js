@@ -8,9 +8,12 @@ function calcFinalStats(char) {
   // 장비 공격력
   const weaponId = char.equipment?.weapon;
   const weaponAtk = weaponId ? (EQUIPMENT[weaponId]?.atk ?? 0) : 0;
-  const baseAtk = 5 + weaponAtk;
 
-  // 주스탯 보정
+  // STR 기본 공격력 보너스 (직업 무관, 1포인트당 +0.5)
+  const strAtkBonus = (s.STR ?? 0) * 0.5;
+  const baseAtk = 5 + weaponAtk + strAtkBonus;
+
+  // 주스탯 보정 (전사=STR배율, 궁수=DEX배율 등)
   const primaryStat = cls.primary ? (s[cls.primary] ?? 0) : 0;
   const atkMultiplier = 1 + PRIMARY_STAT_DMG_COEFF * primaryStat;
 
