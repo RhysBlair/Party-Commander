@@ -124,8 +124,15 @@ function tryEnhanceEquipment(uid) {
   // 실패 시 골드만 소모, 아이템 파괴 없음
 }
 
-function tryLearnSkill(_charId, _skillId) {
-  // 10단계에서 구현
+function tryLearnSkill(charId, skillId) {
+  const char  = gameState.characters.find(c => c.id === charId);
+  const skill = SKILLS[skillId];
+  if (!char || !skill) return;
+  if (skill.classId !== char.classId) return;
+  if (char.skills.includes(skillId)) return;
+  if (gameState.gold < skill.cost) return;
+  gameState.gold -= skill.cost;
+  char.skills.push(skillId);
 }
 
 function tryBuyPet(petId) {

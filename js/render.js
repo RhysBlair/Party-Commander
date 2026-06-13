@@ -112,6 +112,21 @@ function drawMonster(m, stageIdx) {
 function drawCharacter(char) {
   const color = CLASS_COLORS[char.classId] || '#3498db';
 
+  // 스킬 발동 링 효과
+  if ((char.skillAnim || 0) > 0) {
+    const t = char.skillAnim / 0.5;
+    ctx.globalAlpha = t * 0.7;
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = 3;
+    ctx.shadowColor = color;
+    ctx.shadowBlur  = 12;
+    ctx.beginPath();
+    ctx.arc(char.x, char.y - 8, 28 + (1 - t) * 14, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur  = 0;
+    ctx.globalAlpha = 1;
+  }
+
   if (char.attackAnim > 0) {
     ctx.globalAlpha = (char.attackAnim / 0.2) * 0.6;
     ctx.fillStyle = '#fff700';

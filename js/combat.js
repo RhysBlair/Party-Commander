@@ -30,6 +30,8 @@ function updateCharacter(char, dt, stage, field) {
   const target = findNearestMonster(char, field);
   if (!target) return;
 
+  char.skillAnim = Math.max(0, (char.skillAnim || 0) - dt);
+
   const dx = target.x - char.x;
   const dy = target.y - char.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
@@ -47,6 +49,58 @@ function updateCharacter(char, dt, stage, field) {
       dealDamage(char, target, stats, stage, field);
     }
   }
+
+  useSkills(char, dt, stats, stage, field);
+}
+
+function useSkills(char, dt, stats, stage, field) {
+  if (!char.skills || !char.skills.length) return;
+  if (!char.skillTimers) char.skillTimers = {};
+
+  for (const skillId of char.skills) {
+    const skill = SKILLS[skillId];
+    if (!skill) continue;
+    if (char.skillTimers[skillId] === undefined) char.skillTimers[skillId] = 0;
+    char.skillTimers[skillId] -= dt;
+    if (char.skillTimers[skillId] > 0) continue;
+
+    if (executeSkill(char, skill, stats, stage, field)) {
+      char.skillTimers[skillId] = skill.cooldown;
+      char.skillAnim = 0.5;
+    }
+  }
+}
+
+function executeSkill(char, skill, stats, stage, field) {
+  const dmg = Math.floor(stats.atk * skill.dmgMultiplier);
+
+  if (skill.targeting === 'aoe') {
+    const targets = field.monsters.filter(m => m.alive).slice(0, skill.maxTargets || 5);
+    if (!targets.length) return false;
+    for (const t of targets) dealSkillDamage(char, t, dmg, stage, field);
+    return true;
+  }
+
+  if (skill.targeting === 'double_hit') {
+    const t = findNearestMonster(char, field);
+    if (!t) return false;
+    for (let h = 0; h < (skill.hits || 2); h++) dealSkillDamage(char, t, dmg, stage, field);
+    return true;
+  }
+
+  // single_melee / single_long
+  const t = findNearestMonster(char, field);
+  if (!t) return false;
+  dealSkillDamage(char, t, dmg, stage, field);
+  return true;
+}
+
+function dealSkillDamage(char, monster, dmg, stage, field) {
+  const actualDmg = Math.max(1, dmg - stage.monster.def);
+  monster.currentHp -= actualDmg;
+  monster.hitAnim    = 0.2;
+  char.attackAnim    = 0.25;
+  if (monster.currentHp <= 0) killMonster(char, monster, stage, field);
 }
 
 function findNearestMonster(char, field) {

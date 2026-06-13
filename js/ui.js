@@ -51,6 +51,7 @@ function renderActiveTab() {
   if (tab === 'characters') renderCharacterTab();
   else if (tab === 'stats')      renderStatsTab();
   else if (tab === 'equipment')  renderEquipmentTab();
+  else if (tab === 'skills')     renderSkillTab();
   else if (tab === 'pets')       renderPetTab();
   else if (tab === 'stage')      renderStageTab();
 }
@@ -391,6 +392,83 @@ function renderEquipmentTab() {
       상점 <span style="color:#e2b96f;font-size:11px">골드: ${gameState.gold.toLocaleString()}</span>
     </div>
     <div class="shop-list">${shopRows}</div>`;
+}
+
+// ── 스킬 탭 ────────────────────────────────────────────────
+const SKILL_TARGET_DESC = {
+  single_melee: '단일 근접',
+  single_long:  '단일 원거리',
+  aoe:          '전체 범위',
+  double_hit:   '2회 연속',
+};
+
+function renderSkillTab() {
+  const el = document.getElementById('tab-skills');
+  if (gameState.characters.length === 0) {
+    el.innerHTML = '<p style="color:#888">캐릭터가 없습니다.</p>';
+    return;
+  }
+
+  const html = gameState.characters.map(char => {
+    const cls = CLASSES[char.classId];
+    if (!cls.canSkill) {
+      return `
+        <div class="char-card">
+          <h3 style="color:${CLASS_COLORS[char.classId]||'#aaa'};margin-bottom:6px">
+            ${charClassName(char.classId)} Lv.${char.level}
+          </h3>
+          <div style="color:#555;font-size:12px">전직 후 스킬을 배울 수 있습니다.</div>
+        </div>`;
+    }
+
+    // 이 직업에 해당하는 스킬 목록
+    const charSkills = Object.entries(SKILLS).filter(([, s]) => s.classId === char.classId);
+
+    const skillRows = charSkills.map(([id, s]) => {
+      const learned   = char.skills.includes(id);
+      const canAfford = !learned && gameState.gold >= s.cost;
+      const cd = char.skillTimers?.[id];
+      const cdText = learned && cd > 0 ? `쿨타임 ${cd.toFixed(1)}s` : '';
+      const col = CLASS_COLORS[char.classId] || '#aaa';
+
+      return `
+        <div class="skill-row">
+          <div class="skill-info">
+            <span class="skill-name" style="color:${learned ? col : '#888'}">${s.name}</span>
+            <span class="skill-meta">
+              위력 ×${s.dmgMultiplier} &nbsp;·&nbsp; ${SKILL_TARGET_DESC[s.targeting] || s.targeting}
+              &nbsp;·&nbsp; 쿨다운 ${s.cooldown}s
+              ${s.hits ? ` &nbsp;·&nbsp; ${s.hits}회 타격` : ''}
+              ${s.maxTargets ? ` &nbsp;·&nbsp; 최대 ${s.maxTargets}마리` : ''}
+            </span>
+            ${cdText ? `<span class="skill-cd">${cdText}</span>` : ''}
+          </div>
+          <div>
+            ${learned
+              ? `<span class="skill-learned">습득 완료</span>`
+              : `<button class="small-btn ${canAfford ? '' : 'disabled'}"
+                         onclick="tryLearnSkill(${char.id},'${id}');renderSkillTab();">
+                   배우기 ${s.cost.toLocaleString()}G
+                 </button>`}
+          </div>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="char-card">
+        <h3 style="color:${CLASS_COLORS[char.classId]||'#aaa'};margin-bottom:8px">
+          ${charClassName(char.classId)} Lv.${char.level}
+        </h3>
+        ${skillRows}
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="eq-section-title">스킬</div>
+    <div style="font-size:11px;color:#666;margin-bottom:8px">
+      습득한 스킬은 쿨다운마다 자동으로 사용됩니다.
+    </div>
+    ${html}`;
 }
 
 // ── 펫 탭 ──────────────────────────────────────────────────

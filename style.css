@@ -609,6 +609,48 @@ body {
   color: #5b9bd5;
 }
 
+/* 스킬 탭 */
+.skill-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #1a2a3a;
+  border-radius: 4px;
+  background: #0a1525;
+  margin-bottom: 5px;
+}
+
+.skill-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.skill-name {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.skill-meta {
+  font-size: 11px;
+  color: #666;
+}
+
+.skill-cd {
+  font-size: 11px;
+  color: #f39c12;
+}
+
+.skill-learned {
+  font-size: 11px;
+  color: #4caf50;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
 /* 강화 버튼 */
 .enhance-btn {
   border-color: #7a5020;
