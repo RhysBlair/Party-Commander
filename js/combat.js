@@ -87,6 +87,7 @@ function killMonster(char, monster, stage) {
 }
 
 function checkLevelUp(char) {
+  const prevLevel = char.level;
   let needed = expRequired(char.level);
   while (char.exp >= needed) {
     char.exp   -= needed;
@@ -96,4 +97,5 @@ function checkLevelUp(char) {
     console.log(`[레벨업] ${char.level}레벨 달성!`);
     needed = expRequired(char.level);
   }
+  if (char.level !== prevLevel) markTabDirty();
 }

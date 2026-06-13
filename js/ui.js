@@ -1,5 +1,16 @@
 let uiTimer = 0;
-const UI_INTERVAL = 0.1; // 100ms마다 DOM 갱신
+const HUD_INTERVAL = 0.1;
+
+// 탭 재빌드: 레벨업 등 게임 이벤트 시 rAF로 1회 실행
+let tabDirty = false;
+function markTabDirty() {
+  if (tabDirty) return;
+  tabDirty = true;
+  requestAnimationFrame(() => {
+    tabDirty = false;
+    renderActiveTab();
+  });
+}
 
 function initUI() {
   document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -15,10 +26,11 @@ function initUI() {
 
 function updateUI(dt) {
   uiTimer += dt;
-  if (uiTimer < UI_INTERVAL) return;
+  if (uiTimer < HUD_INTERVAL) return;
   uiTimer = 0;
   updateHUD();
-  renderActiveTab();
+  // 탭 콘텐츠는 여기서 갱신하지 않음
+  // → 버튼 onclick 또는 markTabDirty()에서만 갱신
 }
 
 function updateHUD() {
@@ -65,7 +77,7 @@ function renderCharacterTab() {
         <div class="job-btn-grid">
           ${JOB_DEFS.map(j => `
             <button class="job-btn" style="border-color:${j.color}"
-                    onclick="tryAdvanceJob(${char.id}, '${j.id}')">
+                    onclick="tryAdvanceJob(${char.id}, '${j.id}'); renderCharacterTab();">
               <span class="job-btn-name" style="color:${j.color}">${j.name}</span>
               <span class="job-btn-desc">${j.desc}</span>
             </button>`).join('')}
@@ -97,20 +109,20 @@ function renderCharacterTab() {
   el.innerHTML = html;
 }
 
-// ── 스탯 탭 ────────────────────────────────────────────────
+// ── 스탯 탭 (전체 재빌드) ───────────────────────────────────
+const STAT_LABELS = {
+  STR: '공격력 +0.5 · 물리방어 +0.5 · (전사) 추가 배율',
+  DEX: '명중 +0.5% · 회피 +0.1% · (궁수) 추가 배율',
+  INT: '마법방어 +0.5 · (마법사) 추가 배율',
+  LUK: '회피 +0.3% · (도적) 추가 배율',
+};
+
 function renderStatsTab() {
   const el = document.getElementById('tab-stats');
   if (gameState.characters.length === 0) {
     el.innerHTML = '<p style="color:#888">캐릭터가 없습니다.</p>';
     return;
   }
-
-  const STAT_LABELS = {
-    STR: { label: 'STR', desc: '공격력 +0.5 · 물리방어 +0.5 · (전사) 추가 배율' },
-    DEX: { label: 'DEX', desc: '명중 +0.5% · 회피 +0.1% · (궁수) 추가 배율' },
-    INT: { label: 'INT', desc: '마법방어 +0.5 · (마법사) 추가 배율' },
-    LUK: { label: 'LUK', desc: '회피 +0.3% · (도적) 추가 배율' },
-  };
 
   const html = gameState.characters.map(char => {
     const fs = calcFinalStats(char);
@@ -120,12 +132,12 @@ function renderStatsTab() {
 
     const statRows = ['STR', 'DEX', 'INT', 'LUK'].map(stat => `
       <div class="stat-row">
-        <span class="stat-label" title="${STAT_LABELS[stat].desc}">${stat}</span>
-        <span class="stat-val">${char.stats[stat]}</span>
-        ${hasPoints
-          ? `<button class="stat-plus-btn" onclick="tryAddStatPoint(${char.id}, '${stat}'); renderStatsTab();">＋</button>`
-          : `<span class="stat-plus-placeholder"></span>`}
-        <span class="stat-desc">${STAT_LABELS[stat].desc}</span>
+        <span class="stat-label" title="${STAT_LABELS[stat]}">${stat}</span>
+        <span class="stat-val" id="sv-${char.id}-${stat}">${char.stats[stat]}</span>
+        <button class="stat-plus-btn" id="sb-${char.id}-${stat}"
+                style="${hasPoints ? '' : 'display:none'}"
+                onclick="tryAddStatPoint(${char.id}, '${stat}'); updateStatDisplay(${char.id});">＋</button>
+        <span class="stat-desc">${STAT_LABELS[stat]}</span>
       </div>`).join('');
 
     return `
@@ -138,16 +150,15 @@ function renderStatsTab() {
           </button>
         </div>
 
-        ${char.unspentPoints > 0
-          ? `<div class="points-badge" style="margin-bottom:8px">
-               잔여 포인트: <strong>${char.unspentPoints}</strong>
-               ${char.autoAssign ? '<span style="color:#aaa;font-size:11px"> (자동배분 ON — 수동 배분하려면 OFF로)</span>' : ''}
-             </div>`
-          : ''}
+        <div class="points-badge" id="sp-${char.id}"
+             style="margin-bottom:8px${char.unspentPoints === 0 ? ';display:none' : ''}">
+          잔여 포인트: <strong id="spv-${char.id}">${char.unspentPoints}</strong>
+          ${char.autoAssign ? '<span style="color:#aaa;font-size:11px"> (자동배분 ON — 수동 배분하려면 OFF로)</span>' : ''}
+        </div>
 
         <div class="stat-grid">${statRows}</div>
 
-        <div class="final-stats">
+        <div class="final-stats" id="fs-${char.id}">
           <span>공격력 <strong>${fs.atk}</strong></span>
           <span>물리방어 <strong>${fs.physDef}</strong></span>
           <span>마법방어 <strong>${fs.magicDef}</strong></span>
@@ -156,13 +167,46 @@ function renderStatsTab() {
         </div>
 
         <button class="small-btn reset-btn ${canReset ? '' : 'disabled'}"
-                onclick="tryResetStats(${char.id})">
+                onclick="tryResetStats(${char.id}); renderStatsTab();">
           스탯 초기화 &nbsp;(골드 ${resetCost.toLocaleString()})
         </button>
       </div>`;
   }).join('');
 
   el.innerHTML = html;
+}
+
+// ── 스탯 인플레이스 업데이트 (DOM 재빌드 없음) ──────────────
+// + 버튼 클릭마다 이걸 호출 → 버튼이 DOM에서 사라지지 않아 빠른 연속 클릭 가능
+function updateStatDisplay(charId) {
+  const char = gameState.characters.find(c => c.id === charId);
+  if (!char) return;
+  const hasPoints = char.unspentPoints > 0 && !char.autoAssign;
+
+  ['STR', 'DEX', 'INT', 'LUK'].forEach(stat => {
+    const valEl = document.getElementById(`sv-${charId}-${stat}`);
+    if (valEl) valEl.textContent = char.stats[stat];
+    const btnEl = document.getElementById(`sb-${charId}-${stat}`);
+    if (btnEl) btnEl.style.display = hasPoints ? '' : 'none';
+  });
+
+  const spEl = document.getElementById(`sp-${charId}`);
+  if (spEl) {
+    spEl.style.display = char.unspentPoints > 0 ? '' : 'none';
+    const spvEl = document.getElementById(`spv-${charId}`);
+    if (spvEl) spvEl.textContent = char.unspentPoints;
+  }
+
+  const fs = calcFinalStats(char);
+  const fsEl = document.getElementById(`fs-${charId}`);
+  if (fsEl) {
+    fsEl.innerHTML = `
+      <span>공격력 <strong>${fs.atk}</strong></span>
+      <span>물리방어 <strong>${fs.physDef}</strong></span>
+      <span>마법방어 <strong>${fs.magicDef}</strong></span>
+      <span>명중 <strong>${fs.accuracy.toFixed(0)}%</strong></span>
+      <span>회피 <strong>${fs.evade.toFixed(0)}%</strong></span>`;
+  }
 }
 
 // ── 공통 헬퍼 ──────────────────────────────────────────────
