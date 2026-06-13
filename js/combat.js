@@ -84,6 +84,12 @@ function killMonster(char, monster, stage) {
   // 경험치 지급 및 레벨업 체크
   char.exp += stage.monster.expDrop;
   checkLevelUp(char);
+
+  // 스테이지 클리어 체크
+  if (gameState.stageKills >= stage.killsToAdvance) {
+    advanceStage();
+    markTabDirty();
+  }
 }
 
 function checkLevelUp(char) {

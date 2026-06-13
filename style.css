@@ -333,3 +333,100 @@ body {
   color: #888;
   text-align: center;
 }
+
+/* 스테이지 탭 */
+.stage-current-box {
+  background: #0d1b2a;
+  border: 1px solid #0f3460;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.stage-current-title {
+  color: #e2b96f;
+  font-size: 15px;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.stage-monster-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: #aaa;
+  margin-bottom: 4px;
+}
+
+.stage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stage-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 5px;
+  border: 1px solid #1a2a3a;
+  background: #0d1b2a;
+  font-size: 13px;
+}
+
+.stage-row-unlock {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.stage-row-unlock:hover {
+  background: #1a2a3a;
+}
+
+.stage-row-locked {
+  opacity: 0.45;
+}
+
+.stage-row-active {
+  border-color: #e2b96f55;
+  background: #1a150a;
+}
+
+.stage-row-num {
+  width: 18px;
+  color: #555;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.stage-row-name {
+  width: 36px;
+  font-weight: bold;
+  color: #e0e0e0;
+  flex-shrink: 0;
+}
+
+.stage-row-monster {
+  flex: 1;
+  color: #aaa;
+  font-size: 12px;
+}
+
+.stage-row-kills {
+  font-size: 11px;
+  color: #888;
+  flex-shrink: 0;
+}
+
+.stage-row-status {
+  font-size: 11px;
+  width: 48px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.status-current { color: #e2b96f; font-weight: bold; }
+.status-clear   { color: #4caf50; }
+.status-locked  { color: #555; }

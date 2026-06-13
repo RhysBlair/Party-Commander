@@ -48,6 +48,7 @@ function renderActiveTab() {
   const tab = activeBtn.dataset.tab;
   if (tab === 'characters') renderCharacterTab();
   else if (tab === 'stats')  renderStatsTab();
+  else if (tab === 'stage')  renderStageTab();
 }
 
 // ── 캐릭터 탭 ──────────────────────────────────────────────
@@ -207,6 +208,65 @@ function updateStatDisplay(charId) {
       <span>명중 <strong>${fs.accuracy.toFixed(0)}%</strong></span>
       <span>회피 <strong>${fs.evade.toFixed(0)}%</strong></span>`;
   }
+}
+
+// ── 스테이지 탭 ────────────────────────────────────────────
+function renderStageTab() {
+  const el = document.getElementById('tab-stage');
+  const cur   = STAGES[gameState.currentStage];
+  const kills = gameState.stageKills;
+  const pct   = Math.floor((kills / cur.killsToAdvance) * 100);
+  const atMax = gameState.currentStage === STAGES.length - 1;
+
+  const stageRows = STAGES.map((s, i) => {
+    const unlocked  = i <= gameState.maxStageReached;
+    const isCurrent = i === gameState.currentStage;
+    const isCleared = i < gameState.currentStage;
+
+    let statusLabel, statusClass;
+    if (isCurrent)      { statusLabel = '▶ 진행중'; statusClass = 'status-current'; }
+    else if (isCleared) { statusLabel = '✓ 클리어'; statusClass = 'status-clear';   }
+    else if (unlocked)  { statusLabel = '도달';     statusClass = 'status-clear';   }
+    else                { statusLabel = '🔒';        statusClass = 'status-locked';  }
+
+    const killInfo = isCurrent
+      ? `<span class="stage-row-kills">${kills} / ${s.killsToAdvance}</span>`
+      : `<span class="stage-row-kills" style="color:#555">${s.killsToAdvance}처치</span>`;
+
+    return `
+      <div class="stage-row ${isCurrent ? 'stage-row-active' : ''} ${unlocked ? 'stage-row-unlock' : 'stage-row-locked'}"
+           ${unlocked ? `onclick="goToStage(${i}); renderStageTab();"` : ''}>
+        <span class="stage-row-num">${i + 1}</span>
+        <span class="stage-row-name">${s.name}</span>
+        <span class="stage-row-monster">${s.monster.name}</span>
+        ${killInfo}
+        <span class="stage-row-status ${statusClass}">${statusLabel}</span>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="stage-current-box">
+      <div class="stage-current-title">
+        ${gameState.currentStage + 1}. ${cur.name}
+        ${atMax ? '<span style="color:#e2b96f;font-size:11px"> ✦ 최고 스테이지</span>' : ''}
+      </div>
+      <div class="stage-monster-info">
+        <span>${cur.monster.name}</span>
+        <span>HP ${cur.monster.hp}</span>
+        <span>공격 ${cur.monster.atk}</span>
+        <span>방어 ${cur.monster.def}</span>
+        <span>골드 +${cur.monster.goldDrop}</span>
+        <span>경험치 +${cur.monster.expDrop}</span>
+      </div>
+      <div style="margin:6px 0 2px;font-size:12px">
+        처치 진행: <strong>${kills} / ${cur.killsToAdvance}</strong> (${pct}%)
+      </div>
+      <div class="exp-bar-wrap">
+        <div class="exp-bar-fill" style="width:${pct}%;background:#e2b96f"></div>
+      </div>
+      ${atMax ? '<div style="color:#888;font-size:11px;margin-top:4px">최고 스테이지 — 계속 처치하여 골드/경험치 획득</div>' : ''}
+    </div>
+    <div class="stage-list">${stageRows}</div>`;
 }
 
 // ── 공통 헬퍼 ──────────────────────────────────────────────

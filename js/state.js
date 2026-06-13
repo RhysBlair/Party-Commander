@@ -78,6 +78,29 @@ function initField() {
   });
 }
 
+// 스테이지 클리어 → 다음 스테이지로 이동
+function advanceStage() {
+  const next = gameState.currentStage + 1;
+  if (next >= STAGES.length) {
+    // 최고 스테이지 도달 — 처치 수만 초기화하고 계속
+    gameState.stageKills = 0;
+    return;
+  }
+  gameState.currentStage = next;
+  gameState.stageKills   = 0;
+  if (next > gameState.maxStageReached) gameState.maxStageReached = next;
+  initField();
+}
+
+// 특정 스테이지로 이동 (파밍 등)
+function goToStage(index) {
+  if (index < 0 || index > gameState.maxStageReached) return;
+  if (index === gameState.currentStage) return;
+  gameState.currentStage = index;
+  gameState.stageKills   = 0;
+  initField();
+}
+
 const SAVE_KEY = 'party_commander_save';
 
 // 런타임 필드만 제외하고 직렬화
