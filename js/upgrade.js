@@ -28,8 +28,16 @@ function tryResetStats(charId) {
   char.unspentPoints = totalEarned;
 }
 
-function tryAdvanceJob(_charId, _classId) {
-  // 5단계에서 구현
+function tryAdvanceJob(charId, classId) {
+  const char = gameState.characters.find(c => c.id === charId);
+  if (!char) return;
+  if (char.classId !== 'novice') return;
+  if (char.level < JOB_ADVANCE_LEVEL) return;
+  if (!CLASSES[classId] || classId === 'novice') return;
+
+  char.classId = classId;
+  // 전직 후 잔여 포인트 재분배
+  if (char.autoAssign && char.unspentPoints > 0) autoAssignStats(char);
 }
 
 function tryBuyEquipment(_equipId) {

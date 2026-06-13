@@ -283,3 +283,53 @@ body {
 .reset-btn:hover:not(.disabled) {
   background: #4a1515;
 }
+
+/* 전직 UI */
+.job-advance-box {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #e2b96f44;
+  border-radius: 6px;
+  background: #1a140a;
+}
+
+.job-advance-title {
+  color: #e2b96f;
+  font-size: 13px;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.job-btn-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.job-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 6px;
+  background: #0d1b2a;
+  border: 1px solid #333;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.job-btn:hover {
+  background: #1a2a3a;
+}
+
+.job-btn-name {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.job-btn-desc {
+  font-size: 10px;
+  color: #888;
+  text-align: center;
+}

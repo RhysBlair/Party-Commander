@@ -39,6 +39,13 @@ function renderActiveTab() {
 }
 
 // ── 캐릭터 탭 ──────────────────────────────────────────────
+const JOB_DEFS = [
+  { id: 'warrior', name: '전사',   color: '#e74c3c', desc: 'STR · 근접 · 물리방어' },
+  { id: 'archer',  name: '궁수',   color: '#27ae60', desc: 'DEX · 장거리 · 명중/회피' },
+  { id: 'mage',    name: '마법사', color: '#9b59b6', desc: 'INT · 중거리 · 마법방어' },
+  { id: 'rogue',   name: '도적',   color: '#95a5a6', desc: 'LUK · 단거리 · 회피 특화' },
+];
+
 function renderCharacterTab() {
   const el = document.getElementById('tab-characters');
   if (gameState.characters.length === 0) {
@@ -50,10 +57,31 @@ function renderCharacterTab() {
     const needed = expRequired(char.level);
     const pct = Math.floor((char.exp / needed) * 100);
     const hasPoints = char.unspentPoints > 0 && !char.autoAssign;
+    const canAdvance = char.classId === 'novice' && char.level >= JOB_ADVANCE_LEVEL;
+
+    const jobSection = canAdvance ? `
+      <div class="job-advance-box">
+        <div class="job-advance-title">✦ 전직 가능! 직업을 선택하세요</div>
+        <div class="job-btn-grid">
+          ${JOB_DEFS.map(j => `
+            <button class="job-btn" style="border-color:${j.color}"
+                    onclick="tryAdvanceJob(${char.id}, '${j.id}')">
+              <span class="job-btn-name" style="color:${j.color}">${j.name}</span>
+              <span class="job-btn-desc">${j.desc}</span>
+            </button>`).join('')}
+        </div>
+      </div>` : '';
+
+    const classColor = CLASS_COLORS[char.classId] || '#aaa';
+
     return `
       <div class="char-card">
-        <h3>${charClassName(char.classId)} <span style="color:#aaa;font-size:12px">(${char.classId})</span></h3>
-        <div>레벨 <strong>${char.level}</strong> &nbsp;|&nbsp; EXP: ${char.exp} / ${needed} (${pct}%)</div>
+        <h3 style="color:${classColor}">${charClassName(char.classId)}
+          <span style="color:#666;font-size:11px;font-weight:normal"> Lv.${char.level}</span>
+        </h3>
+        <div style="font-size:12px;color:#888;margin-bottom:4px">
+          EXP ${char.exp} / ${needed} (${pct}%)
+        </div>
         <div class="exp-bar-wrap"><div class="exp-bar-fill" style="width:${pct}%"></div></div>
         <div style="margin-top:6px;font-size:12px;color:#aaa">
           STR ${char.stats.STR} &nbsp; DEX ${char.stats.DEX} &nbsp;
@@ -62,6 +90,7 @@ function renderCharacterTab() {
         ${char.unspentPoints > 0
           ? `<div class="points-badge">${hasPoints ? '⬆ 스탯 배분 가능' : '⬆ 자동 배분 중'} (${char.unspentPoints}pt)</div>`
           : ''}
+        ${jobSection}
       </div>`;
   }).join('');
 
