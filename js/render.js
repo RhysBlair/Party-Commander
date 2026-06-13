@@ -24,6 +24,8 @@ function render() {
     if (char.assignedStage === viewIdx) drawCharacter(char);
   }
 
+  drawPets(viewIdx);
+
   drawStageLabel(W, viewIdx, field);
 }
 
@@ -131,6 +133,71 @@ function drawCharacter(char) {
   ctx.textAlign = 'center';
   ctx.fillText(`Lv.${char.level}`, char.x, char.y + 20);
   ctx.textAlign = 'left';
+}
+
+function drawPets(viewIdx) {
+  if (!gameState.pets.length) return;
+  const charsHere = gameState.characters.filter(c => c.assignedStage === viewIdx);
+  if (!charsHere.length) return;
+
+  // 보유 펫 중 가장 범위가 넓은 것을 표시 (실제 동작과 동일)
+  let activePetId = gameState.pets[0];
+  for (const pid of gameState.pets) {
+    if (PETS[pid].pickupRange > PETS[activePetId].pickupRange) activePetId = pid;
+  }
+  const isMagnet = activePetId === 'pet_magnet';
+  const bodyCol  = isMagnet ? '#5b9bd5' : '#f39c12';
+  const earCol   = isMagnet ? '#3a78b5' : '#d4820f';
+
+  // 각 캐릭터 뒤쪽에 펫 하나씩
+  for (const char of charsHere) {
+    const px = char.x - char.facing * 22;
+    const py = char.y + 8;
+
+    // 귀
+    ctx.fillStyle = earCol;
+    ctx.beginPath();
+    ctx.ellipse(px - 5, py - 11, 3, 5, -0.3, 0, Math.PI * 2);
+    ctx.ellipse(px + 5, py - 11, 3, 5,  0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 몸통
+    ctx.fillStyle = bodyCol;
+    ctx.beginPath();
+    ctx.arc(px, py, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // 눈
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.arc(px - 3, py - 1, 1.8, 0, Math.PI * 2);
+    ctx.arc(px + 3, py - 1, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(px - 2.3, py - 1.5, 0.7, 0, Math.PI * 2);
+    ctx.arc(px + 3.7, py - 1.5, 0.7, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 코
+    ctx.fillStyle = isMagnet ? '#a0c8f0' : '#e8a87c';
+    ctx.beginPath();
+    ctx.arc(px, py + 2, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 자석 펫: 파란 광채
+    if (isMagnet) {
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = '#5b9bd5';
+      ctx.beginPath();
+      ctx.arc(px, py, 18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
 }
 
 function drawDrops(viewIdx) {
