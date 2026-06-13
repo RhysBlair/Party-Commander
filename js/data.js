@@ -61,6 +61,11 @@ const EQUIPMENT = {
 
 const GRADE_COLORS = { "노멀": "#aaa", "레어": "#5b9bd5", "에픽": "#9b59b6", "유니크": "#e2b96f" };
 
+// 장비 강화 설정
+const ENHANCE_MAX = 10;
+// 인덱스 = 현재 강화 단계, 값 = 성공 확률(%)
+const ENHANCE_SUCCESS = [100, 100, 100, 100, 100, 80, 60, 40, 25, 10];
+
 // 스킬 정의
 const SKILLS = {
   warrior_strike: { name: "강타",      classId: "warrior", cooldown: 4.0,

@@ -7,16 +7,17 @@ const gameState = {
   gems: 0,
 
   characters: [],
-  equipmentInventory: [],
+  equipmentInventory: [],  // [{ id, uid, enhance }, ...]
   pets: [],
   unlockedSkills: [],
 
+  nextItemUid: 1,          // 아이템 인스턴스 고유 ID 카운터
   maxStageReached: 0,
   drops: [],
 
   // 런타임 전용 (저장 제외)
-  viewStage: 0,       // 캔버스에 표시할 스테이지 인덱스
-  stageFields: [],    // stageFields[i] = { monsters: [], kills: 0 } | undefined
+  viewStage: 0,
+  stageFields: [],
 };
 
 // 새 캐릭터 생성 (모험가)
@@ -29,7 +30,7 @@ function createCharacter(assignedStage = 0) {
     stats: { STR: 5, DEX: 5, INT: 5, LUK: 5 },
     unspentPoints: 0,
     autoAssign: true,
-    equipment: { weapon: 'beginner_sword', armor: null, accessory: null },
+    equipment: { weapon: { id: 'beginner_sword', uid: 0, enhance: 0 }, armor: null, accessory: null },
     skills: [],
     assignedStage,
     // 런타임 필드 상태 (저장 제외)
@@ -182,11 +183,28 @@ function loadGame() {
     const saved = JSON.parse(raw);
     Object.assign(gameState, saved);
 
-    // 구형 세이브 호환: currentStage/stageKills → assignedStage
+    // 구형 세이브 호환: currentStage → assignedStage
     const legacyStage = saved.currentStage ?? 0;
     for (const char of gameState.characters) {
       if (char.assignedStage === undefined) char.assignedStage = legacyStage;
+      // 장비 슬롯: string → object
+      for (const slot of ['weapon', 'armor', 'accessory']) {
+        const val = char.equipment?.[slot];
+        if (typeof val === 'string') {
+          char.equipment[slot] = { id: val, uid: gameState.nextItemUid++, enhance: 0 };
+        }
+      }
+      if (!char.equipment) {
+        char.equipment = { weapon: { id: 'beginner_sword', uid: 0, enhance: 0 }, armor: null, accessory: null };
+      }
     }
+    // 인벤토리: string → object
+    gameState.equipmentInventory = (gameState.equipmentInventory || []).map(item => {
+      if (typeof item === 'string') return { id: item, uid: gameState.nextItemUid++, enhance: 0 };
+      return item;
+    });
+    if (!gameState.nextItemUid) gameState.nextItemUid = 100;
+
     gameState.viewStage = legacyStage;
 
     return true;

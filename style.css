@@ -600,3 +600,15 @@ body {
   font-size: 10px;
   color: #5b9bd5;
 }
+
+/* 강화 버튼 */
+.enhance-btn {
+  border-color: #7a5020;
+  background: #2a1a08;
+  color: #e2b96f;
+  font-size: 11px;
+}
+
+.enhance-btn:hover:not(.disabled) {
+  background: #4a2a10;
+}
