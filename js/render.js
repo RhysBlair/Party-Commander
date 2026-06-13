@@ -18,6 +18,8 @@ function render() {
     for (const m of field.monsters) drawMonster(m, viewIdx);
   }
 
+  drawDrops(viewIdx);
+
   for (const char of gameState.characters) {
     if (char.assignedStage === viewIdx) drawCharacter(char);
   }
@@ -129,6 +131,31 @@ function drawCharacter(char) {
   ctx.textAlign = 'center';
   ctx.fillText(`Lv.${char.level}`, char.x, char.y + 20);
   ctx.textAlign = 'left';
+}
+
+function drawDrops(viewIdx) {
+  for (const d of gameState.drops) {
+    if (d.stageIdx !== viewIdx) continue;
+    const e    = EQUIPMENT[d.equipId];
+    const col  = e ? (GRADE_COLORS[e.grade] || '#aaa') : '#aaa';
+    const fade = Math.min(1, d.timer / 5);
+
+    ctx.globalAlpha = fade;
+    ctx.shadowColor = col;
+    ctx.shadowBlur  = 10;
+    ctx.fillStyle   = col;
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = '#111';
+    ctx.font = 'bold 8px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(e ? e.name[0] : '?', d.x, d.y + 3);
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
+  }
 }
 
 function drawStageLabel(W, stageIdx, field) {

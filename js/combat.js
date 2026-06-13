@@ -79,6 +79,8 @@ function killMonster(char, monster, stage, field) {
   char.exp += stage.monster.expDrop;
   checkLevelUp(char);
 
+  generateDrop(char.assignedStage, monster.x, monster.y);
+
   if (field.kills >= stage.killsToAdvance) {
     advanceStageField(char.assignedStage);
     markTabDirty();

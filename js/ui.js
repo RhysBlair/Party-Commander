@@ -51,6 +51,7 @@ function renderActiveTab() {
   if (tab === 'characters') renderCharacterTab();
   else if (tab === 'stats')      renderStatsTab();
   else if (tab === 'equipment')  renderEquipmentTab();
+  else if (tab === 'pets')       renderPetTab();
   else if (tab === 'stage')      renderStageTab();
 }
 
@@ -390,6 +391,58 @@ function renderEquipmentTab() {
       상점 <span style="color:#e2b96f;font-size:11px">골드: ${gameState.gold.toLocaleString()}</span>
     </div>
     <div class="shop-list">${shopRows}</div>`;
+}
+
+// ── 펫 탭 ──────────────────────────────────────────────────
+function renderPetTab() {
+  const el = document.getElementById('tab-pets');
+
+  const petCards = Object.entries(PETS).map(([id, p]) => {
+    const owned     = gameState.pets.includes(id);
+    const canAfford = !owned && gameState.gold >= p.cost;
+    const rangeText = p.pickupRange >= 9000 ? '전체 필드' : `${p.pickupRange}px`;
+    const desc      = id === 'pet_basic'
+      ? '캐릭터 주변 아이템을 자동으로 수집합니다.'
+      : '필드 전체의 아이템을 빠르게 수집합니다.';
+
+    return `
+      <div class="char-card" style="${owned ? 'border-color:#4caf5055;background:#0a1f0a' : ''}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-weight:bold;font-size:14px;color:${owned ? '#4caf50' : '#e0e0e0'}">
+            ${p.name}
+            ${owned ? '<span style="font-size:11px;font-weight:normal"> ✓ 보유</span>' : ''}
+          </span>
+          ${!owned
+            ? `<button class="small-btn ${canAfford ? '' : 'disabled'}"
+                       onclick="tryBuyPet('${id}');renderPetTab();">
+                 구매 ${p.cost.toLocaleString()}G
+               </button>`
+            : `<span style="color:#4caf50;font-size:12px">활성화됨</span>`}
+        </div>
+        <div style="display:flex;gap:16px;font-size:12px;color:#aaa;margin-bottom:4px">
+          <span>수집 범위 <strong style="color:#e0e0e0">${rangeText}</strong></span>
+          <span>수집 주기 <strong style="color:#e0e0e0">${p.pickupInterval}초</strong></span>
+        </div>
+        <div style="font-size:11px;color:#666">${desc}</div>
+      </div>`;
+  }).join('');
+
+  const dropCount  = gameState.drops.length;
+  const hasPet     = gameState.pets.length > 0;
+  const dropNotice = dropCount > 0
+    ? `<div style="margin-top:8px;padding:6px 10px;background:#1a1a0a;border:1px solid #3a3a1a;border-radius:4px;font-size:12px;color:#e2b96f">
+         드랍 아이템 ${dropCount}개 — ${hasPet ? '펫이 자동 수집 중' : '캐릭터가 근접하면 수집됩니다'}
+       </div>`
+    : '';
+
+  el.innerHTML = `
+    <div class="eq-section-title">펫</div>
+    <div style="font-size:11px;color:#666;margin-bottom:8px">
+      펫이 없으면 캐릭터가 드랍 아이템에 직접 근접해야 수집됩니다.<br>
+      여러 펫 보유 시 범위가 가장 넓은 펫이 적용됩니다.
+    </div>
+    ${petCards}
+    ${dropNotice}`;
 }
 
 // ── 스테이지 탭 ────────────────────────────────────────────

@@ -128,8 +128,13 @@ function tryLearnSkill(_charId, _skillId) {
   // 10단계에서 구현
 }
 
-function tryBuyPet(_petId) {
-  // 9단계에서 구현
+function tryBuyPet(petId) {
+  const p = PETS[petId];
+  if (!p) return;
+  if (gameState.pets.includes(petId)) return;
+  if (gameState.gold < p.cost) return;
+  gameState.gold -= p.cost;
+  gameState.pets.push(petId);
 }
 
 function tryAddCharacter() {
