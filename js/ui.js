@@ -34,12 +34,14 @@ function updateUI(dt) {
 }
 
 function updateHUD() {
-  const s = gameState;
-  const stage = STAGES[s.currentStage];
+  const s     = gameState;
+  const stage = STAGES[s.viewStage];
+  const field = s.stageFields[s.viewStage];
+  const kills = field ? field.kills : 0;
   document.getElementById('hud-gold').textContent     = `골드: ${s.gold.toLocaleString()}`;
   document.getElementById('hud-gems').textContent     = `젬: ${s.gems.toLocaleString()}`;
   document.getElementById('hud-stage').textContent    = `스테이지: ${stage.name}`;
-  document.getElementById('hud-progress').textContent = `처치: ${s.stageKills} / ${stage.killsToAdvance}`;
+  document.getElementById('hud-progress').textContent = `처치: ${kills} / ${stage.killsToAdvance}`;
 }
 
 function renderActiveTab() {
@@ -103,6 +105,16 @@ function renderCharacterTab() {
         ${char.unspentPoints > 0
           ? `<div class="points-badge">⬆ 잔여 포인트 (${char.unspentPoints}pt)${char.autoAssign ? ' · 레벨업 시 자동 배분' : ''}</div>`
           : ''}
+        <div class="assign-section">
+          <span class="assign-label">배치 필드</span>
+          <div class="assign-btns">
+            ${Array.from({ length: gameState.maxStageReached + 1 }, (_, i) => `
+              <button class="assign-btn ${char.assignedStage === i ? 'active' : ''}"
+                      onclick="assignCharToStage(${char.id}, ${i}); renderCharacterTab();">
+                ${STAGES[i].name}
+              </button>`).join('')}
+          </div>
+        </div>
         ${jobSection}
       </div>`;
   }).join('');
@@ -212,33 +224,39 @@ function updateStatDisplay(charId) {
 
 // ── 스테이지 탭 ────────────────────────────────────────────
 function renderStageTab() {
-  const el = document.getElementById('tab-stage');
-  const cur   = STAGES[gameState.currentStage];
-  const kills = gameState.stageKills;
-  const pct   = Math.floor((kills / cur.killsToAdvance) * 100);
-  const atMax = gameState.currentStage === STAGES.length - 1;
+  const el     = document.getElementById('tab-stage');
+  const viewIdx = gameState.viewStage;
+  const cur    = STAGES[viewIdx];
+  const field  = gameState.stageFields[viewIdx];
+  const kills  = field ? field.kills : 0;
+  const pct    = Math.floor((kills / cur.killsToAdvance) * 100);
+  const atMax  = viewIdx === STAGES.length - 1;
 
   const stageRows = STAGES.map((s, i) => {
     const unlocked  = i <= gameState.maxStageReached;
-    const isCurrent = i === gameState.currentStage;
-    const isCleared = i < gameState.currentStage;
+    const isView    = i === viewIdx;
+    const charsHere = gameState.characters.filter(c => c.assignedStage === i);
+    const charIcons = charsHere.map(c =>
+      `<span style="color:${CLASS_COLORS[c.classId] || '#aaa'};font-size:11px">● </span>`
+    ).join('');
 
-    let statusLabel, statusClass;
-    if (isCurrent)      { statusLabel = '▶ 진행중'; statusClass = 'status-current'; }
-    else if (isCleared) { statusLabel = '✓ 클리어'; statusClass = 'status-clear';   }
-    else if (unlocked)  { statusLabel = '도달';     statusClass = 'status-clear';   }
-    else                { statusLabel = '🔒';        statusClass = 'status-locked';  }
+    const f = gameState.stageFields[i];
+    const fKills = f ? f.kills : 0;
+    const killInfo = charsHere.length > 0
+      ? `<span class="stage-row-kills">${fKills} / ${s.killsToAdvance}</span>`
+      : `<span class="stage-row-kills" style="color:#444">${s.killsToAdvance}처치</span>`;
 
-    const killInfo = isCurrent
-      ? `<span class="stage-row-kills">${kills} / ${s.killsToAdvance}</span>`
-      : `<span class="stage-row-kills" style="color:#555">${s.killsToAdvance}처치</span>`;
+    let statusLabel = '', statusClass = '';
+    if (isView)        { statusLabel = '👁 보는 중'; statusClass = 'status-current'; }
+    else if (!unlocked){ statusLabel = '🔒';         statusClass = 'status-locked';  }
 
     return `
-      <div class="stage-row ${isCurrent ? 'stage-row-active' : ''} ${unlocked ? 'stage-row-unlock' : 'stage-row-locked'}"
+      <div class="stage-row ${isView ? 'stage-row-active' : ''} ${unlocked ? 'stage-row-unlock' : 'stage-row-locked'}"
            ${unlocked ? `onclick="goToStage(${i}); renderStageTab();"` : ''}>
         <span class="stage-row-num">${i + 1}</span>
         <span class="stage-row-name">${s.name}</span>
         <span class="stage-row-monster">${s.monster.name}</span>
+        <span class="stage-row-chars">${charIcons}</span>
         ${killInfo}
         <span class="stage-row-status ${statusClass}">${statusLabel}</span>
       </div>`;
@@ -247,7 +265,7 @@ function renderStageTab() {
   el.innerHTML = `
     <div class="stage-current-box">
       <div class="stage-current-title">
-        ${gameState.currentStage + 1}. ${cur.name}
+        ${viewIdx + 1}. ${cur.name}
         ${atMax ? '<span style="color:#e2b96f;font-size:11px"> ✦ 최고 스테이지</span>' : ''}
       </div>
       <div class="stage-monster-info">
@@ -264,7 +282,10 @@ function renderStageTab() {
       <div class="exp-bar-wrap">
         <div class="exp-bar-fill" style="width:${pct}%;background:#e2b96f"></div>
       </div>
-      ${atMax ? '<div style="color:#888;font-size:11px;margin-top:4px">최고 스테이지 — 계속 처치하여 골드/경험치 획득</div>' : ''}
+      ${atMax ? '<div style="color:#888;font-size:11px;margin-top:4px">최고 스테이지 — 계속 파밍 가능</div>' : ''}
+    </div>
+    <div style="font-size:11px;color:#666;margin-bottom:6px">
+      스테이지를 클릭하면 보기만 변경됩니다. 캐릭터 배치는 캐릭터 탭에서 변경하세요.
     </div>
     <div class="stage-list">${stageRows}</div>`;
 }

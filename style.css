@@ -430,3 +430,49 @@ body {
 .status-current { color: #e2b96f; font-weight: bold; }
 .status-clear   { color: #4caf50; }
 .status-locked  { color: #555; }
+
+.stage-row-chars { flex: 1; }
+
+/* 캐릭터 배치 스테이지 선택 */
+.assign-section {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.assign-label {
+  font-size: 11px;
+  color: #888;
+  flex-shrink: 0;
+}
+
+.assign-btns {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.assign-btn {
+  padding: 3px 8px;
+  border: 1px solid #2a3a4a;
+  border-radius: 4px;
+  background: #0d1b2a;
+  color: #888;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.15s;
+}
+
+.assign-btn:hover {
+  border-color: #e2b96f88;
+  color: #e0e0e0;
+}
+
+.assign-btn.active {
+  border-color: #e2b96f;
+  background: #1a150a;
+  color: #e2b96f;
+  font-weight: bold;
+}
