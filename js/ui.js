@@ -136,10 +136,10 @@ function equipStatBonus(char, stat) {
   return sumEquipStat(char, 'bonus' + stat); // bonusSTR, bonusDEX, bonusINT, bonusLUK
 }
 
-// "10(+7)" 형식 스탯 문자열
+// "17(10+7)" 형식 스탯 문자열
 function statValHtml(base, bonus) {
   if (bonus <= 0) return `${base}`;
-  return `${base}<span class="stat-equip-bonus">(+${bonus})</span>`;
+  return `${base + bonus}<span class="stat-equip-bonus">(${base}+${bonus})</span>`;
 }
 
 function renderStatsTab() {
