@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Party Commander</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- 상단 HUD -->
+    <div id="hud">
+      <span id="hud-gold">골드: 0</span>
+      <span id="hud-gems">젬: 0</span>
+      <span id="hud-stage">스테이지: 1</span>
+      <span id="hud-progress">진행: 0 / 20</span>
+    </div>
+
+    <div id="main-area">
+      <!-- 좌측: 전투 필드 Canvas -->
+      <canvas id="field-canvas" width="640" height="480"></canvas>
+
+      <!-- 우측: UI 패널 -->
+      <div id="ui-panel">
+        <div id="tab-bar">
+          <button class="tab-btn active" data-tab="characters">캐릭터</button>
+          <button class="tab-btn" data-tab="stats">스탯</button>
+          <button class="tab-btn" data-tab="equipment">장비</button>
+          <button class="tab-btn" data-tab="skills">스킬</button>
+          <button class="tab-btn" data-tab="pets">펫</button>
+          <button class="tab-btn" data-tab="stage">스테이지</button>
+        </div>
+        <div id="tab-content">
+          <div id="tab-characters" class="tab-pane active">
+            <p id="no-char-msg">캐릭터가 없습니다.</p>
+          </div>
+          <div id="tab-stats" class="tab-pane"></div>
+          <div id="tab-equipment" class="tab-pane"></div>
+          <div id="tab-skills" class="tab-pane"></div>
+          <div id="tab-pets" class="tab-pane"></div>
+          <div id="tab-stage" class="tab-pane"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/stats.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/loot.js"></script>
+  <script src="js/upgrade.js"></script>
+  <script src="js/combat.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

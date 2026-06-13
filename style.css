@@ -1,0 +1,150 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #1a1a2e;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 14px;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* 상단 HUD */
+#hud {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  padding: 8px 16px;
+  background: #16213e;
+  border-bottom: 1px solid #0f3460;
+  flex-shrink: 0;
+}
+
+#hud span {
+  font-weight: bold;
+  color: #e2b96f;
+}
+
+/* 메인 영역: canvas + 우측 패널 */
+#main-area {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 전투 필드 Canvas */
+#field-canvas {
+  background: #0d1b2a;
+  border-right: 2px solid #0f3460;
+  flex-shrink: 0;
+}
+
+/* 우측 UI 패널 */
+#ui-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #16213e;
+  overflow: hidden;
+}
+
+#tab-bar {
+  display: flex;
+  background: #0f3460;
+  flex-shrink: 0;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 8px 4px;
+  background: transparent;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 13px;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s;
+}
+
+.tab-btn:hover {
+  color: #e0e0e0;
+}
+
+.tab-btn.active {
+  color: #e2b96f;
+  border-bottom-color: #e2b96f;
+}
+
+#tab-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.tab-pane {
+  display: none;
+}
+
+.tab-pane.active {
+  display: block;
+}
+
+/* 공통 버튼 */
+.btn {
+  padding: 6px 14px;
+  border: 1px solid #0f3460;
+  border-radius: 4px;
+  background: #0f3460;
+  color: #e0e0e0;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s;
+}
+
+.btn:hover:not(:disabled) {
+  background: #1a4a8a;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 캐릭터 카드 */
+.char-card {
+  background: #0d1b2a;
+  border: 1px solid #0f3460;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.char-card h3 {
+  color: #e2b96f;
+  margin-bottom: 6px;
+}
+
+/* exp 바 */
+.exp-bar-wrap {
+  background: #111;
+  border-radius: 4px;
+  height: 8px;
+  overflow: hidden;
+  margin: 4px 0;
+}
+
+.exp-bar-fill {
+  height: 100%;
+  background: #4caf50;
+  transition: width 0.2s;
+}

@@ -1,0 +1,21 @@
+# 운영체제
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 에디터
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# 로그
+*.log
+
+# 환경 설정 (민감 정보)
+.env
+.env.local
+
+# 빌드 산출물 (현재 없음, 향후 번들러 도입 시)
+dist/
+build/
