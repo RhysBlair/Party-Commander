@@ -269,6 +269,17 @@ function updateCharacter(char, dt, stage, field) {
 
   // 자연 HP 회복 (초당 1%)
   char.currentHp = Math.min(stats.maxHp, char.currentHp + stats.maxHp * 0.01 * dt);
+
+  // 따닥 2번째 타격 타이머 (도적 계열 표창 공격)
+  if ((char.quickHitTimer || 0) > 0) {
+    char.quickHitTimer -= dt;
+    if (char.quickHitTimer <= 0) {
+      char.quickHitTimer = 0;
+      const t2 = findNearestMonster(char, field);
+      if (t2) dealDamage(char, t2, stats, stage, field, 0.5);
+    }
+  }
+
   const range  = RANGE_PIXELS[CLASSES[char.classId].range];
   const target = findNearestMonster(char, field);
   if (!target) return;
@@ -291,7 +302,15 @@ function updateCharacter(char, dt, stage, field) {
     char.attackTimer -= dt;
     if (char.attackTimer <= 0) {
       char.attackTimer = atkInterval;
-      dealDamage(char, target, stats, stage, field);
+      const baseClass   = CLASSES[char.classId]?.parent || char.classId;
+      const rogueThrow  = (char.classId === 'rogue' || baseClass === 'rogue') && !!char.equipment?.throwable;
+      if (rogueThrow) {
+        // 따닥: 0.5x 타격 → 0.065초 후 0.5x 2번째 타격
+        dealDamage(char, target, stats, stage, field, 0.5);
+        char.quickHitTimer = 0.065;
+      } else {
+        dealDamage(char, target, stats, stage, field);
+      }
     }
   }
 
@@ -366,18 +385,25 @@ function dealSkillDamage(char, monster, dmg, stage, field, stats) {
   const dmgType   = CLASSES[char.classId]?.damageType || 'physical';
   const mDef      = dmgType === 'magical' ? stage.monster.magicDef : stage.monster.physDef;
   const actualDmg = Math.max(1, Math.floor(dmg * critMult) - mDef);
-  let total = actualDmg;
-
-  if (char.shadowActive) total += Math.max(1, Math.floor(actualDmg * 0.5));
 
   const col  = isCrit ? '#f1c40f' : '#5b9bd5';
   const size = isCrit ? 17 : 13;
   spawnFloatingText(char.assignedStage, monster.x, monster.y - 24,
-                    isCrit ? `${total}!` : `${total}`, col, size);
-
-  monster.currentHp -= total;
+                    isCrit ? `${actualDmg}!` : `${actualDmg}`, col, size);
+  monster.currentHp -= actualDmg;
   monster.hitAnim    = isCrit ? 0.25 : 0.2;
   char.attackAnim    = 0.25;
+
+  // 쉐도우파트너: 스킬도 별도 실행
+  if (char.shadowActive) {
+    const shadowDmg = Math.max(1, Math.floor(actualDmg * 0.5));
+    spawnFloatingText(char.assignedStage,
+                      char.shadowX ?? (char.x - char.facing * 28),
+                      (char.shadowY ?? char.y) - 30,
+                      `${shadowDmg}`, '#9b59b6', 12);
+    monster.currentHp -= shadowDmg;
+  }
+
   if (monster.currentHp <= 0) killMonster(char, monster, stage, field);
 }
 
@@ -392,7 +418,8 @@ function findNearestMonster(char, field) {
   return nearest;
 }
 
-function dealDamage(char, monster, stats, stage, field) {
+// dmgMult: 도적 따닥 분할 타격 시 0.5 전달 (기본값 1.0)
+function dealDamage(char, monster, stats, stage, field, dmgMult = 1.0) {
   if (Math.random() * 100 >= stats.accuracy) return;
 
   const hasOrb = char.skills && char.skills.includes('orb_strike');
@@ -401,7 +428,7 @@ function dealDamage(char, monster, stats, stage, field) {
   const dmgType = CLASSES[char.classId]?.damageType || 'physical';
   const mDef    = dmgType === 'magical' ? stage.monster.magicDef : stage.monster.physDef;
 
-  if (hasOrb && char.orbReady) {
+  if (hasOrb && char.orbReady && dmgMult >= 1.0) {
     const skill = SKILLS['orb_strike'];
     const mult  = skill ? skill.dmgMultiplier : 20;
     baseDmg      = Math.max(1, Math.floor(stats.atk * mult) - mDef);
@@ -411,16 +438,13 @@ function dealDamage(char, monster, stats, stage, field) {
     orbExplosion    = true;
   } else {
     const atkMult = getSkillAtkMult(char);
-    baseDmg = Math.max(1, Math.floor(stats.atk * atkMult) - mDef);
+    const rawDmg  = Math.max(1, Math.floor(stats.atk * atkMult) - mDef);
+    baseDmg       = Math.max(1, Math.floor(rawDmg * dmgMult));
     if (hasOrb) {
       char.orbCount = (char.orbCount || 0) + 1;
       const required = SKILLS['orb_strike']?.orbsRequired ?? 5;
-      if (char.orbCount >= required) {
-        char.orbReady = true;
-        char.orbCount = 0;
-      }
+      if (char.orbCount >= required) { char.orbReady = true; char.orbCount = 0; }
     }
-    // 크리티컬 체크 (오브 폭발 제외)
     if (Math.random() * 100 < stats.critRate) {
       isCrit  = true;
       baseDmg = Math.floor(baseDmg * stats.critDmg);
@@ -428,17 +452,24 @@ function dealDamage(char, monster, stats, stage, field) {
     char.attackAnim = atkMult > 1 ? 0.1 : 0.2;
   }
 
-  let total = baseDmg;
-  if (char.shadowActive) total += Math.max(1, Math.floor(baseDmg * 0.5));
-
-  // 플로팅 데미지 텍스트
+  // 캐릭터 타격 텍스트
   const col  = orbExplosion ? '#ff6622' : isCrit ? '#f1c40f' : '#e0e0e0';
   const size = orbExplosion ? 22        : isCrit ? 19        : 13;
   spawnFloatingText(char.assignedStage, monster.x, monster.y - 24,
-                    (orbExplosion || isCrit) ? `${total}!` : `${total}`, col, size);
-
-  monster.currentHp -= total;
+                    (orbExplosion || isCrit) ? `${baseDmg}!` : `${baseDmg}`, col, size);
+  monster.currentHp -= baseDmg;
   monster.hitAnim    = orbExplosion ? 0.4 : isCrit ? 0.25 : 0.15;
+
+  // 쉐도우파트너: 분신이 동일 타격을 별도 실행 (데미지 50%, 보라색 텍스트)
+  if (char.shadowActive) {
+    const shadowDmg = Math.max(1, Math.floor(baseDmg * 0.5));
+    spawnFloatingText(char.assignedStage,
+                      char.shadowX ?? (char.x - char.facing * 28),
+                      (char.shadowY ?? char.y) - 30,
+                      `${shadowDmg}`, '#9b59b6', 12);
+    monster.currentHp -= shadowDmg;
+  }
+
   if (monster.currentHp <= 0) killMonster(char, monster, stage, field);
 }
 
@@ -463,9 +494,19 @@ function killMonster(char, monster, stage, field) {
 
   const goldMult = 1 + (gameState.upgrades?.gold_boost || 0) * 0.10;
   gameState.gold += Math.floor(stage.monster.goldDrop * goldMult);
-  field.kills++;
 
-  // 같은 스테이지 파티원 전원에게 경험치 분배
+  // 처치수: 다음 스테이지가 아직 해금되지 않은 경우에만 카운트 + 자동 진행
+  const nextIdx        = char.assignedStage + 1;
+  const alreadyUnlocked = nextIdx < STAGES.length && nextIdx <= gameState.maxStageReached;
+  if (!alreadyUnlocked) {
+    field.kills++;
+    if (field.kills >= stage.killsToAdvance) {
+      advanceStageField(char.assignedStage);
+      markTabDirty();
+    }
+  }
+
+  // 경험치 분배 (항상)
   const expMult  = 1 + (gameState.upgrades?.exp_boost || 0) * 0.10;
   const allies   = gameState.characters.filter(c => c.assignedStage === char.assignedStage);
   const killerI  = allies.indexOf(char);
@@ -473,11 +514,6 @@ function killMonster(char, monster, stage, field) {
   allies.forEach((c, i) => { c.exp += expArr[i]; checkLevelUp(c); });
 
   generateDrop(char.assignedStage, monster.x, monster.y);
-
-  if (field.kills >= stage.killsToAdvance) {
-    advanceStageField(char.assignedStage);
-    markTabDirty();
-  }
 }
 
 // ── 오프라인 진행 계산 ─────────────────────────────────────

@@ -53,13 +53,6 @@ function tryAdvanceJob2(charId, classId) {
   if (char.level < JOB_ADVANCE_LEVEL_2) return;
 
   char.classId = classId;
-
-  // 2차 전직 시 스탯 초기화 + 포인트 전액 환급
-  const totalEarned = (char.level - 1) * STAT_POINTS_PER_LEVEL;
-  char.stats = { STR: 5, DEX: 5, INT: 5, LUK: 5 };
-  char.unspentPoints = totalEarned;
-
-  if (char.autoAssign) autoAssignStats(char);
 }
 
 // 장비 장착 요건 체크 (itemOrId = string id 또는 { id, uid, enhance } 객체)
