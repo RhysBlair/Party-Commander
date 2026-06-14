@@ -105,12 +105,61 @@ const PETS = {
 const DROP_EXPIRE_SECONDS = 30;
 
 // 스테이지 / 몬스터 정의
+// attackType: "melee" | "ranged"  /  moveSpeed: 픽셀/초  /  attackRange: 공격 판정(px)
+// aggroRange: 어그로 범위(px)     /  projSpeed: 투사체 속도  /  projColor: 투사체 색
 const STAGES = [
-  { name: "초원",   monster: { name: "슬라임",    hp: 50,  atk: 4,  def: 1, goldDrop: 10, expDrop: 8  }, spawnCount: 4, killsToAdvance: 20 },
-  { name: "숲",     monster: { name: "고블린",    hp: 120, atk: 8,  def: 2, goldDrop: 22, expDrop: 18 }, spawnCount: 4, killsToAdvance: 30 },
-  { name: "동굴",   monster: { name: "오크",      hp: 280, atk: 15, def: 5, goldDrop: 50, expDrop: 40 }, spawnCount: 5, killsToAdvance: 40 },
-  { name: "사막",   monster: { name: "모래 골렘", hp: 600, atk: 25, def: 10, goldDrop: 110, expDrop: 90 }, spawnCount: 5, killsToAdvance: 50 },
-  { name: "화산",   monster: { name: "불꽃 도마뱀", hp: 1200, atk: 40, def: 18, goldDrop: 240, expDrop: 200 }, spawnCount: 6, killsToAdvance: 60 },
+  { name: "초원",
+    monster: { name: "슬라임",       hp: 50,    atk: 4,   def: 1,  goldDrop: 10,   expDrop: 8,
+               moveSpeed: 35,  attackRange: 55,  aggroRange: 300, attackType: "melee" },
+    spawnCount: 4, killsToAdvance: 20 },
+
+  { name: "숲",
+    monster: { name: "고블린",       hp: 120,   atk: 8,   def: 2,  goldDrop: 22,   expDrop: 18,
+               moveSpeed: 60,  attackRange: 55,  aggroRange: 360, attackType: "melee" },
+    spawnCount: 4, killsToAdvance: 30 },
+
+  { name: "동굴",
+    monster: { name: "오크",         hp: 280,   atk: 15,  def: 5,  goldDrop: 50,   expDrop: 40,
+               moveSpeed: 35,  attackRange: 60,  aggroRange: 320, attackType: "melee" },
+    spawnCount: 5, killsToAdvance: 40 },
+
+  { name: "사막",
+    monster: { name: "모래 골렘",    hp: 600,   atk: 25,  def: 10, goldDrop: 110,  expDrop: 90,
+               moveSpeed: 22,  attackRange: 65,  aggroRange: 300, attackType: "melee" },
+    spawnCount: 5, killsToAdvance: 50 },
+
+  { name: "화산",
+    monster: { name: "불꽃 도마뱀",  hp: 1200,  atk: 40,  def: 18, goldDrop: 240,  expDrop: 200,
+               moveSpeed: 50,  attackRange: 60,  aggroRange: 380, attackType: "melee" },
+    spawnCount: 6, killsToAdvance: 60 },
+
+  { name: "심층 던전",
+    monster: { name: "어둠의 기사",  hp: 3000,  atk: 60,  def: 25, goldDrop: 500,  expDrop: 440,
+               moveSpeed: 55,  attackRange: 65,  aggroRange: 420, attackType: "melee" },
+    spawnCount: 5, killsToAdvance: 70 },
+
+  { name: "마법사 탑",
+    monster: { name: "화염 마법사",  hp: 2500,  atk: 80,  def: 10, goldDrop: 720,  expDrop: 640,
+               moveSpeed: 40,  attackRange: 270, aggroRange: 460, attackType: "ranged",
+               projSpeed: 220, projColor: "#ff6622" },
+    spawnCount: 4, killsToAdvance: 60 },
+
+  { name: "고대 유적",
+    monster: { name: "고대 골렘",    hp: 7000,  atk: 95,  def: 42, goldDrop: 1200, expDrop: 1050,
+               moveSpeed: 18,  attackRange: 70,  aggroRange: 340, attackType: "melee" },
+    spawnCount: 3, killsToAdvance: 50 },
+
+  { name: "어비스",
+    monster: { name: "어비스 궁수",  hp: 4500,  atk: 120, def: 22, goldDrop: 1700, expDrop: 1500,
+               moveSpeed: 65,  attackRange: 320, aggroRange: 520, attackType: "ranged",
+               projSpeed: 280, projColor: "#9b59b6" },
+    spawnCount: 4, killsToAdvance: 65 },
+
+  { name: "신성 신전",
+    monster: { name: "천상의 파수꾼", hp: 12000, atk: 150, def: 55, goldDrop: 3000, expDrop: 2600,
+               moveSpeed: 45,  attackRange: 340, aggroRange: 600, attackType: "ranged",
+               projSpeed: 320, projColor: "#f1c40f" },
+    spawnCount: 3, killsToAdvance: 70 },
 ];
 
 // 사거리 픽셀 값
@@ -146,6 +195,11 @@ const STAGE_BG = [
   { bg: '#1a1a1a', ground: '#2a2a2a' },  // 동굴
   { bg: '#2a1e0a', ground: '#3a2e1a' },  // 사막
   { bg: '#1a0808', ground: '#2a1010' },  // 화산
+  { bg: '#0c0818', ground: '#1a1028' },  // 심층 던전
+  { bg: '#180606', ground: '#2c0e0e' },  // 마법사 탑
+  { bg: '#061414', ground: '#0e2424' },  // 고대 유적
+  { bg: '#04040e', ground: '#08081c' },  // 어비스
+  { bg: '#141208', ground: '#26220c' },  // 신성 신전
 ];
 
 // 직업별 Canvas 색상

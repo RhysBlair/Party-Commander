@@ -23,23 +23,50 @@ function updateCombat(dt) {
     updateCharacter(char, dt, STAGES[char.assignedStage], field);
   }
 
-  // 몬스터 리스폰 + 캐릭터 공격
+  // 몬스터 이동 + 공격 + 리스폰
   for (let i = 0; i < gameState.stageFields.length; i++) {
-    const field = gameState.stageFields[i];
+    const field     = gameState.stageFields[i];
     if (!field) continue;
+    const stageData = STAGES[i];
+    const aliveChars = gameState.characters.filter(c => c.assignedStage === i && !c.isDead);
+
     for (const m of field.monsters) {
       m.hitAnim = Math.max(0, m.hitAnim - dt);
-      if (!m.alive && m.respawnTimer > 0) {
-        m.respawnTimer -= dt;
-        if (m.respawnTimer <= 0) {
-          m.alive       = true;
-          m.currentHp   = m.maxHp;
-          m.respawnTimer = 0;
-          m.attackTimer  = MONSTER_ATTACK_INTERVAL;
+
+      if (!m.alive) {
+        if (m.respawnTimer > 0) {
+          m.respawnTimer -= dt;
+          if (m.respawnTimer <= 0) {
+            m.alive       = true;
+            m.currentHp   = m.maxHp;
+            m.respawnTimer = 0;
+            m.attackTimer  = MONSTER_ATTACK_INTERVAL;
+            m.x = m.spawnX;
+            m.y = m.spawnY;
+          }
+        }
+        continue;
+      }
+
+      updateMonsterMovement(m, dt, stageData, aliveChars);
+
+      // 몬스터 공격 타이머
+      m.attackTimer -= dt;
+      if (m.attackTimer <= 0 && aliveChars.length > 0) {
+        // 가장 가까운 캐릭터
+        let target = null, minD2 = Infinity;
+        for (const c of aliveChars) {
+          const dx = c.x - m.x, dy = c.y - m.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < minD2) { minD2 = d2; target = c; }
+        }
+        // aggroRange 체크
+        if (target && minD2 <= (stageData.monster.aggroRange || 400) ** 2) {
+          m.attackTimer = MONSTER_ATTACK_INTERVAL;
+          executeMonsterAttack(m, target, stageData, i);
         }
       }
     }
-    monsterAttackChars(dt, field, i);
   }
 }
 
@@ -133,27 +160,100 @@ function takeDamage(char, dmg, stageIdx) {
   spawnFloatingText(stageIdx, char.x, char.y - 30, `-${dmg}`, '#e74c3c', 13);
 }
 
-function monsterAttackChars(dt, field, stageIdx) {
-  const alive = gameState.characters.filter(c => c.assignedStage === stageIdx && !c.isDead);
-  if (alive.length === 0) return;
+// ── 몬스터 이동 ───────────────────────────────────────────
+function updateMonsterMovement(m, dt, stageData, aliveChars) {
+  const md  = stageData.monster;
+  const spd = md.moveSpeed || 0;
+  if (!spd) return;
 
-  for (const m of field.monsters) {
-    if (!m.alive) continue;
-    m.attackTimer -= dt;
-    if (m.attackTimer > 0) continue;
-    m.attackTimer = MONSTER_ATTACK_INTERVAL;
+  // 생존 캐릭터 없으면 스폰으로 귀환
+  if (aliveChars.length === 0) {
+    returnToSpawn(m, dt, spd);
+    return;
+  }
 
-    // 가장 가까운 캐릭터 선택
-    let target = null, minD = Infinity;
-    for (const c of alive) {
-      const dx = c.x - m.x, dy = c.y - m.y;
-      const d = dx * dx + dy * dy;
-      if (d < minD) { minD = d; target = c; }
+  let nearest = null, minD2 = Infinity;
+  for (const c of aliveChars) {
+    const dx = c.x - m.x, dy = c.y - m.y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 < minD2) { minD2 = d2; nearest = c; }
+  }
+
+  const dist       = Math.sqrt(minD2);
+  const aggroRange = md.aggroRange || 400;
+
+  if (dist > aggroRange) {
+    returnToSpawn(m, dt, spd);
+    return;
+  }
+
+  const stopDist = md.attackRange || 60;
+  if (dist > stopDist) {
+    const dx = nearest.x - m.x, dy = nearest.y - m.y;
+    m.x += (dx / dist) * spd * dt;
+    m.y += (dy / dist) * spd * dt;
+    // 캔버스 경계 클램프
+    m.x = Math.max(48, Math.min(628, m.x));
+    m.y = Math.max(48, Math.min(448, m.y));
+  }
+}
+
+function returnToSpawn(m, dt, spd) {
+  const dx = m.spawnX - m.x, dy = m.spawnY - m.y;
+  const d  = Math.sqrt(dx * dx + dy * dy);
+  if (d < 4) return;
+  m.x += (dx / d) * spd * dt;
+  m.y += (dy / d) * spd * dt;
+}
+
+// ── 투사체 ───────────────────────────────────────────────
+function spawnProjectile(stageIdx, x, y, targetChar, dmg, speed, color) {
+  const dx   = targetChar.x - x;
+  const dy   = targetChar.y - y;
+  const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+  gameState.projectiles.push({
+    stageIdx, x, y,
+    vx: (dx / dist) * speed,
+    vy: (dy / dist) * speed,
+    dmg, color,
+    timer: 3.5,
+  });
+}
+
+function updateProjectiles(dt) {
+  for (let i = gameState.projectiles.length - 1; i >= 0; i--) {
+    const p = gameState.projectiles[i];
+    p.x     += p.vx * dt;
+    p.y     += p.vy * dt;
+    p.timer -= dt;
+    if (p.timer <= 0) { gameState.projectiles.splice(i, 1); continue; }
+
+    for (const char of gameState.characters) {
+      if (char.assignedStage !== p.stageIdx || char.isDead) continue;
+      const dx = char.x - p.x, dy = char.y - p.y;
+      if (dx * dx + dy * dy < 22 * 22) {
+        takeDamage(char, p.dmg, p.stageIdx);
+        gameState.projectiles.splice(i, 1);
+        break;
+      }
     }
-    if (!target) continue;
+  }
+}
 
-    const stats = calcFinalStats(target);
-    const dmg   = Math.max(1, STAGES[stageIdx].monster.atk - stats.physDef);
+// ── 몬스터 공격 실행 ─────────────────────────────────────
+function executeMonsterAttack(m, target, stageData, stageIdx) {
+  const md   = stageData.monster;
+  const dist = Math.sqrt((target.x - m.x) ** 2 + (target.y - m.y) ** 2);
+
+  // 근접: 공격 범위 내 있어야 함
+  if (md.attackType !== 'ranged' && dist > (md.attackRange || 60)) return;
+
+  const stats = calcFinalStats(target);
+  const dmg   = Math.max(1, md.atk - stats.physDef);
+
+  if (md.attackType === 'ranged') {
+    spawnProjectile(stageIdx, m.x, m.y, target, dmg, md.projSpeed || 200, md.projColor || '#ff6622');
+  } else {
     takeDamage(target, dmg, stageIdx);
   }
 }

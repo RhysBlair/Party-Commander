@@ -25,6 +25,7 @@ function loop(now) {
   updateCombat(dt);
   updateLoot(dt);
   updateFloatingTexts(dt);
+  updateProjectiles(dt);
 
   // 자동 저장
   saveAccum += dt;

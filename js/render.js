@@ -33,6 +33,7 @@ function render() {
   }
 
   drawPets(viewIdx);
+  drawProjectiles(viewIdx);
   drawFloatingTexts(viewIdx);
 
   drawStageLabel(W, viewIdx, field);
@@ -52,9 +53,28 @@ function drawBackground(W, H, stageIdx) {
   ctx.stroke();
 }
 
+function drawProjectiles(viewIdx) {
+  for (const p of gameState.projectiles) {
+    if (p.stageIdx !== viewIdx) continue;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur  = 14;
+    ctx.fillStyle   = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+    // 발광 코어
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+}
+
 function drawMonster(m, stageIdx) {
   const R        = 24;
   const stageDef = STAGES[stageIdx];
+  const isRanged = stageDef.monster.attackType === 'ranged';
 
   if (!m.alive) {
     ctx.globalAlpha = 0.3;
@@ -80,13 +100,25 @@ function drawMonster(m, stageIdx) {
     ctx.globalAlpha = 1;
   }
 
-  ctx.fillStyle = '#c0392b';
-  ctx.strokeStyle = '#e74c3c';
+  // 원거리 몬스터: 파란 계열 / 근접: 빨간 계열
+  ctx.fillStyle   = isRanged ? '#1a3a8a' : '#c0392b';
+  ctx.strokeStyle = isRanged ? '#5b9bd5' : '#e74c3c';
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.arc(m.x, m.y, R, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
+
+  // 원거리 표시: 작은 외곽 링
+  if (isRanged) {
+    ctx.globalAlpha = 0.35;
+    ctx.strokeStyle = '#5b9bd5';
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, R + 8, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
 
   ctx.fillStyle = '#fff';
   ctx.beginPath();
