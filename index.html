@@ -46,6 +46,26 @@
     </div>
   </div>
 
+  <!-- 오프라인 보상 모달 -->
+  <div id="offline-modal">
+    <div id="offline-modal-box">
+      <div id="offline-modal-title">⏰ 오프라인 보상</div>
+      <div id="offline-modal-body">
+        <div class="offline-row">
+          <span class="offline-label">오프라인 시간</span>
+          <span id="offline-time"></span>
+        </div>
+        <div class="offline-row">
+          <span class="offline-label">획득 골드</span>
+          <span id="offline-gold" style="color:#e2b96f"></span>
+        </div>
+        <div class="offline-label" style="margin-top:10px;margin-bottom:4px">경험치 획득</div>
+        <div id="offline-exp-list"></div>
+      </div>
+      <button id="offline-confirm" onclick="closeOfflineModal();">확인</button>
+    </div>
+  </div>
+
   <script src="js/data.js"></script>
   <script src="js/stats.js"></script>
   <script src="js/state.js"></script>

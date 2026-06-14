@@ -268,6 +268,78 @@ function killMonster(char, monster, stage, field) {
   }
 }
 
+// ── 오프라인 진행 계산 ─────────────────────────────────────
+function calcOfflineRewards(elapsedSec) {
+  const MAX_OFFLINE = 8 * 3600; // 최대 8시간 캡
+  const t = Math.min(elapsedSec, MAX_OFFLINE);
+  if (t < 30) return null;
+
+  let totalGold = 0;
+  const expGains = {}; // { charId: exp }
+
+  const stageGroups = {};
+  for (const char of gameState.characters) {
+    const s = char.assignedStage;
+    if (!stageGroups[s]) stageGroups[s] = [];
+    stageGroups[s].push(char);
+  }
+
+  for (const [stageIdxStr, chars] of Object.entries(stageGroups)) {
+    const stageIdx = parseInt(stageIdxStr);
+    const stage = STAGES[stageIdx];
+    if (!stage) continue;
+
+    const m = stage.monster;
+    const goldMult = 1 + (gameState.upgrades?.gold_boost || 0) * 0.10;
+    const expMult  = 1 + (gameState.upgrades?.exp_boost  || 0) * 0.10;
+
+    let partyDps = 0;
+    for (const char of chars) {
+      const stats = calcFinalStats(char);
+      const atkInterval = getAttackInterval(char);
+      const atkMult = getSkillAtkMult(char);
+      const dmg = Math.max(1, Math.floor(stats.atk * atkMult) - m.def);
+      partyDps += dmg / atkInterval;
+    }
+    if (partyDps <= 0) continue;
+
+    const timeToKill = m.hp / partyDps;
+    const cycleTime  = timeToKill + MONSTER_RESPAWN_TIME;
+    const totalKills = Math.floor((t / cycleTime) * stage.spawnCount);
+    if (totalKills <= 0) continue;
+
+    totalGold += Math.floor(m.goldDrop * goldMult * totalKills);
+
+    const levelSum = chars.reduce((a, c) => a + c.level, 0);
+    const baseExpTotal = Math.floor(m.expDrop * expMult * totalKills);
+    for (const char of chars) {
+      const share = levelSum > 0 ? Math.floor(baseExpTotal * (char.level / levelSum)) : 0;
+      expGains[char.id] = (expGains[char.id] || 0) + share;
+    }
+  }
+
+  return { totalGold, expGains, seconds: t };
+}
+
+function applyOfflineProgress() {
+  // gameState.lastTick = 마지막 저장 시각
+  const elapsedSec = Math.floor((Date.now() - gameState.lastTick) / 1000);
+  if (elapsedSec < 30) return null;
+
+  const rewards = calcOfflineRewards(elapsedSec);
+  if (!rewards) return null;
+
+  gameState.gold += rewards.totalGold;
+  for (const char of gameState.characters) {
+    const gained = rewards.expGains[char.id] || 0;
+    if (gained > 0) {
+      char.exp += gained;
+      checkLevelUp(char);
+    }
+  }
+  return rewards;
+}
+
 function checkLevelUp(char) {
   const prevLevel = char.level;
   let needed = expRequired(char.level);

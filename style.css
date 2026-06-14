@@ -790,6 +790,81 @@ body {
   font-weight: bold;
 }
 
+/* 오프라인 보상 모달 */
+#offline-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+
+#offline-modal.active {
+  display: flex;
+}
+
+#offline-modal-box {
+  background: #1a2435;
+  border: 1px solid #e2b96f66;
+  border-radius: 8px;
+  padding: 24px 28px;
+  min-width: 280px;
+  max-width: 380px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+#offline-modal-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #e2b96f;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+#offline-modal-body {
+  margin-bottom: 16px;
+}
+
+.offline-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.offline-label {
+  font-size: 11px;
+  color: #888;
+}
+
+.offline-exp-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 3px 0;
+  color: #aaa;
+}
+
+#offline-confirm {
+  width: 100%;
+  padding: 8px;
+  background: #e2b96f22;
+  border: 1px solid #e2b96f88;
+  border-radius: 4px;
+  color: #e2b96f;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: background 0.15s;
+}
+
+#offline-confirm:hover {
+  background: #e2b96f44;
+}
+
 /* 강화 버튼 */
 .enhance-btn {
   border-color: #7a5020;

@@ -722,6 +722,35 @@ function renderUpgradeTab() {
     <div class="upgrade-list">${rows}</div>`;
 }
 
+// ── 오프라인 보상 모달 ──────────────────────────────────────
+function showOfflineModal(result) {
+  const el = document.getElementById('offline-modal');
+  if (!el) return;
+
+  const h = Math.floor(result.seconds / 3600);
+  const m = Math.floor((result.seconds % 3600) / 60);
+  const timeStr = h > 0 ? `${h}시간 ${m}분` : `${m}분`;
+
+  const expLines = gameState.characters.map(char => {
+    const gained = result.expGains[char.id] || 0;
+    if (!gained) return '';
+    return `<div class="offline-exp-line">
+      <span style="color:${CLASS_COLORS[char.classId] || '#aaa'}">${charClassName(char.classId)} Lv.${char.level}</span>
+      <span>+${gained.toLocaleString()} EXP</span>
+    </div>`;
+  }).filter(Boolean).join('');
+
+  document.getElementById('offline-time').textContent = timeStr;
+  document.getElementById('offline-gold').textContent = result.totalGold.toLocaleString() + 'G';
+  document.getElementById('offline-exp-list').innerHTML = expLines || '<div style="color:#555;font-size:12px">없음</div>';
+  el.classList.add('active');
+}
+
+function closeOfflineModal() {
+  const el = document.getElementById('offline-modal');
+  if (el) el.classList.remove('active');
+}
+
 // ── 공통 헬퍼 ──────────────────────────────────────────────
 function charClassName(classId) {
   const names = {
