@@ -105,6 +105,9 @@ const SKILLS = {
                     targeting: "passive", orbsRequired: 5, dmgMultiplier: 20.0, cost: 500 },
 
   // ── 2차 전사 ──────────────────────────────────────────────
+  threat:         { name: "위협",            classId: "page",     cooldown: 15.0,
+                    targeting: "debuff_area", debuffRange: 250, debuffDmgMult: 1.5,
+                    debuffDuration: 8.0, cost: 500 },
   spear_aura:     { name: "성스러운 오라",   classId: "spearman", cooldown: 90.0,
                     targeting: "party_buff",
                     buffHp: 2.0, buffCdMult: 2.0, buffDuration: 60.0, cost: 500 },

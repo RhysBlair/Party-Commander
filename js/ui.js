@@ -481,6 +481,7 @@ const SKILL_TARGET_DESC = {
   heal:         '범위 회복',
   aoe_freeze:   '광역 빙결',
   party_buff:   '파티 버프',
+  debuff_area:  '범위 디버프',
 };
 
 function renderSkillTab() {
@@ -559,6 +560,8 @@ function renderSkillTab() {
             : s.hits
               ? `표창 ${s.hits}연속 타격 &nbsp;·&nbsp; 쿨다운 없음 &nbsp;·&nbsp; 쉐도우파트너 적용`
               : '패시브 활성'
+        : s.targeting === 'debuff_area'
+          ? `${SKILL_TARGET_DESC.debuff_area} &nbsp;·&nbsp; 쿨다운 ${s.cooldown}s &nbsp;·&nbsp; 범위: ${s.debuffRange}px &nbsp;·&nbsp; 받는 피해 ×${s.debuffDmgMult} &nbsp;·&nbsp; 지속 ${s.debuffDuration}s`
         : s.targeting === 'party_buff'
           ? (() => {
               const parts = [`${SKILL_TARGET_DESC.party_buff} &nbsp;·&nbsp; 쿨다운 ${s.cooldown}s &nbsp;·&nbsp; 지속 ${s.buffDuration}s`];

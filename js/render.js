@@ -131,6 +131,28 @@ function drawMonster(m, stageIdx) {
   ctx.arc(m.x + 9, m.y - 6, 3, 0, Math.PI * 2);
   ctx.fill();
 
+  // 위협 디버프 오버레이 (받는 피해 +50%)
+  if ((m.debuffTimer || 0) > 0) {
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle   = '#e67e22';
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, R + 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = '#f39c12';
+    ctx.lineWidth   = 2;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, R + 5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#f39c12';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`⚠ ${(m.debuffTimer || 0).toFixed(1)}s`, m.x, m.y + R + 26);
+    ctx.textAlign = 'left';
+  }
+
   // 빙결 오버레이
   if (m.frozen) {
     ctx.globalAlpha = 0.45;

@@ -32,6 +32,10 @@ function updateCombat(dt) {
 
     for (const m of field.monsters) {
       m.hitAnim = Math.max(0, m.hitAnim - dt);
+      if ((m.debuffTimer || 0) > 0) {
+        m.debuffTimer -= dt;
+        if (m.debuffTimer <= 0) { m.debuffTimer = 0; m.debuffDmgMult = 1; }
+      }
 
       if (!m.alive) {
         if (m.respawnTimer > 0) {
@@ -393,6 +397,23 @@ function useSkills(char, dt, stats, stage, field) {
 }
 
 function executeSkill(char, skill, stats, stage, field) {
+  // ── 몬스터 디버프 — 받는 피해 증가 (페이지 위협) ───────────
+  if (skill.targeting === 'debuff_area') {
+    const maxR2   = (skill.debuffRange || 250) ** 2;
+    const targets = field.monsters.filter(m => {
+      if (!m.alive) return false;
+      const dx = m.x - char.x, dy = m.y - char.y;
+      return dx * dx + dy * dy <= maxR2;
+    });
+    if (!targets.length) return false;
+    for (const t of targets) {
+      t.debuffDmgMult = skill.debuffDmgMult || 1.5;
+      t.debuffTimer   = skill.debuffDuration || 8.0;
+      spawnFloatingText(char.assignedStage, t.x, t.y - 28, '피해 +50%', '#e67e22', 12);
+    }
+    return true;
+  }
+
   // ── 파티 버프 (스피어맨 오라, 나이트 분노) ─────────────────
   if (skill.targeting === 'party_buff') {
     const stageIdx = char.assignedStage;
@@ -496,7 +517,8 @@ function dealSkillDamage(char, monster, dmg, stage, field, stats) {
   const critMult  = isCrit ? (stats?.critDmg ?? 2) : 1;
   const dmgType   = CLASSES[char.classId]?.damageType || 'physical';
   const mDef      = dmgType === 'magical' ? stage.monster.magicDef : stage.monster.physDef;
-  const actualDmg = Math.max(1, Math.floor(dmg * critMult) - mDef);
+  const debuffMult = (monster.debuffTimer > 0) ? (monster.debuffDmgMult || 1) : 1;
+  const actualDmg = Math.max(1, Math.floor((Math.floor(dmg * critMult) - mDef) * debuffMult));
 
   const col  = isCrit ? '#f1c40f' : '#5b9bd5';
   const size = isCrit ? 17 : 13;
@@ -562,6 +584,10 @@ function dealDamage(char, monster, stats, stage, field, dmgMult = 1.0) {
     }
     char.attackAnim = atkMult > 1 ? 0.1 : 0.2;
   }
+
+  // 디버프(위협): 받는 피해 증가
+  const debuffMult = (monster.debuffTimer > 0) ? (monster.debuffDmgMult || 1) : 1;
+  baseDmg = Math.floor(baseDmg * debuffMult);
 
   // 캐릭터 타격 텍스트
   const col  = orbExplosion ? '#ff6622' : isCrit ? '#f1c40f' : '#e0e0e0';
