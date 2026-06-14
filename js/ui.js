@@ -65,6 +65,27 @@ const JOB_DEFS = [
   { id: 'rogue',   name: '도적',   color: '#95a5a6', desc: 'LUK · 단거리 · 회피 특화' },
 ];
 
+const JOB2_DEFS = {
+  warrior: [
+    { id: 'fighter',   name: '파이터',   color: '#c0392b', desc: 'STR/DEX · 근접 · 물리 화력 극대화' },
+    { id: 'page',      name: '페이지',   color: '#e74c3c', desc: 'STR/INT · 근접 · 균형형 기사' },
+    { id: 'spearman',  name: '스피어맨', color: '#d35400', desc: 'STR/DEX · 창 · 긴 근접 사거리' },
+  ],
+  mage: [
+    { id: 'wizard_tl', name: '썬콜',    color: '#1abc9c', desc: 'INT/DEX · 번개/빙결 · 공격속도 상승' },
+    { id: 'wizard_fp', name: '불독',    color: '#e67e22', desc: 'INT/LUK · 화염/독 · 크리티컬 특화' },
+    { id: 'cleric',    name: '클레릭',   color: '#f1c40f', desc: 'INT/STR · 신성 · HP 회복 강화' },
+  ],
+  rogue: [
+    { id: 'assassin',  name: '어쌔신',   color: '#2c3e50', desc: 'LUK/DEX · 원거리 표창 · 암살 특화' },
+    { id: 'thief',     name: '시프',    color: '#8e44ad', desc: 'LUK/STR · 근접 단검 · 근접 전투' },
+  ],
+  archer: [
+    { id: 'hunter',    name: '헌터',    color: '#27ae60', desc: 'DEX/STR · 활 · 표준 궁수' },
+    { id: 'marksman',  name: '사수',    color: '#229954', desc: 'DEX/LUK · 석궁 · 크리티컬 정밀사격' },
+  ],
+};
+
 function renderCharacterTab() {
   const el = document.getElementById('tab-characters');
   if (gameState.characters.length === 0) {
@@ -85,6 +106,21 @@ function renderCharacterTab() {
           ${JOB_DEFS.map(j => `
             <button class="job-btn" style="border-color:${j.color}"
                     onclick="tryAdvanceJob(${char.id}, '${j.id}'); renderCharacterTab();">
+              <span class="job-btn-name" style="color:${j.color}">${j.name}</span>
+              <span class="job-btn-desc">${j.desc}</span>
+            </button>`).join('')}
+        </div>
+      </div>` : '';
+
+    // 2차 전직: 1차 직업 보유 + Lv.30 이상
+    const avail2nd = JOB2_DEFS[char.classId] || [];
+    const job2Section = avail2nd.length > 0 && char.level >= JOB_ADVANCE_LEVEL_2 ? `
+      <div class="job-advance-box" style="border-color:#f39c12">
+        <div class="job-advance-title" style="color:#f39c12">✦ 2차 전직 가능! (Lv.30 달성)</div>
+        <div class="job-btn-grid">
+          ${avail2nd.map(j => `
+            <button class="job-btn" style="border-color:${j.color}"
+                    onclick="tryAdvanceJob2(${char.id}, '${j.id}'); renderCharacterTab();">
               <span class="job-btn-name" style="color:${j.color}">${j.name}</span>
               <span class="job-btn-desc">${j.desc}</span>
             </button>`).join('')}
@@ -120,6 +156,7 @@ function renderCharacterTab() {
           </div>
         </div>
         ${jobSection}
+        ${job2Section}
       </div>`;
   }).join('');
 
@@ -148,10 +185,10 @@ function renderCharacterTab() {
 
 // ── 스탯 탭 (전체 재빌드) ───────────────────────────────────
 const STAT_LABELS = {
-  STR: '공격력 +0.5 · 물리방어 +0.5 · (전사) 추가 배율',
-  DEX: '명중 +0.5% · 회피 +0.1% · (궁수) 추가 배율',
-  INT: '마법방어 +0.5 · (마법사) 추가 배율',
-  LUK: '회피 +0.3% · (도적) 추가 배율',
+  STR: '공격력 +0.5 · 물리방어 +0.5 · (전사/파이터/페이지/스피어맨) 추가 배율',
+  DEX: '명중 +0.5% · 회피 +0.1% · (궁수/헌터/사수) 추가 배율',
+  INT: '마법방어 +0.5 · (마법사/썬콜/불독/클레릭) 추가 배율',
+  LUK: '회피 +0.3% · (도적/어쌔신/시프) 추가 배율',
 };
 
 // 장비로 인한 스탯 보너스 (bonusSTR 등)
@@ -296,7 +333,8 @@ function renderEquipmentTab() {
 
   // ── 장착 중 ─────────────────────────────────────────────
   const charCards = gameState.characters.map(char => {
-    const slotList = char.classId === 'rogue'
+    const baseClass = CLASSES[char.classId]?.parent || char.classId;
+    const slotList = (char.classId === 'rogue' || baseClass === 'rogue')
       ? ['weapon', 'throwable', 'armor', 'accessory']
       : ['weapon', 'armor', 'accessory'];
     const slots = slotList.map(slot => {
@@ -460,8 +498,11 @@ function renderSkillTab() {
         </div>`;
     }
 
-    // 이 직업에 해당하는 스킬 목록
-    const charSkills = Object.entries(SKILLS).filter(([, s]) => s.classId === char.classId);
+    // 이 직업(+ 부모 직업)에 해당하는 스킬 목록
+    const parentClassId = CLASSES[char.classId]?.parent;
+    const charSkills = Object.entries(SKILLS).filter(([, s]) =>
+      s.classId === char.classId || s.classId === parentClassId
+    );
 
     const skillRows = charSkills.map(([id, s]) => {
       const learned   = char.skills.includes(id);
@@ -757,8 +798,5 @@ function closeOfflineModal() {
 
 // ── 공통 헬퍼 ──────────────────────────────────────────────
 function charClassName(classId) {
-  const names = {
-    novice: '모험가', warrior: '전사', mage: '마법사', archer: '궁수', rogue: '도적',
-  };
-  return names[classId] || classId;
+  return CLASSES[classId]?.name || classId;
 }

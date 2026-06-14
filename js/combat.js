@@ -248,9 +248,10 @@ function executeMonsterAttack(m, target, stageData, stageIdx) {
   // 근접: 공격 범위 내 있어야 함
   if (md.attackType !== 'ranged' && dist > (md.attackRange || 60)) return;
 
-  const stats  = calcFinalStats(target);
-  const minDmg = Math.max(1, Math.floor(md.atk * 0.2)); // 최소 20% 관통
-  const dmg    = Math.max(minDmg, md.atk - stats.physDef);
+  const stats   = calcFinalStats(target);
+  const charDef = md.atkDamageType === 'magical' ? stats.magicDef : stats.physDef;
+  const minDmg  = Math.max(1, Math.floor(md.atk * 0.2)); // 최소 20% 관통
+  const dmg     = Math.max(minDmg, md.atk - charDef);
 
   if (md.attackType === 'ranged') {
     spawnProjectile(stageIdx, m.x, m.y, target, dmg, md.projSpeed || 200, md.projColor || '#ff6622');
@@ -362,7 +363,9 @@ function executeSkill(char, skill, stats, stage, field) {
 function dealSkillDamage(char, monster, dmg, stage, field, stats) {
   const isCrit    = stats && Math.random() * 100 < stats.critRate;
   const critMult  = isCrit ? (stats?.critDmg ?? 2) : 1;
-  const actualDmg = Math.max(1, Math.floor(dmg * critMult) - stage.monster.def);
+  const dmgType   = CLASSES[char.classId]?.damageType || 'physical';
+  const mDef      = dmgType === 'magical' ? stage.monster.magicDef : stage.monster.physDef;
+  const actualDmg = Math.max(1, Math.floor(dmg * critMult) - mDef);
   let total = actualDmg;
 
   if (char.shadowActive) total += Math.max(1, Math.floor(actualDmg * 0.5));
@@ -395,17 +398,20 @@ function dealDamage(char, monster, stats, stage, field) {
   const hasOrb = char.skills && char.skills.includes('orb_strike');
   let baseDmg, orbExplosion = false, isCrit = false;
 
+  const dmgType = CLASSES[char.classId]?.damageType || 'physical';
+  const mDef    = dmgType === 'magical' ? stage.monster.magicDef : stage.monster.physDef;
+
   if (hasOrb && char.orbReady) {
     const skill = SKILLS['orb_strike'];
     const mult  = skill ? skill.dmgMultiplier : 20;
-    baseDmg      = Math.max(1, Math.floor(stats.atk * mult) - stage.monster.def);
+    baseDmg      = Math.max(1, Math.floor(stats.atk * mult) - mDef);
     char.orbReady   = false;
     char.orbCount   = 0;
     char.attackAnim = 0.6;
     orbExplosion    = true;
   } else {
     const atkMult = getSkillAtkMult(char);
-    baseDmg = Math.max(1, Math.floor(stats.atk * atkMult) - stage.monster.def);
+    baseDmg = Math.max(1, Math.floor(stats.atk * atkMult) - mDef);
     if (hasOrb) {
       char.orbCount = (char.orbCount || 0) + 1;
       const required = SKILLS['orb_strike']?.orbsRequired ?? 5;
@@ -504,7 +510,9 @@ function calcOfflineRewards(elapsedSec) {
       const stats = calcFinalStats(char);
       const atkInterval = getAttackInterval(char);
       const atkMult = getSkillAtkMult(char);
-      const dmg = Math.max(1, Math.floor(stats.atk * atkMult) - m.def);
+      const charDmgType = CLASSES[char.classId]?.damageType || 'physical';
+      const offDef = charDmgType === 'magical' ? m.magicDef : m.physDef;
+      const dmg = Math.max(1, Math.floor(stats.atk * atkMult) - offDef);
       partyDps += dmg / atkInterval;
     }
     if (partyDps <= 0) continue;

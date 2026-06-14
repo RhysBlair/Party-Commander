@@ -32,7 +32,7 @@ function tryAdvanceJob(charId, classId) {
   if (!char) return;
   if (char.classId !== 'novice') return;
   if (char.level < JOB_ADVANCE_LEVEL) return;
-  if (!CLASSES[classId] || classId === 'novice') return;
+  if (!CLASSES[classId] || CLASSES[classId].jobLevel !== 1) return;
 
   char.classId = classId;
 
@@ -45,13 +45,33 @@ function tryAdvanceJob(charId, classId) {
   if (char.autoAssign) autoAssignStats(char);
 }
 
+function tryAdvanceJob2(charId, classId) {
+  const char = gameState.characters.find(c => c.id === charId);
+  const cls2 = CLASSES[classId];
+  if (!char || !cls2 || cls2.jobLevel !== 2) return;
+  if (cls2.parent !== char.classId) return;          // 현재 직업의 2차전직이어야 함
+  if (char.level < JOB_ADVANCE_LEVEL_2) return;
+
+  char.classId = classId;
+
+  // 2차 전직 시 스탯 초기화 + 포인트 전액 환급
+  const totalEarned = (char.level - 1) * STAT_POINTS_PER_LEVEL;
+  char.stats = { STR: 5, DEX: 5, INT: 5, LUK: 5 };
+  char.unspentPoints = totalEarned;
+
+  if (char.autoAssign) autoAssignStats(char);
+}
+
 // 장비 장착 요건 체크 (itemOrId = string id 또는 { id, uid, enhance } 객체)
 function canEquipItem(char, itemOrId) {
   const id = typeof itemOrId === 'object' ? itemOrId.id : itemOrId;
   const e  = EQUIPMENT[id];
   if (!e) return false;
-  if (e.req.level   && char.level   < e.req.level)   return false;
-  if (e.req.classId && char.classId !== e.req.classId) return false;
+  if (e.req.level && char.level < e.req.level) return false;
+  if (e.req.classId) {
+    const parentClass = CLASSES[char.classId]?.parent || char.classId;
+    if (char.classId !== e.req.classId && parentClass !== e.req.classId) return false;
+  }
   return true;
 }
 
@@ -128,7 +148,8 @@ function tryLearnSkill(charId, skillId) {
   const char  = gameState.characters.find(c => c.id === charId);
   const skill = SKILLS[skillId];
   if (!char || !skill) return;
-  if (skill.classId !== char.classId) return;
+  const parentClass = CLASSES[char.classId]?.parent || char.classId;
+  if (skill.classId !== char.classId && skill.classId !== parentClass) return;
   if (char.skills.includes(skillId)) return;
   if (gameState.gold < skill.cost) return;
   gameState.gold -= skill.cost;

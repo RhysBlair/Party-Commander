@@ -1,15 +1,38 @@
 // 직업 정의
 const CLASSES = {
-  novice:  { name: "모험가", primary: null, secondary: null, range: "melee",
-             weaponLock: "beginner_sword", canSkill: false },
-  warrior: { name: "전사",   primary: "STR", secondary: "DEX", range: "melee",        canSkill: true },
-  archer:  { name: "궁수",   primary: "DEX", secondary: "STR", range: "ranged_long",  canSkill: true },
-  mage:    { name: "마법사", primary: "INT", secondary: "LUK", range: "ranged",       canSkill: true },
-  rogue:   { name: "도적",   primary: "LUK", secondary: "DEX", range: "ranged_short", canSkill: true },
+  // ── 0차 ─────────────────────────────────────────────────
+  novice:    { name: "모험가",   primary: null,  secondary: null,  range: "melee",
+               weaponLock: "beginner_sword", canSkill: false,
+               damageType: "physical", jobLevel: 0 },
+
+  // ── 1차 ─────────────────────────────────────────────────
+  warrior:   { name: "전사",    primary: "STR", secondary: "DEX", range: "melee",        canSkill: true, damageType: "physical", jobLevel: 1 },
+  archer:    { name: "궁수",    primary: "DEX", secondary: "STR", range: "ranged_long",  canSkill: true, damageType: "physical", jobLevel: 1 },
+  mage:      { name: "마법사",  primary: "INT", secondary: "LUK", range: "ranged",       canSkill: true, damageType: "magical",  jobLevel: 1 },
+  rogue:     { name: "도적",    primary: "LUK", secondary: "DEX", range: "ranged_short", canSkill: true, damageType: "physical", jobLevel: 1 },
+
+  // ── 2차 (전사 계열) ──────────────────────────────────────
+  fighter:   { name: "파이터",   primary: "STR", secondary: "DEX", range: "melee",        canSkill: true, damageType: "physical", jobLevel: 2, parent: "warrior" },
+  page:      { name: "페이지",   primary: "STR", secondary: "INT", range: "melee",        canSkill: true, damageType: "physical", jobLevel: 2, parent: "warrior" },
+  spearman:  { name: "스피어맨", primary: "STR", secondary: "DEX", range: "melee_long",   canSkill: true, damageType: "physical", jobLevel: 2, parent: "warrior" },
+
+  // ── 2차 (마법사 계열) ────────────────────────────────────
+  wizard_tl: { name: "썬콜",    primary: "INT", secondary: "DEX", range: "ranged",       canSkill: true, damageType: "magical",  jobLevel: 2, parent: "mage" },
+  wizard_fp: { name: "불독",    primary: "INT", secondary: "LUK", range: "ranged",       canSkill: true, damageType: "magical",  jobLevel: 2, parent: "mage" },
+  cleric:    { name: "클레릭",   primary: "INT", secondary: "STR", range: "ranged",       canSkill: true, damageType: "magical",  jobLevel: 2, parent: "mage" },
+
+  // ── 2차 (도적 계열) ──────────────────────────────────────
+  assassin:  { name: "어쌔신",   primary: "LUK", secondary: "DEX", range: "ranged_short", canSkill: true, damageType: "physical", jobLevel: 2, parent: "rogue" },
+  thief:     { name: "시프",    primary: "LUK", secondary: "STR", range: "melee",        canSkill: true, damageType: "physical", jobLevel: 2, parent: "rogue" },
+
+  // ── 2차 (궁수 계열) ──────────────────────────────────────
+  hunter:    { name: "헌터",    primary: "DEX", secondary: "STR", range: "ranged_long",  canSkill: true, damageType: "physical", jobLevel: 2, parent: "archer" },
+  marksman:  { name: "사수",    primary: "DEX", secondary: "LUK", range: "ranged_long",  canSkill: true, damageType: "physical", jobLevel: 2, parent: "archer" },
 };
 
 // 전직 가능 레벨
-const JOB_ADVANCE_LEVEL = 10;
+const JOB_ADVANCE_LEVEL  = 10;
+const JOB_ADVANCE_LEVEL_2 = 30;
 
 // 스탯 공통 효과 계수
 const STAT_EFFECTS = {
@@ -105,59 +128,59 @@ const PETS = {
 const DROP_EXPIRE_SECONDS = 30;
 
 // 스테이지 / 몬스터 정의
-// attackType: "melee" | "ranged"  /  moveSpeed: 픽셀/초  /  attackRange: 공격 판정(px)
-// aggroRange: 어그로 범위(px)     /  projSpeed: 투사체 속도  /  projColor: 투사체 색
+// attackType: "melee" | "ranged"   atkDamageType: "physical" | "magical"
+// physDef: 물리방어 / magicDef: 마법방어 (분리 적용)
 const STAGES = [
   { name: "초원",
-    monster: { name: "슬라임",       hp: 50,    atk: 4,   def: 1,  goldDrop: 10,   expDrop: 8,
-               moveSpeed: 35,  attackRange: 55,  aggroRange: 300, attackType: "melee" },
+    monster: { name: "슬라임",       hp: 50,    atk: 4,   physDef: 1,  magicDef: 1,  goldDrop: 10,   expDrop: 8,
+               moveSpeed: 35,  attackRange: 55,  aggroRange: 300, attackType: "melee",   atkDamageType: "physical" },
     spawnCount: 4, killsToAdvance: 20 },
 
   { name: "숲",
-    monster: { name: "고블린",       hp: 120,   atk: 8,   def: 2,  goldDrop: 22,   expDrop: 18,
-               moveSpeed: 60,  attackRange: 55,  aggroRange: 360, attackType: "melee" },
+    monster: { name: "고블린",       hp: 120,   atk: 8,   physDef: 2,  magicDef: 1,  goldDrop: 22,   expDrop: 18,
+               moveSpeed: 60,  attackRange: 55,  aggroRange: 360, attackType: "melee",   atkDamageType: "physical" },
     spawnCount: 4, killsToAdvance: 30 },
 
   { name: "동굴",
-    monster: { name: "오크",         hp: 280,   atk: 15,  def: 5,  goldDrop: 50,   expDrop: 40,
-               moveSpeed: 35,  attackRange: 60,  aggroRange: 320, attackType: "melee" },
+    monster: { name: "오크",         hp: 280,   atk: 15,  physDef: 5,  magicDef: 2,  goldDrop: 50,   expDrop: 40,
+               moveSpeed: 35,  attackRange: 60,  aggroRange: 320, attackType: "melee",   atkDamageType: "physical" },
     spawnCount: 5, killsToAdvance: 40 },
 
   { name: "사막",
-    monster: { name: "모래 골렘",    hp: 600,   atk: 25,  def: 10, goldDrop: 110,  expDrop: 90,
-               moveSpeed: 22,  attackRange: 65,  aggroRange: 300, attackType: "melee" },
+    monster: { name: "모래 골렘",    hp: 600,   atk: 25,  physDef: 10, magicDef: 5,  goldDrop: 110,  expDrop: 90,
+               moveSpeed: 22,  attackRange: 65,  aggroRange: 300, attackType: "melee",   atkDamageType: "physical" },
     spawnCount: 5, killsToAdvance: 50 },
 
   { name: "화산",
-    monster: { name: "불꽃 도마뱀",  hp: 1200,  atk: 40,  def: 18, goldDrop: 240,  expDrop: 200,
-               moveSpeed: 50,  attackRange: 60,  aggroRange: 380, attackType: "melee" },
+    monster: { name: "불꽃 도마뱀",  hp: 1200,  atk: 40,  physDef: 18, magicDef: 8,  goldDrop: 240,  expDrop: 200,
+               moveSpeed: 50,  attackRange: 60,  aggroRange: 380, attackType: "melee",   atkDamageType: "physical" },
     spawnCount: 6, killsToAdvance: 60 },
 
   { name: "심층 던전",
-    monster: { name: "어둠의 기사",  hp: 3000,  atk: 60,  def: 25, goldDrop: 500,  expDrop: 440,
-               moveSpeed: 55,  attackRange: 65,  aggroRange: 420, attackType: "melee" },
+    monster: { name: "어둠의 기사",  hp: 3000,  atk: 60,  physDef: 25, magicDef: 10, goldDrop: 500,  expDrop: 440,
+               moveSpeed: 55,  attackRange: 65,  aggroRange: 420, attackType: "melee",   atkDamageType: "physical" },
     spawnCount: 5, killsToAdvance: 70 },
 
   { name: "마법사 탑",
-    monster: { name: "화염 마법사",  hp: 2500,  atk: 80,  def: 10, goldDrop: 720,  expDrop: 640,
-               moveSpeed: 40,  attackRange: 270, aggroRange: 460, attackType: "ranged",
+    monster: { name: "화염 마법사",  hp: 2500,  atk: 80,  physDef: 5,  magicDef: 25, goldDrop: 720,  expDrop: 640,
+               moveSpeed: 40,  attackRange: 270, aggroRange: 460, attackType: "ranged",  atkDamageType: "magical",
                projSpeed: 220, projColor: "#ff6622" },
     spawnCount: 4, killsToAdvance: 60 },
 
   { name: "고대 유적",
-    monster: { name: "고대 골렘",    hp: 7000,  atk: 95,  def: 42, goldDrop: 1200, expDrop: 1050,
-               moveSpeed: 18,  attackRange: 70,  aggroRange: 340, attackType: "melee" },
+    monster: { name: "고대 골렘",    hp: 7000,  atk: 95,  physDef: 42, magicDef: 20, goldDrop: 1200, expDrop: 1050,
+               moveSpeed: 18,  attackRange: 70,  aggroRange: 340, attackType: "melee",   atkDamageType: "physical" },
     spawnCount: 3, killsToAdvance: 50 },
 
   { name: "어비스",
-    monster: { name: "어비스 궁수",  hp: 4500,  atk: 120, def: 22, goldDrop: 1700, expDrop: 1500,
-               moveSpeed: 65,  attackRange: 320, aggroRange: 520, attackType: "ranged",
+    monster: { name: "어비스 궁수",  hp: 4500,  atk: 120, physDef: 15, magicDef: 30, goldDrop: 1700, expDrop: 1500,
+               moveSpeed: 65,  attackRange: 320, aggroRange: 520, attackType: "ranged",  atkDamageType: "magical",
                projSpeed: 280, projColor: "#9b59b6" },
     spawnCount: 4, killsToAdvance: 65 },
 
   { name: "신성 신전",
-    monster: { name: "천상의 파수꾼", hp: 12000, atk: 150, def: 55, goldDrop: 3000, expDrop: 2600,
-               moveSpeed: 45,  attackRange: 340, aggroRange: 600, attackType: "ranged",
+    monster: { name: "천상의 파수꾼", hp: 12000, atk: 150, physDef: 35, magicDef: 45, goldDrop: 3000, expDrop: 2600,
+               moveSpeed: 45,  attackRange: 340, aggroRange: 600, attackType: "ranged",  atkDamageType: "magical",
                projSpeed: 320, projColor: "#f1c40f" },
     spawnCount: 3, killsToAdvance: 70 },
 ];
@@ -165,6 +188,7 @@ const STAGES = [
 // 사거리 픽셀 값
 const RANGE_PIXELS = {
   melee:        80,
+  melee_long:   130,  // 스피어맨 전용
   ranged_short: 200,
   ranged:       300,
   ranged_long:  420,
@@ -204,11 +228,27 @@ const STAGE_BG = [
 
 // 직업별 Canvas 색상
 const CLASS_COLORS = {
-  novice:  '#3498db',
-  warrior: '#e74c3c',
-  mage:    '#9b59b6',
-  archer:  '#27ae60',
-  rogue:   '#95a5a6',
+  // 0차
+  novice:    '#3498db',
+  // 1차
+  warrior:   '#e74c3c',
+  mage:      '#9b59b6',
+  archer:    '#27ae60',
+  rogue:     '#95a5a6',
+  // 2차 — 전사 계열
+  fighter:   '#c0392b',
+  page:      '#e74c3c',
+  spearman:  '#d35400',
+  // 2차 — 마법사 계열
+  wizard_tl: '#1abc9c',
+  wizard_fp: '#e67e22',
+  cleric:    '#f1c40f',
+  // 2차 — 도적 계열
+  assassin:  '#2c3e50',
+  thief:     '#8e44ad',
+  // 2차 — 궁수 계열
+  hunter:    '#27ae60',
+  marksman:  '#229954',
 };
 
 // 몬스터 스폰 위치 비율 배열 (Canvas 280~600 x, 80~400 y 기준)
