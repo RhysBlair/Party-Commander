@@ -105,7 +105,7 @@ const SKILLS = {
                     targeting: "aoe",           maxTargets: 5, dmgMultiplier: 1.2, cost: 500 },
   archer_shot:    { name: "연사",       classId: "archer",
                     targeting: "passive", attackInterval: 0.2, dmgMultiplier: 1.2, cost: 500 },
-  shadow_partner: { name: "쉐도우파트너", classId: "rogue", cooldown: 10.0,
+  shadow_partner: { name: "쉐도우파트너", classId: "rogue", cooldown: 1.5,
                     targeting: "shadow", duration: 60.0, cost: 500 },
 };
 

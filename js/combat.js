@@ -154,6 +154,12 @@ function takeDamage(char, dmg, stageIdx) {
     char.currentHp    = 0;
     char.isDead       = true;
     char.respawnTimer = CHARACTER_RESPAWN_TIME;
+    // 분신 활성 중 사망 → 강제 종료 + 쿨다운 정상 설정 (미설정 시 9999 고착 버그)
+    if (char.shadowActive) {
+      if (!char.skillTimers) char.skillTimers = {};
+      const sp = SKILLS['shadow_partner'];
+      char.skillTimers['shadow_partner'] = sp ? sp.cooldown : 1.5;
+    }
     char.shadowActive = false;
     char.shadowTimer  = 0;
   }
@@ -394,13 +400,11 @@ function dealSkillDamage(char, monster, dmg, stage, field, stats) {
   monster.hitAnim    = isCrit ? 0.25 : 0.2;
   char.attackAnim    = 0.25;
 
-  // 쉐도우파트너: 스킬도 별도 실행
+  // 쉐도우파트너: 스킬 분신 타격 — 몬스터 위치에 동일하게 표기
   if (char.shadowActive) {
     const shadowDmg = Math.max(1, Math.floor(actualDmg * 0.5));
-    spawnFloatingText(char.assignedStage,
-                      char.shadowX ?? (char.x - char.facing * 28),
-                      (char.shadowY ?? char.y) - 30,
-                      `${shadowDmg}`, '#9b59b6', 12);
+    spawnFloatingText(char.assignedStage, monster.x, monster.y - 24,
+                      `${shadowDmg}`, '#e0e0e0', 13);
     monster.currentHp -= shadowDmg;
   }
 
@@ -460,13 +464,11 @@ function dealDamage(char, monster, stats, stage, field, dmgMult = 1.0) {
   monster.currentHp -= baseDmg;
   monster.hitAnim    = orbExplosion ? 0.4 : isCrit ? 0.25 : 0.15;
 
-  // 쉐도우파트너: 분신이 동일 타격을 별도 실행 (데미지 50%, 보라색 텍스트)
+  // 쉐도우파트너: 분신 타격 — 몬스터 위치에 일반 공격과 동일하게 표기
   if (char.shadowActive) {
     const shadowDmg = Math.max(1, Math.floor(baseDmg * 0.5));
-    spawnFloatingText(char.assignedStage,
-                      char.shadowX ?? (char.x - char.facing * 28),
-                      (char.shadowY ?? char.y) - 30,
-                      `${shadowDmg}`, '#9b59b6', 12);
+    spawnFloatingText(char.assignedStage, monster.x, monster.y - 24,
+                      `${shadowDmg}`, '#e0e0e0', 13);
     monster.currentHp -= shadowDmg;
   }
 
