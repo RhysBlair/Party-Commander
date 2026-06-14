@@ -191,7 +191,6 @@ function tryBuyUpgrade(id) {
 
 function tryAddCharacter() {
   const cur = gameState.characters.length;
-  if (cur >= CHAR_START_POS.length) return;
   const cost = charAddCost(cur);
   if (gameState.gold < cost) return;
   gameState.gold -= cost;

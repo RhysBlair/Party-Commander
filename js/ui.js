@@ -161,25 +161,20 @@ function renderCharacterTab() {
       </div>`;
   }).join('');
 
-  const maxChars = CHAR_START_POS.length;
-  const curChars = gameState.characters.length;
-  const addCost  = charAddCost(curChars);
+  const curChars  = gameState.characters.length;
+  const addCost   = charAddCost(curChars);
   const canAfford = gameState.gold >= addCost;
 
-  const addSection = curChars < maxChars
-    ? `<div class="add-char-box">
-         <div class="add-char-info">
-           <span>파티 슬롯 <strong>${curChars} / ${maxChars}</strong></span>
-           <span class="add-char-sub">새 모험가 영입 — 스테이지 1에서 시작</span>
-         </div>
-         <button class="small-btn ${canAfford ? '' : 'disabled'}"
-                 onclick="tryAddCharacter(); renderCharacterTab();">
-           영입 ${addCost.toLocaleString()}G
-         </button>
-       </div>`
-    : `<div class="add-char-box add-char-full">
-         파티가 가득 찼습니다 (최대 ${maxChars}명)
-       </div>`;
+  const addSection = `<div class="add-char-box">
+       <div class="add-char-info">
+         <span>파티원 <strong>${curChars}명</strong></span>
+         <span class="add-char-sub">새 모험가 영입 — 스테이지 1에서 시작</span>
+       </div>
+       <button class="small-btn ${canAfford ? '' : 'disabled'}"
+               onclick="tryAddCharacter(); renderCharacterTab();">
+         영입 ${addCost.toLocaleString()}G
+       </button>
+     </div>`;
 
   el.innerHTML = html + addSection;
 }

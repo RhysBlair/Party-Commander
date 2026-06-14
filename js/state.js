@@ -82,7 +82,7 @@ function initStageField(stageIdx) {
 function resetCharPos(char) {
   const siblings = gameState.characters.filter(c => c.assignedStage === char.assignedStage);
   const idx = siblings.indexOf(char);
-  const pos = CHAR_START_POS[idx] || CHAR_START_POS[0];
+  const pos = CHAR_START_POS[idx % CHAR_START_POS.length];
   char.x = pos.x;
   char.y = pos.y;
   char.attackTimer = 0;
@@ -108,7 +108,7 @@ function initField() {
   }
   for (const chars of Object.values(byStage)) {
     chars.forEach((char, i) => {
-      const pos = CHAR_START_POS[i] || CHAR_START_POS[0];
+      const pos = CHAR_START_POS[i % CHAR_START_POS.length];
       char.x = pos.x; char.y = pos.y;
       char.attackTimer = 0; char.attackAnim = 0; char.facing = 1;
     });
@@ -146,7 +146,7 @@ function advanceStageField(stageIdx) {
 
   // 이동한 캐릭터들 위치 리셋
   toMove.forEach((char, i) => {
-    const pos = CHAR_START_POS[i] || CHAR_START_POS[0];
+    const pos = CHAR_START_POS[i % CHAR_START_POS.length];
     char.x = pos.x; char.y = pos.y;
     char.attackTimer = 0; char.attackAnim = 0; char.facing = 1;
   });
