@@ -20,11 +20,20 @@ function render() {
 
   drawDrops(viewIdx);
 
+  // 분신은 캐릭터 뒤에 렌더링
+  for (const char of gameState.characters) {
+    if (char.assignedStage === viewIdx) drawShadow(char);
+  }
   for (const char of gameState.characters) {
     if (char.assignedStage === viewIdx) drawCharacter(char);
   }
+  // 오브는 캐릭터 위에 렌더링
+  for (const char of gameState.characters) {
+    if (char.assignedStage === viewIdx) drawCharacterOrbs(char);
+  }
 
   drawPets(viewIdx);
+  drawFloatingTexts(viewIdx);
 
   drawStageLabel(W, viewIdx, field);
 }
@@ -150,6 +159,82 @@ function drawCharacter(char) {
   ctx.textAlign = 'left';
 }
 
+function drawCharacterOrbs(char) {
+  if (!char.skills || !char.skills.includes('orb_strike')) return;
+  const count = char.orbCount || 0;
+  const ready = char.orbReady || false;
+  if (count === 0 && !ready) return;
+
+  const ORB_SLOTS = 5;
+  const orbRadius = 28;
+  const orbSize   = 5;
+  const now       = Date.now();
+  const angleOff  = now / 800;
+  const col       = ready ? '#f1c40f' : '#5b9bd5';
+
+  // 5개 충전 시 황금 광채
+  if (ready) {
+    const pulse = 0.22 + Math.sin(now / 150) * 0.10;
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle   = '#f1c40f';
+    ctx.shadowColor = '#f1c40f';
+    ctx.shadowBlur  = 28;
+    ctx.beginPath();
+    ctx.arc(char.x, char.y - 12, 40, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur  = 0;
+    ctx.globalAlpha = 1;
+  }
+
+  const showCount = ready ? ORB_SLOTS : count;
+  for (let i = 0; i < showCount; i++) {
+    const angle = (i / ORB_SLOTS) * Math.PI * 2 + angleOff;
+    const ox = char.x + Math.cos(angle) * orbRadius;
+    const oy = (char.y - 12) + Math.sin(angle) * orbRadius * 0.5;
+    ctx.shadowColor = col;
+    ctx.shadowBlur  = 10;
+    ctx.fillStyle   = col;
+    ctx.beginPath();
+    ctx.arc(ox, oy, orbSize, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+}
+
+function drawShadow(char) {
+  if (!char.shadowActive) return;
+  const px = char.shadowX ?? (char.x - char.facing * 28);
+  const py = char.shadowY ?? (char.y + 4);
+
+  // 잔여 시간이 10초 미만이면 깜빡임 효과
+  const remaining = char.shadowTimer ?? 0;
+  const flicker   = remaining < 10 ? (Math.sin(Date.now() / 120) * 0.25 + 0.45) : 0.65;
+
+  ctx.globalAlpha = flicker;
+
+  // 몸체 (어두운 자주빛)
+  ctx.fillStyle = '#2a1040';
+  ctx.fillRect(px - 14, py - 24, 28, 36);
+  ctx.strokeStyle = '#7a4aaa';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(px - 14, py - 24, 28, 36);
+
+  // 머리
+  ctx.fillStyle = '#3d1a5a';
+  ctx.beginPath();
+  ctx.arc(px, py - 32, 10, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 눈 (흐릿하게)
+  ctx.fillStyle = '#9b59b6';
+  ctx.beginPath();
+  ctx.arc(px - 4, py - 33, 2, 0, Math.PI * 2);
+  ctx.arc(px + 4, py - 33, 2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+}
+
 function drawPets(viewIdx) {
   for (const char of gameState.characters) {
     if (char.assignedStage !== viewIdx || !char.pet) continue;
@@ -214,6 +299,22 @@ function drawPets(viewIdx) {
       ctx.globalAlpha = 1;
     }
   }
+}
+
+function drawFloatingTexts(viewIdx) {
+  ctx.textAlign = 'center';
+  for (const f of gameState.floatingTexts) {
+    if (f.stageIdx !== viewIdx) continue;
+    ctx.globalAlpha = Math.min(f.timer * 2, 1);
+    ctx.font        = `bold ${f.size}px sans-serif`;
+    ctx.fillStyle   = f.color;
+    ctx.shadowColor = f.color;
+    ctx.shadowBlur  = 10;
+    ctx.fillText(f.text, f.x, f.y);
+  }
+  ctx.shadowBlur  = 0;
+  ctx.globalAlpha = 1;
+  ctx.textAlign   = 'left';
 }
 
 function drawDrops(viewIdx) {

@@ -24,6 +24,7 @@ function loop(now) {
   // 시스템 업데이트
   updateCombat(dt);
   updateLoot(dt);
+  updateFloatingTexts(dt);
 
   // 자동 저장
   saveAccum += dt;

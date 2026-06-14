@@ -215,6 +215,7 @@ function renderStatsTab() {
           <span>마법방어 <strong>${fs.magicDef}</strong></span>
           <span>명중 <strong>${fs.accuracy.toFixed(0)}%</strong></span>
           <span>회피 <strong>${fs.evade.toFixed(0)}%</strong></span>
+          <span>크리티컬 <strong style="color:#f1c40f">${fs.critRate.toFixed(1)}%</strong></span>
         </div>
 
         <button class="small-btn reset-btn ${canReset ? '' : 'disabled'}"
@@ -255,7 +256,8 @@ function updateStatDisplay(charId) {
       <span>물리방어 <strong>${fs.physDef}</strong></span>
       <span>마법방어 <strong>${fs.magicDef}</strong></span>
       <span>명중 <strong>${fs.accuracy.toFixed(0)}%</strong></span>
-      <span>회피 <strong>${fs.evade.toFixed(0)}%</strong></span>`;
+      <span>회피 <strong>${fs.evade.toFixed(0)}%</strong></span>
+      <span>크리티컬 <strong style="color:#f1c40f">${fs.critRate.toFixed(1)}%</strong></span>`;
   }
 }
 

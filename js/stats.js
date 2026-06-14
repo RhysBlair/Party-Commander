@@ -45,6 +45,7 @@ function calcFinalStats(char) {
 
   const atkUpgPct  = (gameState.upgrades?.atk_boost || 0) * 0.05;
   const defUpgFlat = (gameState.upgrades?.def_boost || 0) * 3;
+  const critRate   = Math.min(effLUK * 0.5, 50); // LUK당 0.5%, 최대 50%
 
   return {
     atk:      Math.floor(baseAtk * atkMultiplier * (1 + atkUpgPct)),
@@ -52,6 +53,8 @@ function calcFinalStats(char) {
     magicDef: Math.floor(magicDef),
     accuracy: Math.min(accuracy, 99),
     evade:    Math.min(evade, 60),
+    critRate,
+    critDmg:  2.0,
   };
 }
 

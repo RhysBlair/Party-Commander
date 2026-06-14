@@ -14,6 +14,7 @@ const gameState = {
   maxStageReached: 0,
   drops: [],
   upgrades: {},            // { upgradeId: level }
+  floatingTexts: [],       // 런타임 전용 — 저장 제외
 
   // 런타임 전용 (저장 제외)
   viewStage: 0,
@@ -173,7 +174,7 @@ function saveGame() {
     RUNTIME_CHAR_KEYS.forEach(k => delete s[k]);
     return s;
   });
-  const { stageFields, viewStage, drops, ...rest } = gameState;
+  const { stageFields, viewStage, drops, floatingTexts, ...rest } = gameState;
   localStorage.setItem(SAVE_KEY, JSON.stringify({ ...rest, characters: chars, lastTick: Date.now() }));
 }
 

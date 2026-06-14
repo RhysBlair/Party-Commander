@@ -24,6 +24,31 @@ function updateCombat(dt) {
   }
 }
 
+// ── 플로팅 데미지 텍스트 ──────────────────────────────────
+function spawnFloatingText(stageIdx, x, y, text, color, size) {
+  gameState.floatingTexts.push({
+    stageIdx,
+    x, y,
+    text,
+    color,
+    size: size || 13,
+    timer: 0.9,
+    vy: -55,
+    vx: (Math.random() - 0.5) * 18,
+  });
+}
+
+function updateFloatingTexts(dt) {
+  for (let i = gameState.floatingTexts.length - 1; i >= 0; i--) {
+    const f = gameState.floatingTexts[i];
+    f.timer -= dt;
+    if (f.timer <= 0) { gameState.floatingTexts.splice(i, 1); continue; }
+    f.x  += f.vx * dt;
+    f.y  += f.vy * dt;
+    f.vy += 40 * dt; // 서서히 감속
+  }
+}
+
 // ── 쉐도우파트너 업데이트 ─────────────────────────────────
 function updateShadow(char, dt) {
   if (!char.shadowActive) return;
@@ -150,33 +175,39 @@ function executeSkill(char, skill, stats, stage, field) {
   if (skill.targeting === 'aoe') {
     const targets = field.monsters.filter(m => m.alive).slice(0, skill.maxTargets || 5);
     if (!targets.length) return false;
-    for (const t of targets) dealSkillDamage(char, t, dmg, stage, field);
+    for (const t of targets) dealSkillDamage(char, t, dmg, stage, field, stats);
     return true;
   }
 
   if (skill.targeting === 'double_hit') {
     const t = findNearestMonster(char, field);
     if (!t) return false;
-    for (let h = 0; h < (skill.hits || 2); h++) dealSkillDamage(char, t, dmg, stage, field);
+    for (let h = 0; h < (skill.hits || 2); h++) dealSkillDamage(char, t, dmg, stage, field, stats);
     return true;
   }
 
   // single_melee / single_long
   const t = findNearestMonster(char, field);
   if (!t) return false;
-  dealSkillDamage(char, t, dmg, stage, field);
+  dealSkillDamage(char, t, dmg, stage, field, stats);
   return true;
 }
 
-function dealSkillDamage(char, monster, dmg, stage, field) {
-  const actualDmg = Math.max(1, dmg - stage.monster.def);
+function dealSkillDamage(char, monster, dmg, stage, field, stats) {
+  const isCrit    = stats && Math.random() * 100 < stats.critRate;
+  const critMult  = isCrit ? (stats?.critDmg ?? 2) : 1;
+  const actualDmg = Math.max(1, Math.floor(dmg * critMult) - stage.monster.def);
   let total = actualDmg;
 
-  // 쉐도우파트너: 분신도 50% 추가 데미지
   if (char.shadowActive) total += Math.max(1, Math.floor(actualDmg * 0.5));
 
+  const col  = isCrit ? '#f1c40f' : '#5b9bd5';
+  const size = isCrit ? 17 : 13;
+  spawnFloatingText(char.assignedStage, monster.x, monster.y - 24,
+                    isCrit ? `${total}!` : `${total}`, col, size);
+
   monster.currentHp -= total;
-  monster.hitAnim    = 0.2;
+  monster.hitAnim    = isCrit ? 0.25 : 0.2;
   char.attackAnim    = 0.25;
   if (monster.currentHp <= 0) killMonster(char, monster, stage, field);
 }
@@ -196,10 +227,9 @@ function dealDamage(char, monster, stats, stage, field) {
   if (Math.random() * 100 >= stats.accuracy) return;
 
   const hasOrb = char.skills && char.skills.includes('orb_strike');
-  let baseDmg, orbExplosion = false;
+  let baseDmg, orbExplosion = false, isCrit = false;
 
   if (hasOrb && char.orbReady) {
-    // 오브 폭발: 2000% 데미지
     const skill = SKILLS['orb_strike'];
     const mult  = skill ? skill.dmgMultiplier : 20;
     baseDmg      = Math.max(1, Math.floor(stats.atk * mult) - stage.monster.def);
@@ -218,15 +248,25 @@ function dealDamage(char, monster, stats, stage, field) {
         char.orbCount = 0;
       }
     }
+    // 크리티컬 체크 (오브 폭발 제외)
+    if (Math.random() * 100 < stats.critRate) {
+      isCrit  = true;
+      baseDmg = Math.floor(baseDmg * stats.critDmg);
+    }
     char.attackAnim = atkMult > 1 ? 0.1 : 0.2;
   }
 
   let total = baseDmg;
-  // 쉐도우파트너: 분신도 50% 추가 데미지
   if (char.shadowActive) total += Math.max(1, Math.floor(baseDmg * 0.5));
 
+  // 플로팅 데미지 텍스트
+  const col  = orbExplosion ? '#ff6622' : isCrit ? '#f1c40f' : '#e0e0e0';
+  const size = orbExplosion ? 22        : isCrit ? 19        : 13;
+  spawnFloatingText(char.assignedStage, monster.x, monster.y - 24,
+                    (orbExplosion || isCrit) ? `${total}!` : `${total}`, col, size);
+
   monster.currentHp -= total;
-  monster.hitAnim    = orbExplosion ? 0.4 : 0.15;
+  monster.hitAnim    = orbExplosion ? 0.4 : isCrit ? 0.25 : 0.15;
   if (monster.currentHp <= 0) killMonster(char, monster, stage, field);
 }
 
