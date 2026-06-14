@@ -248,8 +248,9 @@ function executeMonsterAttack(m, target, stageData, stageIdx) {
   // 근접: 공격 범위 내 있어야 함
   if (md.attackType !== 'ranged' && dist > (md.attackRange || 60)) return;
 
-  const stats = calcFinalStats(target);
-  const dmg   = Math.max(1, md.atk - stats.physDef);
+  const stats  = calcFinalStats(target);
+  const minDmg = Math.max(1, Math.floor(md.atk * 0.2)); // 최소 20% 관통
+  const dmg    = Math.max(minDmg, md.atk - stats.physDef);
 
   if (md.attackType === 'ranged') {
     spawnProjectile(stageIdx, m.x, m.y, target, dmg, md.projSpeed || 200, md.projColor || '#ff6622');
