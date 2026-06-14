@@ -13,6 +13,7 @@ const gameState = {
   nextItemUid: 1,          // 아이템 인스턴스 고유 ID 카운터
   maxStageReached: 0,
   drops: [],
+  upgrades: {},            // { upgradeId: level }
 
   // 런타임 전용 (저장 제외)
   viewStage: 0,
@@ -164,7 +165,7 @@ function goToStage(index) {
 const SAVE_KEY = 'party_commander_save';
 
 // 런타임 전용 캐릭터 필드 (저장 제외)
-const RUNTIME_CHAR_KEYS = ['x', 'y', 'attackTimer', 'attackAnim', 'facing', 'skillTimers', 'skillAnim', 'petX', 'petY', 'magnetTimer'];
+const RUNTIME_CHAR_KEYS = ['x', 'y', 'attackTimer', 'attackAnim', 'facing', 'skillTimers', 'skillAnim', 'petX', 'petY', 'magnetTimer', 'shadowActive', 'shadowTimer', 'shadowX', 'shadowY', 'orbCount', 'orbReady'];
 
 function saveGame() {
   const chars = gameState.characters.map(c => {
@@ -217,7 +218,16 @@ function loadGame() {
     // pet 필드 없는 구형 캐릭터 초기화
     for (const char of gameState.characters) {
       if (char.pet === undefined) char.pet = null;
+      // rogue_throw → shadow_partner 마이그레이션
+      const rtIdx = (char.skills || []).indexOf('rogue_throw');
+      if (rtIdx !== -1) char.skills[rtIdx] = 'shadow_partner';
+      // warrior_strike → orb_strike 마이그레이션
+      const wsIdx = (char.skills || []).indexOf('warrior_strike');
+      if (wsIdx !== -1) char.skills[wsIdx] = 'orb_strike';
     }
+
+    // 구형 세이브: upgrades 필드 없으면 초기화
+    if (!gameState.upgrades) gameState.upgrades = {};
 
     gameState.viewStage = legacyStage;
 

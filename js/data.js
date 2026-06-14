@@ -76,14 +76,23 @@ const ENHANCE_SUCCESS = [100, 100, 100, 100, 100, 80, 60, 40, 25, 10];
 
 // 스킬 정의
 const SKILLS = {
-  warrior_strike: { name: "강타",      classId: "warrior", cooldown: 4.0,
-                    targeting: "single_melee",  dmgMultiplier: 2.8, cost: 500 },
+  orb_strike:     { name: "오브 스트라이크", classId: "warrior",
+                    targeting: "passive", orbsRequired: 5, dmgMultiplier: 20.0, cost: 500 },
   mage_blast:     { name: "마력 폭발", classId: "mage",    cooldown: 4.0,
                     targeting: "aoe",           maxTargets: 5, dmgMultiplier: 1.2, cost: 500 },
-  archer_shot:    { name: "강사격",    classId: "archer",  cooldown: 4.0,
-                    targeting: "single_long",   dmgMultiplier: 2.0, cost: 500 },
-  rogue_throw:    { name: "표창 투척", classId: "rogue",   cooldown: 4.0,
-                    targeting: "double_hit",    hits: 2, dmgMultiplier: 1.5, cost: 500 },
+  archer_shot:    { name: "연사",       classId: "archer",
+                    targeting: "passive", attackInterval: 0.2, dmgMultiplier: 1.2, cost: 500 },
+  shadow_partner: { name: "쉐도우파트너", classId: "rogue", cooldown: 10.0,
+                    targeting: "shadow", duration: 60.0, cost: 500 },
+};
+
+// ── 파티 업그레이드 정의 ─────────────────────────────────────
+const UPGRADES = {
+  atk_boost:  { name: "공격 강화",     desc: "파티 전체 공격력",     unit: "+5%/레벨",  maxLevel: 20, baseCost: 500,  costMult: 1.5 },
+  def_boost:  { name: "방어 강화",     desc: "파티 전체 물리방어",   unit: "+3/레벨",   maxLevel: 15, baseCost: 400,  costMult: 1.4 },
+  exp_boost:  { name: "경험치 보너스", desc: "몬스터 경험치 획득량", unit: "+10%/레벨", maxLevel: 10, baseCost: 800,  costMult: 1.6 },
+  gold_boost: { name: "골드 보너스",   desc: "몬스터 골드 획득량",   unit: "+10%/레벨", maxLevel: 10, baseCost: 600,  costMult: 1.6 },
+  atk_spd:    { name: "공격속도 강화", desc: "파티 전체 공격속도",   unit: "+5%/레벨",  maxLevel: 10, baseCost: 1200, costMult: 1.8 },
 };
 
 // 펫 정의

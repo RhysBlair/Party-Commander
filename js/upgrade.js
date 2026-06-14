@@ -156,6 +156,25 @@ function trySellItem(uid) {
   gameState.equipmentInventory.splice(idx, 1);
 }
 
+// ── 파티 업그레이드 ─────────────────────────────────────────
+function upgradeCost(id) {
+  const def = UPGRADES[id];
+  if (!def) return 0;
+  const lv = gameState.upgrades[id] || 0;
+  return Math.floor(def.baseCost * Math.pow(def.costMult, lv));
+}
+
+function tryBuyUpgrade(id) {
+  const def = UPGRADES[id];
+  if (!def) return;
+  const lv = gameState.upgrades[id] || 0;
+  if (lv >= def.maxLevel) return;
+  const cost = upgradeCost(id);
+  if (gameState.gold < cost) return;
+  gameState.gold -= cost;
+  gameState.upgrades[id] = lv + 1;
+}
+
 function tryAddCharacter() {
   const cur = gameState.characters.length;
   if (cur >= CHAR_START_POS.length) return;

@@ -1,7 +1,7 @@
 function updateCombat(dt) {
-  // 각 캐릭터는 자신이 배치된 스테이지 필드에서 독립 전투
   for (const char of gameState.characters) {
     char.attackAnim = Math.max(0, char.attackAnim - dt);
+    updateShadow(char, dt);
     const field = gameState.stageFields[char.assignedStage];
     if (!field) continue;
     updateCharacter(char, dt, STAGES[char.assignedStage], field);
@@ -24,6 +24,57 @@ function updateCombat(dt) {
   }
 }
 
+// ── 쉐도우파트너 업데이트 ─────────────────────────────────
+function updateShadow(char, dt) {
+  if (!char.shadowActive) return;
+
+  char.shadowTimer -= dt;
+  if (char.shadowTimer <= 0) {
+    char.shadowActive = false;
+    char.shadowTimer  = 0;
+    // 분신 소멸 후 쿨다운 시작
+    if (!char.skillTimers) char.skillTimers = {};
+    const skill = SKILLS['shadow_partner'];
+    char.skillTimers['shadow_partner'] = skill ? skill.cooldown : 10;
+    return;
+  }
+
+  // 분신 위치: 캐릭터 바로 뒤를 부드럽게 추적
+  const tx = char.x - char.facing * 28;
+  const ty = char.y + 4;
+  if (char.shadowX === undefined) {
+    char.shadowX = tx;
+    char.shadowY = ty;
+  } else {
+    char.shadowX += (tx - char.shadowX) * 0.25;
+    char.shadowY += (ty - char.shadowY) * 0.25;
+  }
+}
+
+// 패시브 스킬 중 attackInterval 값을 찾아 반환 (없으면 기본값)
+function getAttackInterval(char) {
+  let interval = ATTACK_INTERVAL;
+  if (char.skills) {
+    for (const id of char.skills) {
+      const s = SKILLS[id];
+      if (s && s.attackInterval) { interval = s.attackInterval; break; }
+    }
+  }
+  const spdPct = (gameState.upgrades?.atk_spd || 0) * 0.05;
+  return Math.max(0.1, interval * (1 - spdPct));
+}
+
+// 패시브 스킬 중 공격 배율 반환 (없으면 1)
+function getSkillAtkMult(char) {
+  if (char.skills) {
+    for (const id of char.skills) {
+      const s = SKILLS[id];
+      if (s && s.attackInterval) return s.dmgMultiplier ?? 1;
+    }
+  }
+  return 1;
+}
+
 function updateCharacter(char, dt, stage, field) {
   const stats = calcFinalStats(char);
   const range  = RANGE_PIXELS[CLASSES[char.classId].range];
@@ -36,16 +87,18 @@ function updateCharacter(char, dt, stage, field) {
   const dy = target.y - char.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
 
+  const atkInterval = getAttackInterval(char);
+
   if (dist > range) {
     const step = CHAR_SPEED * dt;
     char.x += (dx / dist) * step;
     char.y += (dy / dist) * step;
     char.facing = dx >= 0 ? 1 : -1;
-    char.attackTimer = ATTACK_INTERVAL;
+    char.attackTimer = atkInterval;
   } else {
     char.attackTimer -= dt;
     if (char.attackTimer <= 0) {
-      char.attackTimer = ATTACK_INTERVAL;
+      char.attackTimer = atkInterval;
       dealDamage(char, target, stats, stage, field);
     }
   }
@@ -60,18 +113,38 @@ function useSkills(char, dt, stats, stage, field) {
   for (const skillId of char.skills) {
     const skill = SKILLS[skillId];
     if (!skill) continue;
+
+    // 패시브 스킬은 useSkills에서 처리하지 않음 (dealDamage에서 처리)
+    if (skill.targeting === 'passive') continue;
+    // 쉐도우파트너: 분신 활성 중에는 쿨다운 타이머를 진행하지 않음
+    if (skill.targeting === 'shadow' && char.shadowActive) continue;
+
     if (char.skillTimers[skillId] === undefined) char.skillTimers[skillId] = 0;
     char.skillTimers[skillId] -= dt;
     if (char.skillTimers[skillId] > 0) continue;
 
     if (executeSkill(char, skill, stats, stage, field)) {
-      char.skillTimers[skillId] = skill.cooldown;
+      // shadow_partner는 소멸 시 쿨다운을 설정하므로 여기선 0으로만
+      if (skill.targeting !== 'shadow') {
+        char.skillTimers[skillId] = skill.cooldown;
+      } else {
+        char.skillTimers[skillId] = 9999; // 분신 소멸 전까지 재발동 방지
+      }
       char.skillAnim = 0.5;
     }
   }
 }
 
 function executeSkill(char, skill, stats, stage, field) {
+  // 쉐도우파트너: 분신 소환
+  if (skill.targeting === 'shadow') {
+    char.shadowActive = true;
+    char.shadowTimer  = skill.duration;
+    char.shadowX = char.x - char.facing * 28;
+    char.shadowY = char.y + 4;
+    return true;
+  }
+
   const dmg = Math.floor(stats.atk * skill.dmgMultiplier);
 
   if (skill.targeting === 'aoe') {
@@ -97,7 +170,12 @@ function executeSkill(char, skill, stats, stage, field) {
 
 function dealSkillDamage(char, monster, dmg, stage, field) {
   const actualDmg = Math.max(1, dmg - stage.monster.def);
-  monster.currentHp -= actualDmg;
+  let total = actualDmg;
+
+  // 쉐도우파트너: 분신도 50% 추가 데미지
+  if (char.shadowActive) total += Math.max(1, Math.floor(actualDmg * 0.5));
+
+  monster.currentHp -= total;
   monster.hitAnim    = 0.2;
   char.attackAnim    = 0.25;
   if (monster.currentHp <= 0) killMonster(char, monster, stage, field);
@@ -116,22 +194,71 @@ function findNearestMonster(char, field) {
 
 function dealDamage(char, monster, stats, stage, field) {
   if (Math.random() * 100 >= stats.accuracy) return;
-  const dmg = Math.max(1, stats.atk - stage.monster.def);
-  monster.currentHp -= dmg;
-  monster.hitAnim    = 0.15;
-  char.attackAnim    = 0.2;
+
+  const hasOrb = char.skills && char.skills.includes('orb_strike');
+  let baseDmg, orbExplosion = false;
+
+  if (hasOrb && char.orbReady) {
+    // 오브 폭발: 2000% 데미지
+    const skill = SKILLS['orb_strike'];
+    const mult  = skill ? skill.dmgMultiplier : 20;
+    baseDmg      = Math.max(1, Math.floor(stats.atk * mult) - stage.monster.def);
+    char.orbReady   = false;
+    char.orbCount   = 0;
+    char.attackAnim = 0.6;
+    orbExplosion    = true;
+  } else {
+    const atkMult = getSkillAtkMult(char);
+    baseDmg = Math.max(1, Math.floor(stats.atk * atkMult) - stage.monster.def);
+    if (hasOrb) {
+      char.orbCount = (char.orbCount || 0) + 1;
+      const required = SKILLS['orb_strike']?.orbsRequired ?? 5;
+      if (char.orbCount >= required) {
+        char.orbReady = true;
+        char.orbCount = 0;
+      }
+    }
+    char.attackAnim = atkMult > 1 ? 0.1 : 0.2;
+  }
+
+  let total = baseDmg;
+  // 쉐도우파트너: 분신도 50% 추가 데미지
+  if (char.shadowActive) total += Math.max(1, Math.floor(baseDmg * 0.5));
+
+  monster.currentHp -= total;
+  monster.hitAnim    = orbExplosion ? 0.4 : 0.15;
   if (monster.currentHp <= 0) killMonster(char, monster, stage, field);
+}
+
+function calcExpDistribution(baseExp, levels, killerIdx) {
+  const n        = levels.length;
+  const levelSum = levels.reduce((a, b) => a + b, 0);
+  const BONUS    = [1, 1, 1.10, 1.15, 1.20, 1.25, 1.30];
+  const bonus    = BONUS[n] ?? 1;
+
+  return levels.map((lv, i) => {
+    const ratio = lv / levelSum;
+    const share = i === killerIdx
+      ? baseExp * (0.2 + 0.8 * ratio)
+      : baseExp * 0.8 * ratio;
+    return Math.floor(share * bonus);
+  });
 }
 
 function killMonster(char, monster, stage, field) {
   monster.alive         = false;
   monster.respawnTimer  = MONSTER_RESPAWN_TIME;
 
-  gameState.gold += stage.monster.goldDrop;
+  const goldMult = 1 + (gameState.upgrades?.gold_boost || 0) * 0.10;
+  gameState.gold += Math.floor(stage.monster.goldDrop * goldMult);
   field.kills++;
 
-  char.exp += stage.monster.expDrop;
-  checkLevelUp(char);
+  // 같은 스테이지 파티원 전원에게 경험치 분배
+  const expMult  = 1 + (gameState.upgrades?.exp_boost || 0) * 0.10;
+  const allies   = gameState.characters.filter(c => c.assignedStage === char.assignedStage);
+  const killerI  = allies.indexOf(char);
+  const expArr   = calcExpDistribution(Math.floor(stage.monster.expDrop * expMult), allies.map(c => c.level), killerI);
+  allies.forEach((c, i) => { c.exp += expArr[i]; checkLevelUp(c); });
 
   generateDrop(char.assignedStage, monster.x, monster.y);
 

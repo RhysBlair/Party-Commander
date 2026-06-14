@@ -726,6 +726,70 @@ body {
   color: #666;
 }
 
+/* 업그레이드 탭 */
+.upgrade-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.upgrade-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  background: #0a1525;
+  border: 1px solid #1a2a3a;
+  border-radius: 5px;
+}
+
+.upgrade-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.upgrade-name {
+  font-size: 13px;
+  font-weight: bold;
+  color: #e0e0e0;
+}
+
+.upgrade-desc {
+  font-size: 11px;
+  color: #666;
+}
+
+.upgrade-unit {
+  color: #4caf50;
+}
+
+.upgrade-current {
+  font-size: 11px;
+  color: #888;
+  margin-top: 1px;
+}
+
+.upgrade-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.upgrade-level {
+  font-size: 11px;
+  color: #aaa;
+  white-space: nowrap;
+}
+
+.upgrade-max {
+  color: #e2b96f;
+  font-weight: bold;
+}
+
 /* 강화 버튼 */
 .enhance-btn {
   border-color: #7a5020;

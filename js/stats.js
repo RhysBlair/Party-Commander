@@ -43,9 +43,12 @@ function calcFinalStats(char) {
   const accuracy = 80 + effDEX * STAT_EFFECTS.DEX.accuracy;
   const evade    = effDEX * STAT_EFFECTS.DEX.evade + effLUK * STAT_EFFECTS.LUK.evade;
 
+  const atkUpgPct  = (gameState.upgrades?.atk_boost || 0) * 0.05;
+  const defUpgFlat = (gameState.upgrades?.def_boost || 0) * 3;
+
   return {
-    atk:      Math.floor(baseAtk * atkMultiplier),
-    physDef:  Math.floor(physDef),
+    atk:      Math.floor(baseAtk * atkMultiplier * (1 + atkUpgPct)),
+    physDef:  Math.floor(physDef + defUpgFlat),
     magicDef: Math.floor(magicDef),
     accuracy: Math.min(accuracy, 99),
     evade:    Math.min(evade, 60),

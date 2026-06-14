@@ -54,6 +54,7 @@ function renderActiveTab() {
   else if (tab === 'skills')     renderSkillTab();
   else if (tab === 'pets')       renderPetTab();
   else if (tab === 'stage')      renderStageTab();
+  else if (tab === 'upgrades')   renderUpgradeTab();
 }
 
 // ── 캐릭터 탭 ──────────────────────────────────────────────
@@ -432,6 +433,8 @@ const SKILL_TARGET_DESC = {
   single_long:  '단일 원거리',
   aoe:          '전체 범위',
   double_hit:   '2회 연속',
+  shadow:       '분신 소환',
+  passive:      '패시브',
 };
 
 function renderSkillTab() {
@@ -459,21 +462,48 @@ function renderSkillTab() {
     const skillRows = charSkills.map(([id, s]) => {
       const learned   = char.skills.includes(id);
       const canAfford = !learned && gameState.gold >= s.cost;
-      const cd = char.skillTimers?.[id];
-      const cdText = learned && cd > 0 ? `쿨타임 ${cd.toFixed(1)}s` : '';
+      const isShadow  = s.targeting === 'shadow';
+      const isPassive = s.targeting === 'passive';
+      const cd        = char.skillTimers?.[id];
+      let cdText = '', cdStyle = '';
+
+      if (isPassive && learned) {
+        if (s.orbsRequired) {
+          if (char.orbReady) {
+            cdText  = '⚡ 충전 완료!';
+            cdStyle = 'color:#f1c40f;font-weight:bold';
+          } else {
+            cdText = `구슬 ${char.orbCount || 0} / ${s.orbsRequired}`;
+          }
+        } else if (s.attackInterval) {
+          cdText  = `연사 활성 · ${s.attackInterval}s/발`;
+          cdStyle = 'color:#27ae60';
+        }
+      } else if (isShadow && char.shadowActive) {
+        cdText  = `분신 활성 ${(char.shadowTimer || 0).toFixed(1)}s`;
+        cdStyle = 'color:#9b59b6';
+      } else if (learned && cd > 0 && cd < 9999) {
+        cdText = `쿨타임 ${cd.toFixed(1)}s`;
+      }
       const col = CLASS_COLORS[char.classId] || '#aaa';
+
+      const metaHtml = isPassive
+        ? s.orbsRequired
+          ? `평타마다 구슬 1개 적립 &nbsp;·&nbsp; ${s.orbsRequired}개 시 다음 공격 ×${s.dmgMultiplier} (${s.dmgMultiplier * 100}%)`
+          : `쿨타임 없이 연사 &nbsp;·&nbsp; ${s.attackInterval}s/발 &nbsp;·&nbsp; 위력 ×${s.dmgMultiplier}`
+        : `${SKILL_TARGET_DESC[s.targeting] || s.targeting}
+           ${s.cooldown ? ` &nbsp;·&nbsp; 쿨다운 ${s.cooldown}s` : ''}
+           ${s.dmgMultiplier ? ` &nbsp;·&nbsp; 위력 ×${s.dmgMultiplier}` : ''}
+           ${s.duration ? ` &nbsp;·&nbsp; 지속 ${s.duration}s &nbsp;·&nbsp; 분신 데미지 50%` : ''}
+           ${s.hits ? ` &nbsp;·&nbsp; ${s.hits}회 타격` : ''}
+           ${s.maxTargets ? ` &nbsp;·&nbsp; 최대 ${s.maxTargets}마리` : ''}`;
 
       return `
         <div class="skill-row">
           <div class="skill-info">
             <span class="skill-name" style="color:${learned ? col : '#888'}">${s.name}</span>
-            <span class="skill-meta">
-              위력 ×${s.dmgMultiplier} &nbsp;·&nbsp; ${SKILL_TARGET_DESC[s.targeting] || s.targeting}
-              &nbsp;·&nbsp; 쿨다운 ${s.cooldown}s
-              ${s.hits ? ` &nbsp;·&nbsp; ${s.hits}회 타격` : ''}
-              ${s.maxTargets ? ` &nbsp;·&nbsp; 최대 ${s.maxTargets}마리` : ''}
-            </span>
-            ${cdText ? `<span class="skill-cd">${cdText}</span>` : ''}
+            <span class="skill-meta">${metaHtml}</span>
+            ${cdText ? `<span class="skill-cd" style="${cdStyle}">${cdText}</span>` : ''}
           </div>
           <div>
             ${learned
@@ -625,6 +655,71 @@ function renderStageTab() {
       스테이지를 클릭하면 보기만 변경됩니다. 캐릭터 배치는 캐릭터 탭에서 변경하세요.
     </div>
     <div class="stage-list">${stageRows}</div>`;
+}
+
+// ── 업그레이드 탭 ──────────────────────────────────────────
+function upgradeEffectText(id, level) {
+  if (!level) return '효과 없음';
+  switch (id) {
+    case 'atk_boost':  return `공격력 +${level * 5}%`;
+    case 'def_boost':  return `물리방어 +${level * 3}`;
+    case 'exp_boost':  return `경험치 +${level * 10}%`;
+    case 'gold_boost': return `골드 +${level * 10}%`;
+    case 'atk_spd':   return `공격속도 +${level * 5}%`;
+    default: return '';
+  }
+}
+
+function renderUpgradeTab() {
+  const el = document.getElementById('tab-upgrades');
+
+  const rows = Object.entries(UPGRADES).map(([id, def]) => {
+    const lv       = gameState.upgrades[id] || 0;
+    const isMax    = lv >= def.maxLevel;
+    const cost     = isMax ? 0 : upgradeCost(id);
+    const canAfford = !isMax && gameState.gold >= cost;
+    const nextLv   = lv + 1;
+    const nextEffect = (() => {
+      switch (id) {
+        case 'atk_boost':  return `공격력 +${nextLv * 5}%`;
+        case 'def_boost':  return `물리방어 +${nextLv * 3}`;
+        case 'exp_boost':  return `경험치 +${nextLv * 10}%`;
+        case 'gold_boost': return `골드 +${nextLv * 10}%`;
+        case 'atk_spd':   return `공격속도 +${nextLv * 5}%`;
+        default: return '';
+      }
+    })();
+
+    return `
+      <div class="upgrade-row">
+        <div class="upgrade-info">
+          <div class="upgrade-name">${def.name}</div>
+          <div class="upgrade-desc">${def.desc} <span class="upgrade-unit">${def.unit}</span></div>
+          <div class="upgrade-current">
+            현재: <strong style="color:${lv > 0 ? '#4caf50' : '#555'}">${upgradeEffectText(id, lv)}</strong>
+            ${!isMax ? `→ <span style="color:#e2b96f">${nextEffect}</span>` : ''}
+          </div>
+        </div>
+        <div class="upgrade-right">
+          <span class="upgrade-level ${isMax ? 'upgrade-max' : ''}">
+            ${isMax ? 'MAX' : `Lv.${lv} / ${def.maxLevel}`}
+          </span>
+          ${isMax
+            ? ''
+            : `<button class="small-btn ${canAfford ? '' : 'disabled'}"
+                       onclick="tryBuyUpgrade('${id}');renderUpgradeTab();">
+                 ${cost.toLocaleString()}G
+               </button>`}
+        </div>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="eq-section-title">파티 업그레이드</div>
+    <div style="font-size:11px;color:#666;margin-bottom:12px">
+      골드를 사용해 파티 전체에 영구 강화를 적용합니다.
+    </div>
+    <div class="upgrade-list">${rows}</div>`;
 }
 
 // ── 공통 헬퍼 ──────────────────────────────────────────────
