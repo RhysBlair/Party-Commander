@@ -1,26 +1,45 @@
 function updateCombat(dt) {
+  // 사망 캐릭터 부활 처리
+  for (const char of gameState.characters) {
+    if (!char.isDead) continue;
+    char.respawnTimer -= dt;
+    if (char.respawnTimer <= 0) {
+      char.isDead       = false;
+      char.respawnTimer = 0;
+      const stats = calcFinalStats(char);
+      char.currentHp  = stats.maxHp;
+      char.maxHpCache = stats.maxHp;
+      resetCharPos(char);
+    }
+  }
+
   for (const char of gameState.characters) {
     char.attackAnim = Math.max(0, char.attackAnim - dt);
-    updateShadow(char, dt);
+    char.hitAnim    = Math.max(0, (char.hitAnim || 0) - dt);
+    if (!char.isDead) updateShadow(char, dt);
+    if (char.isDead) continue;
     const field = gameState.stageFields[char.assignedStage];
     if (!field) continue;
     updateCharacter(char, dt, STAGES[char.assignedStage], field);
   }
 
-  // 모든 활성 필드의 몬스터 리스폰 처리
-  for (const field of gameState.stageFields) {
+  // 몬스터 리스폰 + 캐릭터 공격
+  for (let i = 0; i < gameState.stageFields.length; i++) {
+    const field = gameState.stageFields[i];
     if (!field) continue;
     for (const m of field.monsters) {
       m.hitAnim = Math.max(0, m.hitAnim - dt);
       if (!m.alive && m.respawnTimer > 0) {
         m.respawnTimer -= dt;
         if (m.respawnTimer <= 0) {
-          m.alive = true;
-          m.currentHp = m.maxHp;
+          m.alive       = true;
+          m.currentHp   = m.maxHp;
           m.respawnTimer = 0;
+          m.attackTimer  = MONSTER_ATTACK_INTERVAL;
         }
       }
     }
+    monsterAttackChars(dt, field, i);
   }
 }
 
@@ -100,8 +119,54 @@ function getSkillAtkMult(char) {
   return 1;
 }
 
+function takeDamage(char, dmg, stageIdx) {
+  if (char.isDead) return;
+  char.currentHp = (char.currentHp || char.maxHpCache || 100) - dmg;
+  char.hitAnim   = 0.2;
+  if (char.currentHp <= 0) {
+    char.currentHp    = 0;
+    char.isDead       = true;
+    char.respawnTimer = CHARACTER_RESPAWN_TIME;
+    char.shadowActive = false;
+    char.shadowTimer  = 0;
+  }
+  spawnFloatingText(stageIdx, char.x, char.y - 30, `-${dmg}`, '#e74c3c', 13);
+}
+
+function monsterAttackChars(dt, field, stageIdx) {
+  const alive = gameState.characters.filter(c => c.assignedStage === stageIdx && !c.isDead);
+  if (alive.length === 0) return;
+
+  for (const m of field.monsters) {
+    if (!m.alive) continue;
+    m.attackTimer -= dt;
+    if (m.attackTimer > 0) continue;
+    m.attackTimer = MONSTER_ATTACK_INTERVAL;
+
+    // 가장 가까운 캐릭터 선택
+    let target = null, minD = Infinity;
+    for (const c of alive) {
+      const dx = c.x - m.x, dy = c.y - m.y;
+      const d = dx * dx + dy * dy;
+      if (d < minD) { minD = d; target = c; }
+    }
+    if (!target) continue;
+
+    const stats = calcFinalStats(target);
+    const dmg   = Math.max(1, STAGES[stageIdx].monster.atk - stats.physDef);
+    takeDamage(target, dmg, stageIdx);
+  }
+}
+
 function updateCharacter(char, dt, stage, field) {
   const stats = calcFinalStats(char);
+
+  // HP 초기화 (첫 틱 또는 undefined)
+  if (char.currentHp === undefined) char.currentHp = stats.maxHp;
+  char.maxHpCache = stats.maxHp;
+
+  // 자연 HP 회복 (초당 1%)
+  char.currentHp = Math.min(stats.maxHp, char.currentHp + stats.maxHp * 0.01 * dt);
   const range  = RANGE_PIXELS[CLASSES[char.classId].range];
   const target = findNearestMonster(char, field);
   if (!target) return;

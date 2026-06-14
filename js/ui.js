@@ -210,6 +210,7 @@ function renderStatsTab() {
         <div class="stat-grid">${statRows}</div>
 
         <div class="final-stats" id="fs-${char.id}">
+          <span>HP <strong style="color:#e74c3c">${char.maxHpCache ? Math.ceil(char.currentHp || 0) : fs.maxHp} / ${fs.maxHp}</strong></span>
           <span>공격력 <strong>${fs.atk}</strong></span>
           <span>물리방어 <strong>${fs.physDef}</strong></span>
           <span>마법방어 <strong>${fs.magicDef}</strong></span>
@@ -252,6 +253,7 @@ function updateStatDisplay(charId) {
   const fsEl = document.getElementById(`fs-${charId}`);
   if (fsEl) {
     fsEl.innerHTML = `
+      <span>HP <strong style="color:#e74c3c">${char.maxHpCache ? Math.ceil(char.currentHp || 0) : fs.maxHp} / ${fs.maxHp}</strong></span>
       <span>공격력 <strong>${fs.atk}</strong></span>
       <span>물리방어 <strong>${fs.physDef}</strong></span>
       <span>마법방어 <strong>${fs.magicDef}</strong></span>

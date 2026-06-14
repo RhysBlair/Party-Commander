@@ -71,6 +71,7 @@ function initStageField(stageIdx) {
       alive: true,
       respawnTimer: 0,
       hitAnim: 0,
+      attackTimer: Math.random() * MONSTER_ATTACK_INTERVAL,
     })),
     kills: 0,
   };
@@ -166,7 +167,7 @@ function goToStage(index) {
 const SAVE_KEY = 'party_commander_save';
 
 // 런타임 전용 캐릭터 필드 (저장 제외)
-const RUNTIME_CHAR_KEYS = ['x', 'y', 'attackTimer', 'attackAnim', 'facing', 'skillTimers', 'skillAnim', 'petX', 'petY', 'magnetTimer', 'shadowActive', 'shadowTimer', 'shadowX', 'shadowY', 'orbCount', 'orbReady'];
+const RUNTIME_CHAR_KEYS = ['x', 'y', 'attackTimer', 'attackAnim', 'facing', 'skillTimers', 'skillAnim', 'petX', 'petY', 'magnetTimer', 'shadowActive', 'shadowTimer', 'shadowX', 'shadowY', 'orbCount', 'orbReady', 'currentHp', 'maxHpCache', 'hitAnim', 'isDead', 'respawnTimer'];
 
 function saveGame() {
   const chars = gameState.characters.map(c => {

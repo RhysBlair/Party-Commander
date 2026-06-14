@@ -121,6 +121,23 @@ function drawMonster(m, stageIdx) {
 function drawCharacter(char) {
   const color = CLASS_COLORS[char.classId] || '#3498db';
 
+  // 사망 상태: 반투명 실루엣 + 부활 카운트다운
+  if (char.isDead) {
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle   = '#888';
+    ctx.fillRect(char.x - 14, char.y - 24, 28, 36);
+    ctx.beginPath();
+    ctx.arc(char.x, char.y - 32, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#e74c3c';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`💀 ${(char.respawnTimer || 0).toFixed(1)}s`, char.x, char.y + 4);
+    ctx.textAlign = 'left';
+    return;
+  }
+
   // 스킬 발동 링 효과
   if ((char.skillAnim || 0) > 0) {
     const t = char.skillAnim / 0.5;
@@ -143,6 +160,14 @@ function drawCharacter(char) {
     ctx.globalAlpha = 1;
   }
 
+  // 피격 빨간 오버레이
+  if ((char.hitAnim || 0) > 0) {
+    ctx.globalAlpha = (char.hitAnim / 0.2) * 0.55;
+    ctx.fillStyle   = '#e74c3c';
+    ctx.fillRect(char.x - 16, char.y - 26, 32, 40);
+    ctx.globalAlpha = 1;
+  }
+
   ctx.fillStyle = color;
   ctx.fillRect(char.x - 14, char.y - 24, 28, 36);
   ctx.strokeStyle = 'rgba(255,255,255,0.4)';
@@ -157,6 +182,18 @@ function drawCharacter(char) {
   ctx.textAlign = 'center';
   ctx.fillText(`Lv.${char.level}`, char.x, char.y + 20);
   ctx.textAlign = 'left';
+
+  // HP 바
+  const maxHp   = char.maxHpCache || 1;
+  const hpRatio = Math.max(0, Math.min(1, (char.currentHp || 0) / maxHp));
+  const bW = 30, bH = 4, bX = char.x - bW / 2, bY = char.y + 26;
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(bX, bY, bW, bH);
+  ctx.fillStyle = hpRatio > 0.5 ? '#2ecc71' : hpRatio > 0.25 ? '#f39c12' : '#e74c3c';
+  ctx.fillRect(bX, bY, bW * hpRatio, bH);
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth   = 0.5;
+  ctx.strokeRect(bX, bY, bW, bH);
 }
 
 function drawCharacterOrbs(char) {

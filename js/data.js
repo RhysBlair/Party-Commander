@@ -124,6 +124,12 @@ const RANGE_PIXELS = {
 // 캐릭터 추가 비용 (n번째 캐릭터 추가 시)
 const charAddCost = (currentCount) => Math.floor(500 * Math.pow(3, currentCount));
 
+// 몬스터 공격 주기 (초)
+const MONSTER_ATTACK_INTERVAL = 2.0;
+
+// 캐릭터 사망 후 부활 대기 시간 (초)
+const CHARACTER_RESPAWN_TIME = 8.0;
+
 // 캐릭터 이동 속도 (픽셀/초)
 const CHAR_SPEED = 120;
 
