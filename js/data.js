@@ -15,6 +15,7 @@ const CLASSES = {
   fighter:   { name: "파이터",   primary: "STR", secondary: "DEX", range: "melee",        canSkill: true, damageType: "physical", jobLevel: 2, parent: "warrior" },
   page:      { name: "페이지",   primary: "STR", secondary: "INT", range: "melee",        canSkill: true, damageType: "physical", jobLevel: 2, parent: "warrior" },
   spearman:  { name: "스피어맨", primary: "STR", secondary: "DEX", range: "melee_long",   canSkill: true, damageType: "physical", jobLevel: 2, parent: "warrior" },
+  knight:    { name: "나이트",   primary: "STR", secondary: "DEX", range: "melee",        canSkill: true, damageType: "physical", jobLevel: 2, parent: "warrior" },
 
   // ── 2차 (마법사 계열) ────────────────────────────────────
   wizard_tl: { name: "썬콜",    primary: "INT", secondary: "DEX", range: "ranged",       canSkill: true, damageType: "magical",  jobLevel: 2, parent: "mage" },
@@ -99,14 +100,44 @@ const ENHANCE_SUCCESS = [100, 100, 100, 100, 100, 80, 60, 40, 25, 10];
 
 // 스킬 정의
 const SKILLS = {
+  // ── 전사 ──────────────────────────────────────────────────
   orb_strike:     { name: "오브 스트라이크", classId: "warrior",
                     targeting: "passive", orbsRequired: 5, dmgMultiplier: 20.0, cost: 500 },
-  mage_blast:     { name: "마력 폭발", classId: "mage",    cooldown: 4.0,
-                    targeting: "aoe",           maxTargets: 5, dmgMultiplier: 1.2, cost: 500 },
-  archer_shot:    { name: "연사",       classId: "archer",
+
+  // ── 2차 전사 ──────────────────────────────────────────────
+  spear_aura:     { name: "성스러운 오라",   classId: "spearman", cooldown: 90.0,
+                    targeting: "party_buff",
+                    buffHp: 2.0, buffCdMult: 2.0, buffDuration: 60.0, cost: 500 },
+  rage:           { name: "분노",            classId: "knight",   cooldown: 60.0,
+                    targeting: "party_buff",
+                    buffAtk: 2.0, buffDuration: 30.0, cost: 500 },
+
+  // ── 마법사 ────────────────────────────────────────────────
+  mage_blast:     { name: "마력 폭발",      classId: "mage",    cooldown: 4.0,
+                    targeting: "aoe",    maxTargets: 5, dmgMultiplier: 1.2, cost: 500 },
+
+  // ── 2차 마법사 ────────────────────────────────────────────
+  ice_strike:     { name: "아이스 스트라이크", classId: "wizard_tl", cooldown: 8.0,
+                    targeting: "aoe_freeze", freezeRange: 270, maxTargets: 8,
+                    dmgMultiplier: 3.0, freezeDuration: 5.0, cost: 500 },
+  cleric_heal:    { name: "신성한 치유",     classId: "cleric",  cooldown: 8.0,
+                    targeting: "heal",   healRange: 320, healMult: 3, cost: 500 },
+
+  // ── 궁수 ──────────────────────────────────────────────────
+  double_shot:    { name: "더블샷",          classId: "archer",  cooldown: 3.0,
+                    targeting: "double_hit", hits: 2, dmgMultiplier: 0.8, cost: 500 },
+
+  // ── 2차 궁수 (헌터가 연사 계승) ──────────────────────────
+  archer_shot:    { name: "연사",            classId: "hunter",
                     targeting: "passive", attackInterval: 0.2, dmgMultiplier: 1.2, cost: 500 },
-  shadow_partner: { name: "쉐도우파트너", classId: "rogue", cooldown: 1.5,
+
+  // ── 도적 ──────────────────────────────────────────────────
+  shadow_partner: { name: "쉐도우파트너",    classId: "rogue",   cooldown: 1.5,
                     targeting: "shadow", duration: 60.0, cost: 500 },
+
+  // ── 2차 도적 (어쌔신) ────────────────────────────────────
+  triple_throw:   { name: "트리플 스로우",   classId: "assassin",
+                    targeting: "passive", hits: 3, cost: 500 },
 };
 
 // ── 파티 업그레이드 정의 ─────────────────────────────────────
@@ -239,6 +270,7 @@ const CLASS_COLORS = {
   fighter:   '#c0392b',
   page:      '#e74c3c',
   spearman:  '#d35400',
+  knight:    '#3498db',
   // 2차 — 마법사 계열
   wizard_tl: '#1abc9c',
   wizard_fp: '#e67e22',

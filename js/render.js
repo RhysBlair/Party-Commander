@@ -131,6 +131,29 @@ function drawMonster(m, stageIdx) {
   ctx.arc(m.x + 9, m.y - 6, 3, 0, Math.PI * 2);
   ctx.fill();
 
+  // 빙결 오버레이
+  if (m.frozen) {
+    ctx.globalAlpha = 0.45;
+    ctx.fillStyle   = '#7ecff5';
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, R + 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = '#a8e6ff';
+    ctx.lineWidth   = 2;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, R + 5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // 빙결 남은 시간
+    ctx.fillStyle = '#a8e6ff';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`❄ ${(m.frozenTimer || 0).toFixed(1)}s`, m.x, m.y + R + 26);
+    ctx.textAlign = 'left';
+  }
+
   ctx.fillStyle = '#eee';
   ctx.font = '11px sans-serif';
   ctx.textAlign = 'center';

@@ -69,7 +69,8 @@ const JOB2_DEFS = {
   warrior: [
     { id: 'fighter',   name: '파이터',   color: '#c0392b', desc: 'STR/DEX · 근접 · 물리 화력 극대화' },
     { id: 'page',      name: '페이지',   color: '#e74c3c', desc: 'STR/INT · 근접 · 균형형 기사' },
-    { id: 'spearman',  name: '스피어맨', color: '#d35400', desc: 'STR/DEX · 창 · 긴 근접 사거리' },
+    { id: 'spearman',  name: '스피어맨', color: '#d35400', desc: 'STR/DEX · 창 · 파티 체력/스킬 버프' },
+    { id: 'knight',    name: '나이트',   color: '#3498db', desc: 'STR/DEX · 근접 · 파티 공격력 버프' },
   ],
   mage: [
     { id: 'wizard_tl', name: '썬콜',    color: '#1abc9c', desc: 'INT/DEX · 번개/빙결 · 공격속도 상승' },
@@ -477,6 +478,9 @@ const SKILL_TARGET_DESC = {
   double_hit:   '2회 연속',
   shadow:       '분신 소환',
   passive:      '패시브',
+  heal:         '범위 회복',
+  aoe_freeze:   '광역 빙결',
+  party_buff:   '파티 버프',
 };
 
 function renderSkillTab() {
@@ -523,6 +527,21 @@ function renderSkillTab() {
         } else if (s.attackInterval) {
           cdText  = `연사 활성 · ${s.attackInterval}s/발`;
           cdStyle = 'color:#27ae60';
+        } else if (s.hits) {
+          cdText  = `${s.hits}연속 공격 활성`;
+          cdStyle = 'color:#2c3e50';
+        }
+      } else if (s.targeting === 'party_buff' && learned) {
+        const activeTimer = Math.max(
+          s.buffHp    ? (char.activeBuffs?.hp?.timer  || 0) : 0,
+          s.buffCdMult? (char.activeBuffs?.cd?.timer  || 0) : 0,
+          s.buffAtk   ? (char.activeBuffs?.atk?.timer || 0) : 0
+        );
+        if (activeTimer > 0) {
+          cdText  = `버프 활성 ${activeTimer.toFixed(1)}s 남음`;
+          cdStyle = 'color:#2ecc71;font-weight:bold';
+        } else if (cd > 0) {
+          cdText = `쿨타임 ${cd.toFixed(1)}s`;
         }
       } else if (isShadow && char.shadowActive) {
         cdText  = `분신 활성 ${(char.shadowTimer || 0).toFixed(1)}s`;
@@ -535,13 +554,29 @@ function renderSkillTab() {
       const metaHtml = isPassive
         ? s.orbsRequired
           ? `평타마다 구슬 1개 적립 &nbsp;·&nbsp; ${s.orbsRequired}개 시 다음 공격 ×${s.dmgMultiplier} (${s.dmgMultiplier * 100}%)`
-          : `쿨타임 없이 연사 &nbsp;·&nbsp; ${s.attackInterval}s/발 &nbsp;·&nbsp; 위력 ×${s.dmgMultiplier}`
-        : `${SKILL_TARGET_DESC[s.targeting] || s.targeting}
-           ${s.cooldown ? ` &nbsp;·&nbsp; 쿨다운 ${s.cooldown}s` : ''}
-           ${s.dmgMultiplier ? ` &nbsp;·&nbsp; 위력 ×${s.dmgMultiplier}` : ''}
-           ${s.duration ? ` &nbsp;·&nbsp; 지속 ${s.duration}s &nbsp;·&nbsp; 분신 데미지 50%` : ''}
-           ${s.hits ? ` &nbsp;·&nbsp; ${s.hits}회 타격` : ''}
-           ${s.maxTargets ? ` &nbsp;·&nbsp; 최대 ${s.maxTargets}마리` : ''}`;
+          : s.attackInterval
+            ? `쿨타임 없이 연사 &nbsp;·&nbsp; ${s.attackInterval}s/발 &nbsp;·&nbsp; 위력 ×${s.dmgMultiplier}`
+            : s.hits
+              ? `표창 ${s.hits}연속 타격 &nbsp;·&nbsp; 쿨다운 없음 &nbsp;·&nbsp; 쉐도우파트너 적용`
+              : '패시브 활성'
+        : s.targeting === 'party_buff'
+          ? (() => {
+              const parts = [`${SKILL_TARGET_DESC.party_buff} &nbsp;·&nbsp; 쿨다운 ${s.cooldown}s &nbsp;·&nbsp; 지속 ${s.buffDuration}s`];
+              if (s.buffHp)     parts.push(`파티 HP ×${s.buffHp}`);
+              if (s.buffCdMult) parts.push(`스킬 쿨타임 ${Math.round(100 / s.buffCdMult)}%`);
+              if (s.buffAtk)    parts.push(`파티 물리공격 ×${s.buffAtk}`);
+              return parts.join(' &nbsp;·&nbsp; ');
+            })()
+        : s.targeting === 'heal'
+          ? `${SKILL_TARGET_DESC.heal} &nbsp;·&nbsp; 쿨다운 ${s.cooldown}s &nbsp;·&nbsp; 힐량: ATK×${s.healMult} &nbsp;·&nbsp; 범위: ${s.healRange}px`
+          : s.targeting === 'aoe_freeze'
+            ? `${SKILL_TARGET_DESC.aoe_freeze} &nbsp;·&nbsp; 쿨다운 ${s.cooldown}s &nbsp;·&nbsp; 위력 ×${s.dmgMultiplier} &nbsp;·&nbsp; 빙결 ${s.freezeDuration}초`
+            : `${SKILL_TARGET_DESC[s.targeting] || s.targeting}
+               ${s.cooldown ? ` &nbsp;·&nbsp; 쿨다운 ${s.cooldown}s` : ''}
+               ${s.dmgMultiplier ? ` &nbsp;·&nbsp; 위력 ×${s.dmgMultiplier}` : ''}
+               ${s.duration ? ` &nbsp;·&nbsp; 지속 ${s.duration}s &nbsp;·&nbsp; 분신 데미지 50%` : ''}
+               ${s.hits ? ` &nbsp;·&nbsp; ${s.hits}회 타격` : ''}
+               ${s.maxTargets ? ` &nbsp;·&nbsp; 최대 ${s.maxTargets}마리` : ''}`;
 
       return `
         <div class="skill-row">

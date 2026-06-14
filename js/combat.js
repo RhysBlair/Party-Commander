@@ -60,8 +60,8 @@ function updateCombat(dt) {
           const d2 = dx * dx + dy * dy;
           if (d2 < minD2) { minD2 = d2; target = c; }
         }
-        // aggroRange 체크
-        if (target && minD2 <= (stageData.monster.aggroRange || 400) ** 2) {
+        // aggroRange 체크, 빙결 중 공격 불가
+        if (target && minD2 <= (stageData.monster.aggroRange || 400) ** 2 && !m.frozen) {
           m.attackTimer = MONSTER_ATTACK_INTERVAL;
           executeMonsterAttack(m, target, stageData, i);
         }
@@ -168,6 +168,13 @@ function takeDamage(char, dmg, stageIdx) {
 
 // ── 몬스터 이동 ───────────────────────────────────────────
 function updateMonsterMovement(m, dt, stageData, aliveChars) {
+  // 빙결 타이머 감소 + 이동 정지
+  if (m.frozen) {
+    m.frozenTimer = (m.frozenTimer || 0) - dt;
+    if (m.frozenTimer <= 0) { m.frozen = false; m.frozenTimer = 0; }
+    return;
+  }
+
   const md  = stageData.monster;
   const spd = md.moveSpeed || 0;
   if (!spd) return;
@@ -273,16 +280,37 @@ function updateCharacter(char, dt, stage, field) {
   if (char.currentHp === undefined) char.currentHp = stats.maxHp;
   char.maxHpCache = stats.maxHp;
 
+  // 버프 타이머 감소
+  if (char.activeBuffs) {
+    for (const key of Object.keys(char.activeBuffs)) {
+      const b = char.activeBuffs[key];
+      if (b && b.timer > 0) {
+        b.timer -= dt;
+        if (b.timer <= 0) {
+          delete char.activeBuffs[key];
+          if (key === 'hp') {
+            const newStats = calcFinalStats(char);
+            char.maxHpCache = newStats.maxHp;
+            char.currentHp  = Math.min(char.currentHp || 0, newStats.maxHp);
+          }
+        }
+      }
+    }
+  }
+
   // 자연 HP 회복 (초당 1%)
   char.currentHp = Math.min(stats.maxHp, char.currentHp + stats.maxHp * 0.01 * dt);
 
-  // 따닥 2번째 타격 타이머 (도적 계열 표창 공격)
+  // 다중 타격 타이머 (따닥/트리플 스로우)
   if ((char.quickHitTimer || 0) > 0) {
     char.quickHitTimer -= dt;
     if (char.quickHitTimer <= 0) {
       char.quickHitTimer = 0;
       const t2 = findNearestMonster(char, field);
-      if (t2) dealDamage(char, t2, stats, stage, field, 0.5);
+      if (t2) dealDamage(char, t2, stats, stage, field, char.quickHitDmgMult ?? 0.5);
+      const remaining = Math.max(0, (char.quickHitCount || 0) - 1);
+      char.quickHitCount = remaining;
+      if (remaining > 0) char.quickHitTimer = char.quickHitDelay || 0.065;
     }
   }
 
@@ -308,12 +336,23 @@ function updateCharacter(char, dt, stage, field) {
     char.attackTimer -= dt;
     if (char.attackTimer <= 0) {
       char.attackTimer = atkInterval;
-      const baseClass   = CLASSES[char.classId]?.parent || char.classId;
-      const rogueThrow  = (char.classId === 'rogue' || baseClass === 'rogue') && !!char.equipment?.throwable;
-      if (rogueThrow) {
-        // 따닥: 0.5x 타격 → 0.065초 후 0.5x 2번째 타격
+      const baseClass     = CLASSES[char.classId]?.parent || char.classId;
+      const rogueThrow    = (char.classId === 'rogue' || baseClass === 'rogue') && !!char.equipment?.throwable;
+      const hasTriple     = rogueThrow && char.skills?.includes('triple_throw');
+      if (hasTriple) {
+        // 트리플 스로우: 1/3 × 3타
+        dealDamage(char, target, stats, stage, field, 1 / 3);
+        char.quickHitDmgMult = 1 / 3;
+        char.quickHitDelay   = 0.065;
+        char.quickHitCount   = 2;
+        char.quickHitTimer   = 0.065;
+      } else if (rogueThrow) {
+        // 따닥: 0.5 × 2타
         dealDamage(char, target, stats, stage, field, 0.5);
-        char.quickHitTimer = 0.065;
+        char.quickHitDmgMult = 0.5;
+        char.quickHitDelay   = 0.065;
+        char.quickHitCount   = 1;
+        char.quickHitTimer   = 0.065;
       } else {
         dealDamage(char, target, stats, stage, field);
       }
@@ -337,7 +376,8 @@ function useSkills(char, dt, stats, stage, field) {
     if (skill.targeting === 'shadow' && char.shadowActive) continue;
 
     if (char.skillTimers[skillId] === undefined) char.skillTimers[skillId] = 0;
-    char.skillTimers[skillId] -= dt;
+    const cdMult = (char.activeBuffs?.cd?.timer > 0) ? (char.activeBuffs.cd.mult || 1) : 1;
+    char.skillTimers[skillId] -= dt * cdMult;
     if (char.skillTimers[skillId] > 0) continue;
 
     if (executeSkill(char, skill, stats, stage, field)) {
@@ -353,6 +393,35 @@ function useSkills(char, dt, stats, stage, field) {
 }
 
 function executeSkill(char, skill, stats, stage, field) {
+  // ── 파티 버프 (스피어맨 오라, 나이트 분노) ─────────────────
+  if (skill.targeting === 'party_buff') {
+    const stageIdx = char.assignedStage;
+    const allies   = gameState.characters.filter(c => c.assignedStage === stageIdx && !c.isDead);
+    if (!allies.length) return false;
+    for (const c of allies) {
+      if (!c.activeBuffs) c.activeBuffs = {};
+      if (skill.buffHp) {
+        const wasBuffed = c.activeBuffs.hp && c.activeBuffs.hp.timer > 0;
+        c.activeBuffs.hp = { mult: skill.buffHp, timer: skill.buffDuration };
+        if (!wasBuffed) {
+          const newMax = calcFinalStats(c).maxHp;
+          c.currentHp  = Math.min(newMax, (c.currentHp || c.maxHpCache || 100) * skill.buffHp);
+          c.maxHpCache = newMax;
+        }
+        spawnFloatingText(stageIdx, c.x, c.y - 30, '체력 ×2!', '#2ecc71', 13);
+      }
+      if (skill.buffCdMult) {
+        c.activeBuffs.cd = { mult: skill.buffCdMult, timer: skill.buffDuration };
+        spawnFloatingText(stageIdx, c.x, c.y - 44, '스킬 가속!', '#3498db', 13);
+      }
+      if (skill.buffAtk) {
+        c.activeBuffs.atk = { mult: skill.buffAtk, timer: skill.buffDuration };
+        spawnFloatingText(stageIdx, c.x, c.y - 30, '공격 ×2!', '#e74c3c', 13);
+      }
+    }
+    return true;
+  }
+
   // 쉐도우파트너: 분신 소환
   if (skill.targeting === 'shadow') {
     char.shadowActive = true;
@@ -363,6 +432,43 @@ function executeSkill(char, skill, stats, stage, field) {
   }
 
   const dmg = Math.floor(stats.atk * skill.dmgMultiplier);
+
+  // ── 범위 회복 (클레릭) ──────────────────────────────────
+  if (skill.targeting === 'heal') {
+    const stageIdx = char.assignedStage;
+    const healAmt  = Math.floor(stats.atk * (skill.healMult || 2));
+    const allies   = gameState.characters.filter(c => {
+      if (c.isDead || c.assignedStage !== stageIdx) return false;
+      const dx = c.x - char.x, dy = c.y - char.y;
+      return dx * dx + dy * dy <= (skill.healRange || 300) ** 2;
+    });
+    const needsHeal = allies.some(c => (c.currentHp || 0) < (c.maxHpCache || 100));
+    if (!needsHeal) return false;
+    for (const c of allies) {
+      if ((c.currentHp || 0) < (c.maxHpCache || 100)) {
+        c.currentHp = Math.min(c.maxHpCache || 100, (c.currentHp || 0) + healAmt);
+        spawnFloatingText(stageIdx, c.x, c.y - 24, `+${healAmt}`, '#2ecc71', 14);
+      }
+    }
+    return true;
+  }
+
+  // ── 광역 빙결 (썬콜) ────────────────────────────────────
+  if (skill.targeting === 'aoe_freeze') {
+    const maxR2   = (skill.freezeRange || 270) ** 2;
+    const targets = field.monsters.filter(m => {
+      if (!m.alive) return false;
+      const dx = m.x - char.x, dy = m.y - char.y;
+      return dx * dx + dy * dy <= maxR2;
+    }).slice(0, skill.maxTargets || 8);
+    if (!targets.length) return false;
+    for (const t of targets) {
+      dealSkillDamage(char, t, dmg, stage, field, stats);
+      t.frozen      = true;
+      t.frozenTimer = skill.freezeDuration || 5.0;
+    }
+    return true;
+  }
 
   if (skill.targeting === 'aoe') {
     const targets = field.monsters.filter(m => m.alive).slice(0, skill.maxTargets || 5);
@@ -441,8 +547,9 @@ function dealDamage(char, monster, stats, stage, field, dmgMult = 1.0) {
     char.attackAnim = 0.6;
     orbExplosion    = true;
   } else {
-    const atkMult = getSkillAtkMult(char);
-    const rawDmg  = Math.max(1, Math.floor(stats.atk * atkMult) - mDef);
+    const atkMult    = getSkillAtkMult(char);
+    const atkBufMult = (char.activeBuffs?.atk?.timer > 0) ? (char.activeBuffs.atk.mult || 1) : 1;
+    const rawDmg  = Math.max(1, Math.floor(stats.atk * atkMult * atkBufMult) - mDef);
     baseDmg       = Math.max(1, Math.floor(rawDmg * dmgMult));
     if (hasOrb) {
       char.orbCount = (char.orbCount || 0) + 1;
