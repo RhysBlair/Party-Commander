@@ -1,7 +1,7 @@
 // 장비 슬롯 합산 헬퍼 (강화 보너스 포함: +15% per enhance level)
 function sumEquipStat(char, stat) {
   let total = 0;
-  for (const slot of ['weapon', 'armor', 'accessory']) {
+  for (const slot of ['weapon', 'armor', 'accessory', 'throwable']) {
     const item = char.equipment?.[slot];
     if (!item) continue;
     const id      = typeof item === 'string' ? item : item.id;

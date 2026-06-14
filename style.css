@@ -550,6 +550,16 @@ body {
   background: #4a1515;
 }
 
+.sell-btn {
+  border-color: #20503a;
+  background: #0a2018;
+  color: #4caf87;
+}
+
+.sell-btn:hover {
+  background: #144030;
+}
+
 .inv-list {
   display: flex;
   flex-direction: column;
@@ -649,6 +659,71 @@ body {
   color: #4caf50;
   font-weight: bold;
   white-space: nowrap;
+}
+
+/* 캐릭터 영입 박스 */
+.add-char-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #0a1020;
+  border: 1px dashed #2a3a4a;
+  border-radius: 6px;
+  margin-top: 4px;
+}
+
+.add-char-full {
+  justify-content: center;
+  color: #555;
+  font-size: 12px;
+}
+
+.add-char-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+}
+
+.add-char-sub {
+  font-size: 11px;
+  color: #666;
+}
+
+/* 펫 탭 */
+.pet-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 8px;
+  border: 1px solid #1a2a3a;
+  border-radius: 4px;
+  background: #0a1525;
+  margin-bottom: 5px;
+}
+
+.pet-equipped {
+  border-color: #4caf5044;
+  background: #0a1f0a;
+}
+
+.pet-option-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pet-option-name {
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.pet-option-meta {
+  font-size: 11px;
+  color: #666;
 }
 
 /* 강화 버튼 */

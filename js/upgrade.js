@@ -135,15 +135,36 @@ function tryLearnSkill(charId, skillId) {
   char.skills.push(skillId);
 }
 
-function tryBuyPet(petId) {
+function tryBuyPet(charId, petId) {
+  const char = gameState.characters.find(c => c.id === charId);
   const p = PETS[petId];
-  if (!p) return;
-  if (gameState.pets.includes(petId)) return;
+  if (!char || !p) return;
+  if (char.pet === petId) return;
   if (gameState.gold < p.cost) return;
   gameState.gold -= p.cost;
-  gameState.pets.push(petId);
+  char.pet = petId;
+}
+
+function trySellItem(uid) {
+  const idx = gameState.equipmentInventory.findIndex(i => i.uid === uid);
+  if (idx === -1) return;
+  const item = gameState.equipmentInventory[idx];
+  if (item.uid === 0) return;
+  const e = EQUIPMENT[item.id];
+  if (!e || !e.cost) return;
+  gameState.gold += Math.floor(e.cost * 0.6);
+  gameState.equipmentInventory.splice(idx, 1);
 }
 
 function tryAddCharacter() {
-  // 11단계에서 구현
+  const cur = gameState.characters.length;
+  if (cur >= CHAR_START_POS.length) return;
+  const cost = charAddCost(cur);
+  if (gameState.gold < cost) return;
+  gameState.gold -= cost;
+  const newChar = createCharacter(0);
+  gameState.characters.push(newChar);
+  if (!gameState.stageFields[0]) initStageField(0);
+  resetCharPos(newChar);
+  markTabDirty();
 }

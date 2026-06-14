@@ -28,35 +28,43 @@ const expRequired = (level) => Math.floor(10 * Math.pow(1.4, level - 1));
 // 레벨업 시 획득 스탯 포인트
 const STAT_POINTS_PER_LEVEL = 5;
 
-// 장비 정의
+// 장비 정의  (minDropStage: 0=초원, 1=숲, 2=동굴, 3=사막, 4=화산)
 const EQUIPMENT = {
   // ── 스타터 ──────────────────────────────────────────────
-  beginner_sword:  { name: "초보자의 검",   type: "weapon",    grade: "노멀", atk: 3,                       req: {},                              cost: 0    },
+  beginner_sword:  { name: "초보자의 검",   type: "weapon",    grade: "노멀", atk: 3,                       req: {},                               cost: 0,    minDropStage: 99 },
 
   // ── 무기 (공용) ─────────────────────────────────────────
-  iron_sword:      { name: "철검",           type: "weapon",    grade: "노멀", atk: 8,                       req: { level: 5 },                    cost: 200  },
-  steel_sword:     { name: "강철검",         type: "weapon",    grade: "노멀", atk: 16,                      req: { level: 10 },                   cost: 600  },
+  iron_sword:      { name: "철검",           type: "weapon",    grade: "노멀", atk: 8,                       req: { level: 5 },                     cost: 200,  minDropStage: 0 },
+  steel_sword:     { name: "강철검",         type: "weapon",    grade: "노멀", atk: 16,                      req: { level: 10 },                    cost: 600,  minDropStage: 1 },
 
   // ── 무기 (직업 전용) ────────────────────────────────────
-  knight_sword:    { name: "기사검",         type: "weapon",    grade: "레어", atk: 28,                      req: { level: 15, classId: "warrior" }, cost: 1500 },
-  long_bow:        { name: "장궁",           type: "weapon",    grade: "노멀", atk: 12,                      req: { level: 5,  classId: "archer"  }, cost: 280  },
-  compound_bow:    { name: "복합궁",         type: "weapon",    grade: "레어", atk: 22,                      req: { level: 10, classId: "archer"  }, cost: 750  },
-  magic_staff:     { name: "마법 지팡이",    type: "weapon",    grade: "노멀", atk: 5,  bonusINT: 5,         req: { level: 5,  classId: "mage"    }, cost: 280  },
-  great_staff:     { name: "대마법 지팡이",  type: "weapon",    grade: "레어", atk: 8,  bonusINT: 10,        req: { level: 10, classId: "mage"    }, cost: 750  },
-  dagger:          { name: "단검",           type: "weapon",    grade: "노멀", atk: 11,                      req: { level: 5,  classId: "rogue"   }, cost: 260  },
-  shadow_blade:    { name: "그림자 검",      type: "weapon",    grade: "레어", atk: 20,                      req: { level: 10, classId: "rogue"   }, cost: 720  },
+  knight_sword:    { name: "기사검",         type: "weapon",    grade: "레어", atk: 28,                      req: { level: 15, classId: "warrior" }, cost: 1500, minDropStage: 2 },
+  long_bow:        { name: "장궁",           type: "weapon",    grade: "노멀", atk: 12,                      req: { level: 5,  classId: "archer"  }, cost: 280,  minDropStage: 0 },
+  compound_bow:    { name: "복합궁",         type: "weapon",    grade: "레어", atk: 22,                      req: { level: 10, classId: "archer"  }, cost: 750,  minDropStage: 1 },
+  magic_staff:     { name: "마법 지팡이",    type: "weapon",    grade: "노멀", atk: 5,  bonusINT: 5,         req: { level: 5,  classId: "mage"    }, cost: 280,  minDropStage: 0 },
+  great_staff:     { name: "대마법 지팡이",  type: "weapon",    grade: "레어", atk: 8,  bonusINT: 10,        req: { level: 10, classId: "mage"    }, cost: 750,  minDropStage: 1 },
+  dagger:          { name: "단검",           type: "weapon",    grade: "노멀", atk: 11,                      req: { level: 5,  classId: "rogue"   }, cost: 260,  minDropStage: 0 },
+  shadow_blade:    { name: "그림자 검",      type: "weapon",    grade: "레어", atk: 20,                      req: { level: 10, classId: "rogue"   }, cost: 720,  minDropStage: 1 },
 
   // ── 방어구 ──────────────────────────────────────────────
-  leather_armor:   { name: "가죽 갑옷",      type: "armor",     grade: "노멀", physDef: 5,                   req: { level: 5 },                    cost: 200  },
-  chain_mail:      { name: "사슬 갑옷",      type: "armor",     grade: "노멀", physDef: 12,                  req: { level: 10 },                   cost: 600  },
-  plate_armor:     { name: "판금 갑옷",      type: "armor",     grade: "레어", physDef: 22,                  req: { level: 15, classId: "warrior" }, cost: 1500 },
-  mage_robe:       { name: "마법사 로브",    type: "armor",     grade: "노멀", magicDef: 10, bonusINT: 3,    req: { level: 5,  classId: "mage"    }, cost: 250  },
+  leather_armor:   { name: "가죽 갑옷",      type: "armor",     grade: "노멀", physDef: 5,                   req: { level: 5 },                     cost: 200,  minDropStage: 0 },
+  chain_mail:      { name: "사슬 갑옷",      type: "armor",     grade: "노멀", physDef: 12,                  req: { level: 10 },                    cost: 600,  minDropStage: 1 },
+  plate_armor:     { name: "판금 갑옷",      type: "armor",     grade: "레어", physDef: 22,                  req: { level: 15, classId: "warrior" }, cost: 1500, minDropStage: 2 },
+  mage_robe:       { name: "마법사 로브",    type: "armor",     grade: "노멀", magicDef: 10, bonusINT: 3,    req: { level: 5,  classId: "mage"    }, cost: 250,  minDropStage: 0 },
 
   // ── 장신구 ──────────────────────────────────────────────
-  lucky_ring:      { name: "행운의 반지",    type: "accessory", grade: "노멀", bonusLUK: 5,                  req: { level: 5 },                    cost: 300  },
-  str_ring:        { name: "힘의 반지",      type: "accessory", grade: "노멀", bonusSTR: 5,                  req: { level: 5 },                    cost: 300  },
-  dex_bracelet:    { name: "민첩의 팔찌",    type: "accessory", grade: "레어", bonusDEX: 8,                  req: { level: 10 },                   cost: 700  },
-  int_necklace:    { name: "지성의 목걸이",  type: "accessory", grade: "레어", bonusINT: 8,                  req: { level: 10 },                   cost: 700  },
+  lucky_ring:      { name: "행운의 반지",    type: "accessory", grade: "노멀", bonusLUK: 5,                  req: { level: 5 },                     cost: 300,  minDropStage: 0 },
+  str_ring:        { name: "힘의 반지",      type: "accessory", grade: "노멀", bonusSTR: 5,                  req: { level: 5 },                     cost: 300,  minDropStage: 0 },
+  dex_bracelet:    { name: "민첩의 팔찌",    type: "accessory", grade: "레어", bonusDEX: 8,                  req: { level: 10 },                    cost: 700,  minDropStage: 1 },
+  int_necklace:    { name: "지성의 목걸이",  type: "accessory", grade: "레어", bonusINT: 8,                  req: { level: 10 },                    cost: 700,  minDropStage: 1 },
+
+  // ── 표창 (도적 전용, throwable 슬롯) ────────────────────
+  su_shuriken:     { name: "수비표창",   type: "throwable", grade: "노멀", atk: 10, req: { classId: "rogue" },              cost: 300,  minDropStage: 0 },
+  geum_shuriken:   { name: "금비표창",   type: "throwable", grade: "노멀", atk: 15, req: { classId: "rogue", level: 5  },  cost: 700,  minDropStage: 0 },
+  to_shuriken:     { name: "토비표창",   type: "throwable", grade: "노멀", atk: 20, req: { classId: "rogue", level: 10 },  cost: 1500, minDropStage: 1 },
+  rae_shuriken:    { name: "뇌전수리검", type: "throwable", grade: "레어", atk: 25, req: { classId: "rogue", level: 15 },  cost: 3000, minDropStage: 2 },
+  il_shuriken:     { name: "일비표창",   type: "throwable", grade: "레어", atk: 30, req: { classId: "rogue", level: 15 },  cost: 5000, minDropStage: 3 },
+  hwa_shuriken:    { name: "화비표창",   type: "throwable", grade: "에픽", atk: 35, req: { classId: "rogue", level: 20 },  cost: 9000, minDropStage: 4 },
 };
 
 const GRADE_COLORS = { "노멀": "#aaa", "레어": "#5b9bd5", "에픽": "#9b59b6", "유니크": "#e2b96f" };

@@ -8,7 +8,6 @@ const gameState = {
 
   characters: [],
   equipmentInventory: [],  // [{ id, uid, enhance }, ...]
-  pets: [],
   unlockedSkills: [],
 
   nextItemUid: 1,          // 아이템 인스턴스 고유 ID 카운터
@@ -30,8 +29,9 @@ function createCharacter(assignedStage = 0) {
     stats: { STR: 5, DEX: 5, INT: 5, LUK: 5 },
     unspentPoints: 0,
     autoAssign: true,
-    equipment: { weapon: { id: 'beginner_sword', uid: 0, enhance: 0 }, armor: null, accessory: null },
+    equipment: { weapon: { id: 'beginner_sword', uid: 0, enhance: 0 }, armor: null, accessory: null, throwable: null },
     skills: [],
+    pet: null,
     assignedStage,
     // 런타임 필드 상태 (저장 제외)
     x: 80, y: 240, attackTimer: 0, attackAnim: 0, facing: 1,
@@ -164,7 +164,7 @@ function goToStage(index) {
 const SAVE_KEY = 'party_commander_save';
 
 // 런타임 전용 캐릭터 필드 (저장 제외)
-const RUNTIME_CHAR_KEYS = ['x', 'y', 'attackTimer', 'attackAnim', 'facing', 'skillTimers', 'skillAnim'];
+const RUNTIME_CHAR_KEYS = ['x', 'y', 'attackTimer', 'attackAnim', 'facing', 'skillTimers', 'skillAnim', 'petX', 'petY', 'magnetTimer'];
 
 function saveGame() {
   const chars = gameState.characters.map(c => {
@@ -195,7 +195,9 @@ function loadGame() {
         }
       }
       if (!char.equipment) {
-        char.equipment = { weapon: { id: 'beginner_sword', uid: 0, enhance: 0 }, armor: null, accessory: null };
+        char.equipment = { weapon: { id: 'beginner_sword', uid: 0, enhance: 0 }, armor: null, accessory: null, throwable: null };
+      } else if (char.equipment.throwable === undefined) {
+        char.equipment.throwable = null;
       }
     }
     // 인벤토리: string → object
@@ -204,6 +206,18 @@ function loadGame() {
       return item;
     });
     if (!gameState.nextItemUid) gameState.nextItemUid = 100;
+
+    // 구형 세이브 호환: 전역 pets[] → 첫 캐릭터 pet 필드로 마이그레이션
+    if (saved.pets && saved.pets.length > 0) {
+      const bestPet = saved.pets.includes('pet_magnet') ? 'pet_magnet' : 'pet_basic';
+      if (gameState.characters.length > 0 && !gameState.characters[0].pet) {
+        gameState.characters[0].pet = bestPet;
+      }
+    }
+    // pet 필드 없는 구형 캐릭터 초기화
+    for (const char of gameState.characters) {
+      if (char.pet === undefined) char.pet = null;
+    }
 
     gameState.viewStage = legacyStage;
 

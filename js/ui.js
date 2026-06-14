@@ -122,7 +122,27 @@ function renderCharacterTab() {
       </div>`;
   }).join('');
 
-  el.innerHTML = html;
+  const maxChars = CHAR_START_POS.length;
+  const curChars = gameState.characters.length;
+  const addCost  = charAddCost(curChars);
+  const canAfford = gameState.gold >= addCost;
+
+  const addSection = curChars < maxChars
+    ? `<div class="add-char-box">
+         <div class="add-char-info">
+           <span>파티 슬롯 <strong>${curChars} / ${maxChars}</strong></span>
+           <span class="add-char-sub">새 모험가 영입 — 스테이지 1에서 시작</span>
+         </div>
+         <button class="small-btn ${canAfford ? '' : 'disabled'}"
+                 onclick="tryAddCharacter(); renderCharacterTab();">
+           영입 ${addCost.toLocaleString()}G
+         </button>
+       </div>`
+    : `<div class="add-char-box add-char-full">
+         파티가 가득 찼습니다 (최대 ${maxChars}명)
+       </div>`;
+
+  el.innerHTML = html + addSection;
 }
 
 // ── 스탯 탭 (전체 재빌드) ───────────────────────────────────
@@ -239,7 +259,7 @@ function updateStatDisplay(charId) {
 }
 
 // ── 장비 탭 ────────────────────────────────────────────────
-const SLOT_NAMES = { weapon: '무기', armor: '방어구', accessory: '장신구' };
+const SLOT_NAMES = { weapon: '무기', throwable: '표창', armor: '방어구', accessory: '장신구' };
 
 // 강화 보너스가 적용된 실제 스탯 문자열 반환
 function equipStatText(e, enhance) {
@@ -271,7 +291,10 @@ function renderEquipmentTab() {
 
   // ── 장착 중 ─────────────────────────────────────────────
   const charCards = gameState.characters.map(char => {
-    const slots = ['weapon', 'armor', 'accessory'].map(slot => {
+    const slotList = char.classId === 'rogue'
+      ? ['weapon', 'throwable', 'armor', 'accessory']
+      : ['weapon', 'armor', 'accessory'];
+    const slots = slotList.map(slot => {
       const item = char.equipment[slot];
       const e    = item ? EQUIPMENT[item.id] : null;
       const col  = e ? (GRADE_COLORS[e.grade] || '#aaa') : '#333';
@@ -336,6 +359,14 @@ function renderEquipmentTab() {
              </button>`
           : `<span style="color:#e2b96f;font-size:10px">MAX</span>`;
 
+        const sellPrice = e.cost ? Math.floor(e.cost * 0.6) : 0;
+        const sellBtn   = sellPrice > 0
+          ? `<button class="equip-remove sell-btn"
+                     onclick="trySellItem(${item.uid});renderEquipmentTab();">
+               판매 ${sellPrice.toLocaleString()}G
+             </button>`
+          : '';
+
         return `
           <div class="inv-item">
             <div style="display:flex;align-items:center;gap:6px">
@@ -345,6 +376,7 @@ function renderEquipmentTab() {
             <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;align-items:center">
               ${equipBtns}
               ${enhBtn}
+              ${sellBtn}
             </div>
           </div>`;
       }).join('');
@@ -474,52 +506,56 @@ function renderSkillTab() {
 // ── 펫 탭 ──────────────────────────────────────────────────
 function renderPetTab() {
   const el = document.getElementById('tab-pets');
+  if (gameState.characters.length === 0) {
+    el.innerHTML = '<p style="color:#888">캐릭터가 없습니다.</p>';
+    return;
+  }
 
-  const petCards = Object.entries(PETS).map(([id, p]) => {
-    const owned     = gameState.pets.includes(id);
-    const canAfford = !owned && gameState.gold >= p.cost;
-    const rangeText = p.pickupRange >= 9000 ? '전체 필드' : `${p.pickupRange}px`;
-    const desc      = id === 'pet_basic'
-      ? '캐릭터 주변 아이템을 자동으로 수집합니다.'
-      : '필드 전체의 아이템을 빠르게 수집합니다.';
+  const charCards = gameState.characters.map(char => {
+    const petOptions = Object.entries(PETS).map(([id, p]) => {
+      const isEquipped = char.pet === id;
+      const rangeText  = p.pickupRange >= 9000 ? '전체 필드' : `${p.pickupRange}px`;
+      const canAfford  = !isEquipped && gameState.gold >= p.cost;
+
+      return `
+        <div class="pet-option ${isEquipped ? 'pet-equipped' : ''}">
+          <div class="pet-option-info">
+            <span class="pet-option-name" style="color:${isEquipped ? '#4caf50' : '#e0e0e0'}">${p.name}</span>
+            <span class="pet-option-meta">범위 ${rangeText} · 주기 ${p.pickupInterval}s</span>
+          </div>
+          ${isEquipped
+            ? `<span class="skill-learned">✓ 장착 중</span>`
+            : `<button class="small-btn ${canAfford ? '' : 'disabled'}"
+                       onclick="tryBuyPet(${char.id},'${id}');renderPetTab();">
+                 ${p.cost.toLocaleString()}G
+               </button>`}
+        </div>`;
+    }).join('');
 
     return `
-      <div class="char-card" style="${owned ? 'border-color:#4caf5055;background:#0a1f0a' : ''}">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <span style="font-weight:bold;font-size:14px;color:${owned ? '#4caf50' : '#e0e0e0'}">
-            ${p.name}
-            ${owned ? '<span style="font-size:11px;font-weight:normal"> ✓ 보유</span>' : ''}
-          </span>
-          ${!owned
-            ? `<button class="small-btn ${canAfford ? '' : 'disabled'}"
-                       onclick="tryBuyPet('${id}');renderPetTab();">
-                 구매 ${p.cost.toLocaleString()}G
-               </button>`
-            : `<span style="color:#4caf50;font-size:12px">활성화됨</span>`}
-        </div>
-        <div style="display:flex;gap:16px;font-size:12px;color:#aaa;margin-bottom:4px">
-          <span>수집 범위 <strong style="color:#e0e0e0">${rangeText}</strong></span>
-          <span>수집 주기 <strong style="color:#e0e0e0">${p.pickupInterval}초</strong></span>
-        </div>
-        <div style="font-size:11px;color:#666">${desc}</div>
+      <div class="char-card">
+        <h3 style="color:${CLASS_COLORS[char.classId]||'#aaa'};margin-bottom:8px">
+          ${charClassName(char.classId)} Lv.${char.level}
+          ${char.pet ? `<span style="font-size:11px;font-weight:normal;color:#4caf50"> ─ ${PETS[char.pet].name} 장착 중</span>` : ''}
+        </h3>
+        ${petOptions}
       </div>`;
   }).join('');
 
-  const dropCount  = gameState.drops.length;
-  const hasPet     = gameState.pets.length > 0;
+  const dropCount = gameState.drops.length;
   const dropNotice = dropCount > 0
     ? `<div style="margin-top:8px;padding:6px 10px;background:#1a1a0a;border:1px solid #3a3a1a;border-radius:4px;font-size:12px;color:#e2b96f">
-         드랍 아이템 ${dropCount}개 — ${hasPet ? '펫이 자동 수집 중' : '캐릭터가 근접하면 수집됩니다'}
+         드랍 아이템 ${dropCount}개 필드에 존재
        </div>`
     : '';
 
   el.innerHTML = `
     <div class="eq-section-title">펫</div>
     <div style="font-size:11px;color:#666;margin-bottom:8px">
-      펫이 없으면 캐릭터가 드랍 아이템에 직접 근접해야 수집됩니다.<br>
-      여러 펫 보유 시 범위가 가장 넓은 펫이 적용됩니다.
+      캐릭터마다 펫을 개별 장착합니다.<br>
+      펫이 없으면 캐릭터가 드랍에 직접 근접해야 수집됩니다.
     </div>
-    ${petCards}
+    ${charCards}
     ${dropNotice}`;
 }
 
