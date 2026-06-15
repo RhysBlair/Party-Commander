@@ -20,12 +20,15 @@ const gameState = {
   // 런타임 전용 (저장 제외)
   viewStage: 0,
   stageFields: [],
+  raidField: null,
+  viewRaid: false,
 };
 
 // 새 캐릭터 생성 (모험가)
 function createCharacter(assignedStage = 0) {
   return {
     id: Date.now(),
+    nickname: NICKNAME_LIST[Math.floor(Math.random() * NICKNAME_LIST.length)],
     classId: 'novice',
     level: 1,
     exp: 0,
@@ -34,6 +37,8 @@ function createCharacter(assignedStage = 0) {
     autoAssign: true,
     equipment: { weapon: { id: 'beginner_sword', uid: 0, enhance: 0 }, armor: null, accessory: null, throwable: null },
     skills: [],
+    skillLevels: {},
+    skillPoints: 0,
     pet: null,
     assignedStage,
     // 런타임 필드 상태 (저장 제외)
@@ -168,7 +173,7 @@ function goToStage(index) {
 const SAVE_KEY = 'party_commander_save';
 
 // 런타임 전용 캐릭터 필드 (저장 제외)
-const RUNTIME_CHAR_KEYS = ['x', 'y', 'attackTimer', 'attackAnim', 'facing', 'skillTimers', 'skillAnim', 'petX', 'petY', 'magnetTimer', 'shadowActive', 'shadowTimer', 'shadowX', 'shadowY', 'orbCount', 'orbReady', 'currentHp', 'maxHpCache', 'hitAnim', 'isDead', 'respawnTimer', 'quickHitTimer', 'quickHitCount', 'quickHitDmgMult', 'quickHitDelay', 'activeBuffs'];
+const RUNTIME_CHAR_KEYS = ['x', 'y', 'attackTimer', 'attackAnim', 'facing', 'skillTimers', 'skillAnim', 'petX', 'petY', 'magnetTimer', 'shadowActive', 'shadowTimer', 'shadowX', 'shadowY', 'orbCount', 'orbReady', 'currentHp', 'maxHpCache', 'hitAnim', 'isDead', 'respawnTimer', 'quickHitTimer', 'quickHitCount', 'quickHitDmgMult', 'quickHitDelay', 'activeBuffs', 'inRaid', 'raidAccDown', 'raidSkillSeal'];
 
 function saveGame() {
   const chars = gameState.characters.map(c => {
@@ -176,7 +181,7 @@ function saveGame() {
     RUNTIME_CHAR_KEYS.forEach(k => delete s[k]);
     return s;
   });
-  const { stageFields, viewStage, drops, floatingTexts, projectiles, ...rest } = gameState;
+  const { stageFields, viewStage, raidField, viewRaid, drops, floatingTexts, projectiles, ...rest } = gameState;
   localStorage.setItem(SAVE_KEY, JSON.stringify({ ...rest, characters: chars, lastTick: Date.now() }));
 }
 
@@ -227,6 +232,15 @@ function loadGame() {
       // warrior_strike → orb_strike 마이그레이션
       const wsIdx = (char.skills || []).indexOf('warrior_strike');
       if (wsIdx !== -1) char.skills[wsIdx] = 'orb_strike';
+      // skillLevels / skillPoints 구형 세이브 호환
+      if (!char.skillLevels) {
+        char.skillLevels = {};
+        for (const id of (char.skills || [])) char.skillLevels[id] = 1;
+      }
+      if (char.skillPoints === undefined)
+        char.skillPoints = Math.floor((char.level - 1) / SKILL_SP_PER_LEVEL);
+      if (!char.nickname)
+        char.nickname = NICKNAME_LIST[Math.floor(Math.random() * NICKNAME_LIST.length)];
     }
 
     // 구형 세이브: upgrades 필드 없으면 초기화

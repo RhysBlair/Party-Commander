@@ -22,6 +22,7 @@ function loop(now) {
   }
 
   // 시스템 업데이트
+  updateRaid(dt);
   updateCombat(dt);
   updateLoot(dt);
   updateFloatingTexts(dt);

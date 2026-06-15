@@ -17,8 +17,11 @@
     </div>
 
     <div id="main-area">
-      <!-- 좌측: 전투 필드 Canvas -->
-      <canvas id="field-canvas" width="640" height="480"></canvas>
+      <!-- 좌측: 전투 필드 Canvas + 캐릭터 리스트 패널 -->
+      <div id="canvas-wrap">
+        <canvas id="field-canvas" width="640" height="480"></canvas>
+        <div id="char-list-panel"></div>
+      </div>
 
       <!-- 우측: UI 패널 -->
       <div id="ui-panel">
@@ -26,10 +29,12 @@
           <button class="tab-btn active" data-tab="characters">캐릭터</button>
           <button class="tab-btn" data-tab="stats">스탯</button>
           <button class="tab-btn" data-tab="equipment">장비</button>
+          <button class="tab-btn" data-tab="shop">상점</button>
           <button class="tab-btn" data-tab="skills">스킬</button>
           <button class="tab-btn" data-tab="pets">펫</button>
           <button class="tab-btn" data-tab="stage">스테이지</button>
           <button class="tab-btn" data-tab="upgrades">업그레이드</button>
+          <button class="tab-btn" data-tab="raid">레이드</button>
         </div>
         <div id="tab-content">
           <div id="tab-characters" class="tab-pane active">
@@ -37,12 +42,50 @@
           </div>
           <div id="tab-stats" class="tab-pane"></div>
           <div id="tab-equipment" class="tab-pane"></div>
+          <div id="tab-shop" class="tab-pane"></div>
           <div id="tab-skills" class="tab-pane"></div>
           <div id="tab-pets" class="tab-pane"></div>
           <div id="tab-stage" class="tab-pane"></div>
           <div id="tab-upgrades" class="tab-pane"></div>
+          <div id="tab-raid" class="tab-pane"></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- 캐릭터 상세 모달 -->
+  <div id="char-modal-overlay" onclick="closeCharModal()">
+    <div id="char-modal" onclick="event.stopPropagation()">
+      <div id="char-modal-header">
+        <div id="char-modal-title"></div>
+        <button id="char-modal-close" onclick="closeCharModal()">✕</button>
+      </div>
+      <div id="char-modal-tabs">
+        <button class="modal-tab-btn active" data-section="stats" onclick="switchCharModalSection('stats')">능력치</button>
+        <button class="modal-tab-btn" data-section="equipment" onclick="switchCharModalSection('equipment')">장비</button>
+        <button class="modal-tab-btn" data-section="skills" onclick="switchCharModalSection('skills')">스킬</button>
+      </div>
+      <div id="char-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- 레이드 결과 모달 -->
+  <div id="raid-result-overlay">
+    <div id="raid-result-box">
+      <div id="raid-result-title">⚔ 자쿰 격파!</div>
+      <div class="raid-result-section">
+        <div class="raid-result-label">클리어 시간</div>
+        <div id="raid-result-time"></div>
+      </div>
+      <div class="raid-result-section">
+        <div class="raid-result-label">딜 순위 (TOP 3)</div>
+        <div id="raid-result-dmg"></div>
+      </div>
+      <div class="raid-result-section">
+        <div class="raid-result-label">회복량</div>
+        <div id="raid-result-heal"></div>
+      </div>
+      <button id="raid-result-confirm" onclick="closeRaidResult()">확인</button>
     </div>
   </div>
 
@@ -72,6 +115,7 @@
   <script src="js/loot.js"></script>
   <script src="js/upgrade.js"></script>
   <script src="js/combat.js"></script>
+  <script src="js/raid.js"></script>
   <script src="js/render.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/game.js"></script>

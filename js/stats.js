@@ -48,13 +48,14 @@ function calcFinalStats(char) {
   const critRate   = Math.min(effLUK * 0.5, 50); // LUK당 0.5%, 최대 50%
   const maxHp      = Math.floor(100 + char.level * 20 + effSTR * 5);
 
-  const hpBuffMult = (char.activeBuffs?.hp?.timer > 0) ? (char.activeBuffs.hp.mult || 1) : 1;
+  const hpBuffMult  = (char.activeBuffs?.hp?.timer > 0) ? (char.activeBuffs.hp.mult || 1) : 1;
+  const accPenalty  = (char.raidAccDown || 0) > 0 ? ZAKUM?.accDebuffAmt ?? 70 : 0;
 
   return {
     atk:      Math.floor(baseAtk * atkMultiplier * (1 + atkUpgPct)),
     physDef:  Math.floor(physDef + defUpgFlat),
     magicDef: Math.floor(magicDef),
-    accuracy: Math.min(accuracy, 99),
+    accuracy: Math.max(10, Math.min(accuracy - accPenalty, 99)),
     evade:    Math.min(evade, 60),
     critRate,
     critDmg:  2.0,

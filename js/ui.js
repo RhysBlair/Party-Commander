@@ -22,6 +22,17 @@ function initUI() {
       renderActiveTab();
     });
   });
+
+  // 캐릭터 리스트 패널 — 이벤트 위임 (innerHTML 재렌더링에도 안정적)
+  const panel = document.getElementById('char-list-panel');
+  if (panel) {
+    panel.addEventListener('click', e => {
+      const item = e.target.closest('.char-list-item');
+      if (item && item.dataset.charId) {
+        openCharModal(Number(item.dataset.charId));
+      }
+    });
+  }
 }
 
 function updateUI(dt) {
@@ -29,19 +40,26 @@ function updateUI(dt) {
   if (uiTimer < HUD_INTERVAL) return;
   uiTimer = 0;
   updateHUD();
+  updateCharList();
   // 탭 콘텐츠는 여기서 갱신하지 않음
   // → 버튼 onclick 또는 markTabDirty()에서만 갱신
 }
 
 function updateHUD() {
-  const s     = gameState;
-  const stage = STAGES[s.viewStage];
-  const field = s.stageFields[s.viewStage];
-  const kills = field ? field.kills : 0;
-  document.getElementById('hud-gold').textContent     = `골드: ${s.gold.toLocaleString()}`;
-  document.getElementById('hud-gems').textContent     = `젬: ${s.gems.toLocaleString()}`;
-  document.getElementById('hud-stage').textContent    = `스테이지: ${stage.name}`;
-  document.getElementById('hud-progress').textContent = `처치: ${kills} / ${stage.killsToAdvance}`;
+  const s = gameState;
+  document.getElementById('hud-gold').textContent = `골드: ${s.gold.toLocaleString()}`;
+  document.getElementById('hud-gems').textContent = `젬: ${s.gems.toLocaleString()}`;
+  if (s.viewRaid) {
+    const rf = s.raidField;
+    document.getElementById('hud-stage').textContent    = `[레이드] 자쿰`;
+    document.getElementById('hud-progress').textContent = rf ? `HP: ${(rf.boss.hp / rf.boss.maxHp * 100).toFixed(1)}%` : '준비 중';
+  } else {
+    const stage = STAGES[s.viewStage];
+    const field = s.stageFields[s.viewStage];
+    const kills = field ? field.kills : 0;
+    document.getElementById('hud-stage').textContent    = `스테이지: ${stage.name}`;
+    document.getElementById('hud-progress').textContent = `처치: ${kills} / ${stage.killsToAdvance}`;
+  }
 }
 
 function renderActiveTab() {
@@ -51,10 +69,12 @@ function renderActiveTab() {
   if (tab === 'characters') renderCharacterTab();
   else if (tab === 'stats')      renderStatsTab();
   else if (tab === 'equipment')  renderEquipmentTab();
+  else if (tab === 'shop')       renderShopTab();
   else if (tab === 'skills')     renderSkillTab();
   else if (tab === 'pets')       renderPetTab();
   else if (tab === 'stage')      renderStageTab();
   else if (tab === 'upgrades')   renderUpgradeTab();
+  else if (tab === 'raid')       renderRaidTab();
 }
 
 // ── 캐릭터 탭 ──────────────────────────────────────────────
@@ -132,7 +152,8 @@ function renderCharacterTab() {
 
     return `
       <div class="char-card">
-        <h3 style="color:${classColor}">${charClassName(char.classId)}
+        <h3 style="color:${classColor}">${char.nickname || '???'}
+          <span style="color:#888;font-size:12px;font-weight:normal"> (${charClassName(char.classId)})</span>
           <span style="color:#666;font-size:11px;font-weight:normal"> Lv.${char.level}</span>
         </h3>
         <div style="font-size:12px;color:#888;margin-bottom:4px">
@@ -227,7 +248,7 @@ function renderStatsTab() {
     return `
       <div class="char-card">
         <div class="stat-card-header">
-          <h3>${charClassName(char.classId)} Lv.${char.level}</h3>
+          <h3>${char.nickname || '???'} <span style="color:#888;font-size:12px;font-weight:normal">(${charClassName(char.classId)})</span> Lv.${char.level}</h3>
           <button class="toggle-btn ${char.autoAssign ? 'active' : ''}"
                   onclick="tryToggleAutoAssign(${char.id}); renderStatsTab();">
             자동배분 ${char.autoAssign ? 'ON' : 'OFF'}
@@ -367,7 +388,7 @@ function renderEquipmentTab() {
     return `
       <div class="char-card">
         <h3 style="color:${CLASS_COLORS[char.classId]||'#aaa'};margin-bottom:8px">
-          ${charClassName(char.classId)} Lv.${char.level}
+          ${char.nickname || '???'} <span style="color:#888;font-size:12px;font-weight:normal">(${charClassName(char.classId)})</span> Lv.${char.level}
         </h3>
         <div class="equip-slots">${slots}</div>
       </div>`;
@@ -420,48 +441,67 @@ function renderEquipmentTab() {
           </div>`;
       }).join('');
 
-  // ── 상점 ─────────────────────────────────────────────────
+  const gradeCount = g => inv.filter(i => { const e = EQUIPMENT[i.id]; return e && e.grade === g; }).length;
+  const sellBtns = ['노멀', '레어', '에픽'].map(g => {
+    const cnt = gradeCount(g);
+    const col = GRADE_COLORS[g] || '#aaa';
+    return `<button class="small-btn ${cnt > 0 ? '' : 'disabled'}" style="color:${col}"
+                    onclick="trySellByGrade('${g}');renderEquipmentTab();">
+              ${g} 일괄판매 (${cnt}개)
+            </button>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="eq-section-title">장착 중</div>
+    ${charCards}
+    <div class="eq-section-title" style="margin-top:10px">인벤토리</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${sellBtns}</div>
+    <div class="inv-list">${invHtml}</div>`;
+}
+
+// ── 상점 탭 ──────────────────────────────────────────────────
+function renderShopTab() {
+  const el  = document.getElementById('tab-shop');
+  const inv = gameState.equipmentInventory;
+
   const shopRows = Object.entries(EQUIPMENT)
     .filter(([id]) => id !== 'beginner_sword')
     .sort((a, b) => (a[1].req.level || 0) - (b[1].req.level || 0))
     .map(([id, e]) => {
-      const col       = GRADE_COLORS[e.grade] || '#aaa';
-      const ownedInv  = inv.filter(x => x.id === id).length;
-      const ownedEqp  = gameState.characters.filter(c =>
+      const col      = GRADE_COLORS[e.grade] || '#aaa';
+      const ownedInv = inv.filter(x => x.id === id).length;
+      const ownedEqp = gameState.characters.filter(c =>
         Object.values(c.equipment).some(eq => eq?.id === id)
       ).length;
-      const owned     = ownedInv + ownedEqp;
-      const canAfford = gameState.gold >= e.cost;
-      const reqParts  = [];
+      const owned    = ownedInv + ownedEqp;
+      const canAff   = gameState.gold >= e.cost;
+      const reqParts = [];
       if (e.req.level)   reqParts.push(`Lv.${e.req.level}`);
       if (e.req.classId) reqParts.push(charClassName(e.req.classId) + ' 전용');
       const reqStr = reqParts.join(' · ');
 
       return `
         <div class="shop-item">
-          <div class="shop-item-left">
-            <span style="color:${col};font-weight:bold">${e.name}</span>
-            <span style="color:${col};font-size:10px">[${e.grade}]</span>
-            <span class="equip-stat-text">${equipStatText(e, 0)}</span>
-            ${reqStr ? `<span class="shop-req">${reqStr}</span>` : ''}
-          </div>
-          <div class="shop-item-right">
-            <span class="shop-cost">${e.cost.toLocaleString()}G</span>
-            ${owned ? `<span style="color:#555;font-size:11px">×${owned} 보유</span>` : ''}
-            <button class="small-btn ${canAfford ? '' : 'disabled'}"
-                    onclick="tryBuyEquipment('${id}');renderEquipmentTab();">구매</button>
+          <span style="color:${col};font-weight:bold;font-size:13px">${e.name}</span>
+          <span style="color:${col};font-size:10px">[${e.grade}]</span>
+          <span class="equip-stat-text">${equipStatText(e, 0)}</span>
+          ${reqStr ? `<span class="shop-req">${reqStr}</span>` : ''}
+          <div class="shop-item-bottom">
+            <div>
+              <span class="shop-cost">${e.cost.toLocaleString()}G</span>
+              ${owned ? `<span style="color:#555;font-size:10px;margin-left:4px">×${owned}</span>` : ''}
+            </div>
+            <button class="small-btn ${canAff ? '' : 'disabled'}"
+                    onclick="tryBuyEquipment('${id}');renderShopTab();">구매</button>
           </div>
         </div>`;
     }).join('');
 
   el.innerHTML = `
-    <div class="eq-section-title">장착 중</div>
-    ${charCards}
-    <div class="eq-section-title" style="margin-top:10px">인벤토리</div>
-    <div class="inv-list">${invHtml}</div>
-    <div class="eq-section-title" style="margin-top:10px">
-      상점 <span style="color:#e2b96f;font-size:11px">골드: ${gameState.gold.toLocaleString()}</span>
+    <div class="eq-section-title">
+      상점 <span style="color:#e2b96f;font-size:11px"> 골드: ${gameState.gold.toLocaleString()}</span>
     </div>
+    <div style="font-size:11px;color:#666;margin-bottom:8px">장비를 구매하여 캐릭터에게 장착하세요.</div>
     <div class="shop-list">${shopRows}</div>`;
 }
 
@@ -479,6 +519,43 @@ const SKILL_TARGET_DESC = {
   debuff_area:  '범위 디버프',
 };
 
+function skillEffectDesc(id, s, level) {
+  const m = SKILL_LEVEL_MULTS[level] ?? 1.0;
+  const cd = level >= 1 ? (s.cooldown / (1 + (level - 1) * 0.06)).toFixed(1) : s.cooldown;
+  switch (s.targeting) {
+    case 'passive':
+      if (s.orbsRequired)   return `위력 ×${(s.dmgMultiplier * m).toFixed(1)} (구슬 ${s.orbsRequired}개)`;
+      if (s.attackInterval) return `위력 ×${((s.dmgMultiplier ?? 1) * m).toFixed(2)} · ${s.attackInterval}s/발`;
+      if (s.hits)           return `표창 3연속 · 타격당 ×${(m / 3).toFixed(2)}`;
+      return '패시브';
+    case 'debuff_area': {
+      const dm = 1 + (s.debuffDmgMult - 1) * m;
+      const dur = ((s.debuffDuration || 8) * (1 + (level - 1) * 0.1)).toFixed(0);
+      return `받는피해 +${Math.round((dm - 1) * 100)}% · ${dur}s · CD ${cd}s`;
+    }
+    case 'party_buff': {
+      const dur = ((s.buffDuration || 30) * (1 + (level - 1) * 0.12)).toFixed(0);
+      const parts = [`CD ${cd}s · 지속 ${dur}s`];
+      if (s.buffHp)     parts.push(`HP ×${s.buffHp}`);
+      if (s.buffCdMult) parts.push(`스킬CD ${Math.round(100/s.buffCdMult)}%`);
+      if (s.buffAtk)    parts.push(`ATK ×${s.buffAtk}`);
+      return parts.join(' · ');
+    }
+    case 'heal':
+      return `힐 ATK×${((s.healMult || 2) * m).toFixed(2)} · CD ${cd}s`;
+    case 'aoe_freeze': {
+      const freeze = ((s.freezeDuration || 5) + (level - 1) * 0.4).toFixed(1);
+      return `위력 ×${((s.dmgMultiplier || 1) * m).toFixed(2)} · 빙결 ${freeze}s · CD ${cd}s`;
+    }
+    case 'shadow': {
+      const dur = ((s.duration || 60) * (1 + (level - 1) * 0.12)).toFixed(0);
+      return `분신 지속 ${dur}s · CD ${cd}s`;
+    }
+    default:
+      return `위력 ×${((s.dmgMultiplier || 1) * m).toFixed(2)} · CD ${cd}s`;
+  }
+}
+
 function renderSkillTab() {
   const el = document.getElementById('tab-skills');
   if (gameState.characters.length === 0) {
@@ -488,117 +565,107 @@ function renderSkillTab() {
 
   const html = gameState.characters.map(char => {
     const cls = CLASSES[char.classId];
+    const sp  = char.skillPoints || 0;
     if (!cls.canSkill) {
       return `
         <div class="char-card">
           <h3 style="color:${CLASS_COLORS[char.classId]||'#aaa'};margin-bottom:6px">
-            ${charClassName(char.classId)} Lv.${char.level}
+            ${char.nickname || '???'} <span style="color:#888;font-size:12px;font-weight:normal">(${charClassName(char.classId)})</span> Lv.${char.level}
           </h3>
           <div style="color:#555;font-size:12px">전직 후 스킬을 배울 수 있습니다.</div>
         </div>`;
     }
 
-    // 이 직업(+ 부모 직업)에 해당하는 스킬 목록
     const parentClassId = CLASSES[char.classId]?.parent;
     const charSkills = Object.entries(SKILLS).filter(([, s]) =>
       s.classId === char.classId || s.classId === parentClassId
     );
 
     const skillRows = charSkills.map(([id, s]) => {
-      const learned   = char.skills.includes(id);
-      const canAfford = !learned && gameState.gold >= s.cost;
+      const curLv     = char.skillLevels?.[id] || 0;
+      const learned   = curLv > 0;
+      const isMax     = curLv >= SKILL_MAX_LEVEL;
+      const nextCost  = learned ? (SKILL_SP_COSTS[curLv + 1] ?? Infinity) : (SKILL_SP_COSTS[1] ?? 1);
+      const canUp     = !isMax && sp >= nextCost;
+      const col       = CLASS_COLORS[char.classId] || '#aaa';
+      const cd        = char.skillTimers?.[id];
       const isShadow  = s.targeting === 'shadow';
       const isPassive = s.targeting === 'passive';
-      const cd        = char.skillTimers?.[id];
-      let cdText = '', cdStyle = '';
 
-      if (isPassive && learned) {
-        if (s.orbsRequired) {
-          if (char.orbReady) {
-            cdText  = '⚡ 충전 완료!';
-            cdStyle = 'color:#f1c40f;font-weight:bold';
-          } else {
-            cdText = `구슬 ${char.orbCount || 0} / ${s.orbsRequired}`;
+      let cdText = '', cdStyle = '';
+      if (learned) {
+        if (isPassive) {
+          if (s.orbsRequired) {
+            cdText  = char.orbReady ? '⚡ 충전 완료!' : `구슬 ${char.orbCount || 0}/${s.orbsRequired}`;
+            cdStyle = char.orbReady ? 'color:#f1c40f;font-weight:bold' : '';
+          } else if (s.attackInterval) {
+            cdText  = `연사 활성 · ${s.attackInterval}s/발`;
+            cdStyle = 'color:#27ae60';
+          } else if (s.hits) {
+            cdText  = `${s.hits}연속 공격 활성`;
+            cdStyle = 'color:#2c3e50';
           }
-        } else if (s.attackInterval) {
-          cdText  = `연사 활성 · ${s.attackInterval}s/발`;
-          cdStyle = 'color:#27ae60';
-        } else if (s.hits) {
-          cdText  = `${s.hits}연속 공격 활성`;
-          cdStyle = 'color:#2c3e50';
-        }
-      } else if (s.targeting === 'party_buff' && learned) {
-        const activeTimer = Math.max(
-          s.buffHp    ? (char.activeBuffs?.hp?.timer  || 0) : 0,
-          s.buffCdMult? (char.activeBuffs?.cd?.timer  || 0) : 0,
-          s.buffAtk   ? (char.activeBuffs?.atk?.timer || 0) : 0
-        );
-        if (activeTimer > 0) {
-          cdText  = `버프 활성 ${activeTimer.toFixed(1)}s 남음`;
-          cdStyle = 'color:#2ecc71;font-weight:bold';
-        } else if (cd > 0) {
+        } else if (s.targeting === 'party_buff') {
+          const t = Math.max(
+            s.buffHp     ? (char.activeBuffs?.hp?.timer  || 0) : 0,
+            s.buffCdMult ? (char.activeBuffs?.cd?.timer  || 0) : 0,
+            s.buffAtk    ? (char.activeBuffs?.atk?.timer || 0) : 0
+          );
+          cdText  = t > 0 ? `버프 ${t.toFixed(1)}s 남음` : (cd > 0 ? `쿨타임 ${cd.toFixed(1)}s` : '');
+          cdStyle = t > 0 ? 'color:#2ecc71;font-weight:bold' : '';
+        } else if (isShadow && char.shadowActive) {
+          cdText  = `분신 ${(char.shadowTimer || 0).toFixed(1)}s`;
+          cdStyle = 'color:#9b59b6';
+        } else if (cd > 0 && cd < 9999) {
           cdText = `쿨타임 ${cd.toFixed(1)}s`;
         }
-      } else if (isShadow && char.shadowActive) {
-        cdText  = `분신 활성 ${(char.shadowTimer || 0).toFixed(1)}s`;
-        cdStyle = 'color:#9b59b6';
-      } else if (learned && cd > 0 && cd < 9999) {
-        cdText = `쿨타임 ${cd.toFixed(1)}s`;
       }
-      const col = CLASS_COLORS[char.classId] || '#aaa';
 
-      const metaHtml = isPassive
-        ? s.orbsRequired
-          ? `평타마다 구슬 1개 적립 &nbsp;·&nbsp; ${s.orbsRequired}개 시 다음 공격 ×${s.dmgMultiplier} (${s.dmgMultiplier * 100}%)`
-          : s.attackInterval
-            ? `쿨타임 없이 연사 &nbsp;·&nbsp; ${s.attackInterval}s/발 &nbsp;·&nbsp; 위력 ×${s.dmgMultiplier}`
-            : s.hits
-              ? `표창 ${s.hits}연속 타격 &nbsp;·&nbsp; 쿨다운 없음 &nbsp;·&nbsp; 쉐도우파트너 적용`
-              : '패시브 활성'
-        : s.targeting === 'debuff_area'
-          ? `${SKILL_TARGET_DESC.debuff_area} &nbsp;·&nbsp; 쿨다운 ${s.cooldown}s &nbsp;·&nbsp; 범위: ${s.debuffRange}px &nbsp;·&nbsp; 받는 피해 ×${s.debuffDmgMult} &nbsp;·&nbsp; 지속 ${s.debuffDuration}s`
-        : s.targeting === 'party_buff'
-          ? (() => {
-              const parts = [`${SKILL_TARGET_DESC.party_buff} &nbsp;·&nbsp; 쿨다운 ${s.cooldown}s &nbsp;·&nbsp; 지속 ${s.buffDuration}s`];
-              if (s.buffHp)     parts.push(`파티 HP ×${s.buffHp}`);
-              if (s.buffCdMult) parts.push(`스킬 쿨타임 ${Math.round(100 / s.buffCdMult)}%`);
-              if (s.buffAtk)    parts.push(`파티 물리공격 ×${s.buffAtk}`);
-              return parts.join(' &nbsp;·&nbsp; ');
-            })()
-        : s.targeting === 'heal'
-          ? `${SKILL_TARGET_DESC.heal} &nbsp;·&nbsp; 쿨다운 ${s.cooldown}s &nbsp;·&nbsp; 힐량: ATK×${s.healMult} &nbsp;·&nbsp; 범위: ${s.healRange}px`
-          : s.targeting === 'aoe_freeze'
-            ? `${SKILL_TARGET_DESC.aoe_freeze} &nbsp;·&nbsp; 쿨다운 ${s.cooldown}s &nbsp;·&nbsp; 위력 ×${s.dmgMultiplier} &nbsp;·&nbsp; 빙결 ${s.freezeDuration}초`
-            : `${SKILL_TARGET_DESC[s.targeting] || s.targeting}
-               ${s.cooldown ? ` &nbsp;·&nbsp; 쿨다운 ${s.cooldown}s` : ''}
-               ${s.dmgMultiplier ? ` &nbsp;·&nbsp; 위력 ×${s.dmgMultiplier}` : ''}
-               ${s.duration ? ` &nbsp;·&nbsp; 지속 ${s.duration}s &nbsp;·&nbsp; 분신 데미지 50%` : ''}
-               ${s.hits ? ` &nbsp;·&nbsp; ${s.hits}회 타격` : ''}
-               ${s.maxTargets ? ` &nbsp;·&nbsp; 최대 ${s.maxTargets}마리` : ''}`;
+      const curDesc  = learned ? skillEffectDesc(id, s, curLv) : '—';
+      const nextDesc = !isMax  ? skillEffectDesc(id, s, Math.max(1, curLv + 1)) : '';
+
+      const lvBadge = learned
+        ? `<span style="color:${isMax ? '#e2b96f' : '#4caf50'};font-weight:bold;font-size:11px">
+             ${isMax ? 'MAX' : `Lv.${curLv}`}
+           </span>`
+        : `<span style="color:#555;font-size:11px">미습득</span>`;
+
+      const btn = isMax
+        ? `<span style="color:#e2b96f;font-size:10px">MAX</span>`
+        : learned
+          ? `<button class="small-btn ${canUp ? '' : 'disabled'}"
+                     onclick="tryUpgradeSkill(${char.id},'${id}');renderSkillTab();">
+               Lv.${curLv}→${curLv+1} (${nextCost}SP)
+             </button>`
+          : `<button class="small-btn ${canUp ? '' : 'disabled'}"
+                     onclick="tryLearnSkill(${char.id},'${id}');renderSkillTab();">
+               배우기 (${nextCost}SP)
+             </button>`;
 
       return `
         <div class="skill-row">
           <div class="skill-info">
-            <span class="skill-name" style="color:${learned ? col : '#888'}">${s.name}</span>
-            <span class="skill-meta">${metaHtml}</span>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span class="skill-name" style="color:${learned ? col : '#888'}">${s.name}</span>
+              ${lvBadge}
+            </div>
+            <span class="skill-meta" style="color:#999">${curDesc}</span>
+            ${!isMax && learned ? `<span class="skill-meta" style="color:#666">→ ${nextDesc}</span>` : ''}
             ${cdText ? `<span class="skill-cd" style="${cdStyle}">${cdText}</span>` : ''}
           </div>
-          <div>
-            ${learned
-              ? `<span class="skill-learned">습득 완료</span>`
-              : `<button class="small-btn ${canAfford ? '' : 'disabled'}"
-                         onclick="tryLearnSkill(${char.id},'${id}');renderSkillTab();">
-                   배우기 ${s.cost.toLocaleString()}G
-                 </button>`}
-          </div>
+          <div>${btn}</div>
         </div>`;
     }).join('');
 
     return `
       <div class="char-card">
-        <h3 style="color:${CLASS_COLORS[char.classId]||'#aaa'};margin-bottom:8px">
-          ${charClassName(char.classId)} Lv.${char.level}
+        <h3 style="color:${CLASS_COLORS[char.classId]||'#aaa'};margin-bottom:4px">
+          ${char.nickname || '???'} <span style="color:#888;font-size:12px;font-weight:normal">(${charClassName(char.classId)})</span> Lv.${char.level}
         </h3>
+        <div style="font-size:12px;color:${sp > 0 ? '#f1c40f' : '#555'};margin-bottom:8px">
+          스킬 포인트: <strong>${sp}</strong>
+          <span style="color:#444;font-size:10px"> (5레벨마다 1 획득)</span>
+        </div>
         ${skillRows}
       </div>`;
   }).join('');
@@ -606,7 +673,7 @@ function renderSkillTab() {
   el.innerHTML = `
     <div class="eq-section-title">스킬</div>
     <div style="font-size:11px;color:#666;margin-bottom:8px">
-      습득한 스킬은 쿨다운마다 자동으로 사용됩니다.
+      스킬 포인트(SP)로 스킬을 습득·강화합니다. 레벨이 높을수록 효율이 크게 증가합니다.
     </div>
     ${html}`;
 }
@@ -643,7 +710,7 @@ function renderPetTab() {
     return `
       <div class="char-card">
         <h3 style="color:${CLASS_COLORS[char.classId]||'#aaa'};margin-bottom:8px">
-          ${charClassName(char.classId)} Lv.${char.level}
+          ${char.nickname || '???'} <span style="color:#888;font-size:12px;font-weight:normal">(${charClassName(char.classId)})</span> Lv.${char.level}
           ${char.pet ? `<span style="font-size:11px;font-weight:normal;color:#4caf50"> ─ ${PETS[char.pet].name} 장착 중</span>` : ''}
         </h3>
         ${petOptions}
@@ -800,6 +867,95 @@ function renderUpgradeTab() {
     <div class="upgrade-list">${rows}</div>`;
 }
 
+// ── 레이드 탭 ─────────────────────────────────────────────
+function renderRaidTab() {
+  const el = document.getElementById('tab-raid');
+  if (!el) return;
+
+  const rf = gameState.raidField;
+  const raidChars   = gameState.characters.filter(c => c.inRaid);
+  const normalChars = gameState.characters.filter(c => !c.inRaid);
+
+  const bossSection = (() => {
+    if (!rf) return `<div style="color:#999;font-size:12px">레이드가 초기화되지 않았습니다.</div>`;
+    const b     = rf.boss;
+    const pct   = Math.max(0, (b.hp / b.maxHp) * 100).toFixed(1);
+    const col   = b.hp / b.maxHp > 0.5 ? '#c0392b' : b.hp / b.maxHp > 0.2 ? '#e67e22' : '#7b241c';
+    const minAlive = rf.minions.filter(m => m.alive).length;
+    return `
+      <div class="upgrade-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+        <div style="color:#e74c3c;font-weight:bold;font-size:14px">자쿰</div>
+        <div style="font-size:11px;color:#aaa">HP: ${b.hp.toLocaleString()} / ${b.maxHp.toLocaleString()} (${pct}%)</div>
+        <div style="width:100%;height:10px;background:#1a0010;border-radius:4px;overflow:hidden;margin:2px 0">
+          <div style="width:${pct}%;height:100%;background:${col};transition:width 0.3s"></div>
+        </div>
+        <div style="font-size:11px;color:#e67e22">소환수: ${minAlive}마리 생존</div>
+        ${rf.cleared ? `<div style="color:#f1c40f;font-weight:bold">✓ 자쿰 격파 완료!</div>` : ''}
+      </div>`;
+  })();
+
+  const raidCharRows = raidChars.map(c => {
+    const s    = calcFinalStats(c);
+    const hp   = Math.max(0, c.currentHp || 0);
+    const hpPct = Math.min(100, (hp / s.maxHp) * 100).toFixed(0);
+    const dead = c.isDead ? `<span style="color:#e74c3c"> (사망 ${(c.respawnTimer || 0).toFixed(1)}s)</span>` : '';
+    const seal = (c.raidSkillSeal || 0) > 0 ? `<span style="color:#8e44ad"> 봉인${c.raidSkillSeal.toFixed(0)}s</span>` : '';
+    const acc  = (c.raidAccDown   || 0) > 0 ? `<span style="color:#7f8c8d"> 암흑${c.raidAccDown.toFixed(0)}s</span>` : '';
+    const col  = CLASS_COLORS[c.classId] || '#aaa';
+    return `
+      <div class="upgrade-row">
+        <div class="upgrade-info" style="gap:2px">
+          <div style="font-size:12px;font-weight:bold">
+            <span style="color:${col}">${c.nickname || '???'}</span>
+            <span style="color:#888;font-weight:normal"> (${CLASSES[c.classId]?.name || c.classId}) Lv.${c.level}</span>${dead}${seal}${acc}
+          </div>
+          <div style="font-size:10px;color:#aaa">HP ${hp.toLocaleString()} / ${s.maxHp.toLocaleString()} (${hpPct}%)</div>
+        </div>
+        <button class="small-btn" onclick="leaveRaid(${c.id});renderRaidTab();">복귀</button>
+      </div>`;
+  }).join('');
+
+  const normalCharRows = normalChars.map(c => {
+    const col = CLASS_COLORS[c.classId] || '#aaa';
+    return `
+      <div class="upgrade-row">
+        <div class="upgrade-info">
+          <div style="font-size:12px;font-weight:bold">
+            <span style="color:${col}">${c.nickname || '???'}</span>
+            <span style="color:#888;font-weight:normal"> (${CLASSES[c.classId]?.name || c.classId}) Lv.${c.level}</span>
+          </div>
+          <div style="font-size:10px;color:#aaa">스테이지 ${c.assignedStage + 1}에 배치 중</div>
+        </div>
+        <button class="small-btn ${rf?.cleared ? 'disabled' : ''}"
+                onclick="enterRaid(${c.id});renderRaidTab();">
+          참전
+        </button>
+      </div>`;
+  }).join('');
+
+  const viewBtn = gameState.viewRaid
+    ? `<button class="small-btn" onclick="gameState.viewRaid=false;renderRaidTab();">필드 보기</button>`
+    : `<button class="small-btn" onclick="gameState.viewRaid=true;renderRaidTab();">레이드 보기</button>`;
+
+  const resetBtn = `<button class="small-btn" style="margin-left:8px" onclick="if(confirm('레이드를 리셋하시겠습니까?')){resetRaid();}renderRaidTab();">리셋</button>`;
+
+  el.innerHTML = `
+    <div class="eq-section-title">⚔️ 자쿰 레이드</div>
+    <div style="font-size:11px;color:#666;margin-bottom:8px">
+      캐릭터를 레이드에 참전시켜 자쿰을 처치하세요.<br>
+      레이드 중인 캐릭터는 일반 스테이지 전투에 참여하지 않습니다.
+    </div>
+    <div style="margin-bottom:10px;display:flex;align-items:center">
+      ${viewBtn}${resetBtn}
+    </div>
+    <div class="eq-section-title" style="font-size:12px">보스 상태</div>
+    ${bossSection}
+    <div class="eq-section-title" style="font-size:12px;margin-top:10px">레이드 참전 중 (${raidChars.length}명)</div>
+    ${raidChars.length ? raidCharRows : `<div style="color:#555;font-size:11px">참전 중인 캐릭터 없음</div>`}
+    <div class="eq-section-title" style="font-size:12px;margin-top:10px">참전 가능 캐릭터 (${normalChars.length}명)</div>
+    ${normalChars.length ? normalCharRows : `<div style="color:#555;font-size:11px">모든 캐릭터가 레이드 중</div>`}`;
+}
+
 // ── 오프라인 보상 모달 ──────────────────────────────────────
 function showOfflineModal(result) {
   const el = document.getElementById('offline-modal');
@@ -813,7 +969,7 @@ function showOfflineModal(result) {
     const gained = result.expGains[char.id] || 0;
     if (!gained) return '';
     return `<div class="offline-exp-line">
-      <span style="color:${CLASS_COLORS[char.classId] || '#aaa'}">${charClassName(char.classId)} Lv.${char.level}</span>
+      <span style="color:${CLASS_COLORS[char.classId] || '#aaa'}">${char.nickname || '???'} (${charClassName(char.classId)}) Lv.${char.level}</span>
       <span>+${gained.toLocaleString()} EXP</span>
     </div>`;
   }).filter(Boolean).join('');
@@ -832,4 +988,351 @@ function closeOfflineModal() {
 // ── 공통 헬퍼 ──────────────────────────────────────────────
 function charClassName(classId) {
   return CLASSES[classId]?.name || classId;
+}
+
+function charLabel(char) {
+  return `${char.nickname || '???'} (${charClassName(char.classId)})`;
+}
+
+// ── 캐릭터 리스트 패널 (canvas 오버레이) ────────────────────
+let charModalOpenId = null;
+let charModalSection = 'stats';
+
+function updateCharList() {
+  const panel = document.getElementById('char-list-panel');
+  if (!panel) return;
+
+  const stageChars = gameState.characters.filter(
+    c => !c.inRaid && c.assignedStage === gameState.viewStage
+  );
+
+  // 구성이 바뀐 경우만 DOM 재빌드 (클릭 mousedown~mouseup 사이 DOM 교체 방지)
+  const curIds = Array.from(panel.querySelectorAll('.char-list-item')).map(el => el.dataset.charId);
+  const newIds = stageChars.map(c => String(c.id));
+  const needsRebuild = curIds.length !== newIds.length || curIds.some((id, i) => id !== newIds[i]);
+
+  if (needsRebuild) {
+    if (stageChars.length === 0) { panel.innerHTML = ''; return; }
+    panel.innerHTML = stageChars.map(char => {
+      const fs     = calcFinalStats(char);
+      const maxHp  = char.maxHpCache || fs.maxHp;
+      const hp     = Math.max(0, char.currentHp || maxHp);
+      const hpPct  = Math.min(100, (hp / maxHp) * 100);
+      const ratio  = hp / maxHp;
+      const hpCol  = ratio > 0.5 ? '#4caf50' : ratio > 0.25 ? '#e67e22' : '#e74c3c';
+      const col    = CLASS_COLORS[char.classId] || '#aaa';
+      const tag    = char.isDead ? '💀 ' : '';
+      return `
+        <div class="char-list-item" data-char-id="${char.id}">
+          <div class="char-list-nick" style="color:${col}">${tag}${char.nickname || '???'}(${charClassName(char.classId)})</div>
+          <div class="char-list-sub">Lv.${char.level}</div>
+          <div class="char-list-hp">
+            <div class="char-list-hp-fill" style="width:${hpPct}%;background:${hpCol}"></div>
+          </div>
+        </div>`;
+    }).join('');
+    return;
+  }
+
+  // 구성 동일 → HP바만 업데이트 (DOM 유지, 클릭 안전)
+  for (const char of stageChars) {
+    const item = panel.querySelector(`.char-list-item[data-char-id="${char.id}"]`);
+    if (!item) continue;
+    const fs    = calcFinalStats(char);
+    const maxHp = char.maxHpCache || fs.maxHp;
+    const hp    = Math.max(0, char.currentHp || maxHp);
+    const ratio = hp / maxHp;
+    const hpPct = Math.min(100, ratio * 100);
+    const hpCol = ratio > 0.5 ? '#4caf50' : ratio > 0.25 ? '#e67e22' : '#e74c3c';
+    const fill  = item.querySelector('.char-list-hp-fill');
+    if (fill) { fill.style.width = `${hpPct}%`; fill.style.background = hpCol; }
+    const nick = item.querySelector('.char-list-nick');
+    if (nick) {
+      const tag = char.isDead ? '💀 ' : '';
+      nick.textContent = `${tag}${char.nickname || '???'}(${charClassName(char.classId)})`;
+    }
+  }
+}
+
+// ── 캐릭터 상세 모달 ────────────────────────────────────────
+function openCharModal(charId) {
+  charModalOpenId = charId;
+  charModalSection = 'stats';
+  document.getElementById('char-modal-overlay').classList.add('active');
+  renderCharModal();
+}
+
+// ── 레이드 결과 모달 ─────────────────────────────────────────
+function showRaidResult(rf) {
+  const overlay = document.getElementById('raid-result-overlay');
+  if (!overlay) return;
+
+  const totalSec = Math.floor(rf.elapsedTime || 0);
+  const mins = Math.floor(totalSec / 60);
+  const secs = totalSec % 60;
+  document.getElementById('raid-result-time').textContent =
+    `${mins}분 ${secs.toString().padStart(2, '0')}초`;
+
+  const medals = ['🥇', '🥈', '🥉'];
+  const dmgEntries = Object.entries(rf.damageLog || {})
+    .map(([id, dmg]) => {
+      const c = gameState.characters.find(ch => ch.id === Number(id));
+      return { name: c ? (c.nickname || '???') : '???', job: c ? charClassName(c.classId) : '', dmg };
+    })
+    .sort((a, b) => b.dmg - a.dmg);
+
+  const dmgEl = document.getElementById('raid-result-dmg');
+  if (dmgEntries.length) {
+    dmgEl.innerHTML = dmgEntries.slice(0, 3).map((e, i) =>
+      `<div class="raid-result-row">
+        <span>${medals[i] || ''} ${e.name} <span style="color:#666;font-size:11px">(${e.job})</span></span>
+        <span style="color:#e74c3c;font-weight:bold">${e.dmg.toLocaleString()}</span>
+      </div>`
+    ).join('');
+  } else {
+    dmgEl.innerHTML = '<div style="color:#666;font-size:12px">데이터 없음</div>';
+  }
+
+  const healEntries = Object.entries(rf.healLog || {})
+    .map(([id, heal]) => {
+      const c = gameState.characters.find(ch => ch.id === Number(id));
+      return { name: c ? (c.nickname || '???') : '???', job: c ? charClassName(c.classId) : '', heal };
+    })
+    .filter(e => e.heal > 0)
+    .sort((a, b) => b.heal - a.heal);
+
+  const healEl = document.getElementById('raid-result-heal');
+  if (healEntries.length) {
+    healEl.innerHTML = healEntries.map(e =>
+      `<div class="raid-result-row">
+        <span>💚 ${e.name} <span style="color:#666;font-size:11px">(${e.job})</span></span>
+        <span style="color:#2ecc71;font-weight:bold">${e.heal.toLocaleString()}</span>
+      </div>`
+    ).join('');
+  } else {
+    healEl.innerHTML = '<div style="color:#666;font-size:12px">힐러 없음</div>';
+  }
+
+  overlay.classList.add('active');
+}
+
+function closeRaidResult() {
+  document.getElementById('raid-result-overlay').classList.remove('active');
+}
+
+function closeCharModal() {
+  charModalOpenId = null;
+  document.getElementById('char-modal-overlay').classList.remove('active');
+}
+
+function switchCharModalSection(section) {
+  charModalSection = section;
+  document.querySelectorAll('.modal-tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.section === section);
+  });
+  renderCharModalBody();
+}
+
+function renderCharModal() {
+  const char = gameState.characters.find(c => c.id === charModalOpenId);
+  if (!char) { closeCharModal(); return; }
+  const col = CLASS_COLORS[char.classId] || '#aaa';
+  document.getElementById('char-modal-title').innerHTML =
+    `<span style="color:${col}">${char.nickname || '???'}</span>` +
+    ` <span style="color:#888;font-size:12px;font-weight:normal">(${charClassName(char.classId)})</span>`;
+  document.querySelectorAll('.modal-tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.section === charModalSection);
+  });
+  renderCharModalBody();
+}
+
+function renderCharModalBody() {
+  const char = gameState.characters.find(c => c.id === charModalOpenId);
+  if (!char) return;
+  const body = document.getElementById('char-modal-body');
+  if (!body) return;
+  if (charModalSection === 'stats')         body.innerHTML = buildModalStats(char);
+  else if (charModalSection === 'equipment') body.innerHTML = buildModalEquipment(char);
+  else if (charModalSection === 'skills')    body.innerHTML = buildModalSkills(char);
+}
+
+function buildModalStats(char) {
+  const fs        = calcFinalStats(char);
+  const hasPoints = char.unspentPoints > 0;
+  const isMagic   = CLASSES[char.classId]?.damageType === 'magical';
+  const resetCost = 100 * char.level;
+  const canReset  = gameState.gold >= resetCost;
+
+  const statRows = ['STR', 'DEX', 'INT', 'LUK'].map(stat => {
+    const bonus = equipStatBonus(char, stat);
+    const btn = hasPoints
+      ? `<button class="stat-plus-btn" onclick="tryAddStatPoint(${char.id},'${stat}');renderCharModalBody();">＋</button>`
+      : `<span class="stat-plus-placeholder"></span>`;
+    return `
+      <div class="stat-row">
+        <span class="stat-label">${stat}</span>
+        <span class="stat-val">${statValHtml(char.stats[stat], bonus)}</span>
+        ${btn}
+        <span class="stat-desc" style="font-size:10px">${STAT_LABELS[stat]}</span>
+      </div>`;
+  }).join('');
+
+  const combatRows = [
+    ['공격력',    `${fs.atk}`],
+    ['물리방어',  `${fs.physDef}`],
+    ['마법공격',  isMagic ? `${fs.atk}` : `<span style="color:#555">—</span>`],
+    ['마법방어',  `${fs.magicDef}`],
+    ['명중률',    `${fs.accuracy.toFixed(0)}%`],
+    ['회피율',    `${fs.evade.toFixed(0)}%`],
+    ['이동속도',  `${CHAR_SPEED} px/s`],
+  ].map(([label, val]) => `
+    <div class="stat-row">
+      <span class="stat-label" style="width:64px;color:#aaa">${label}</span>
+      <span class="stat-val">${val}</span>
+    </div>`).join('');
+
+  return `
+    <div class="nickname-edit-row">
+      <span style="font-size:12px;color:#888;flex-shrink:0">닉네임</span>
+      <input class="nickname-input" id="nick-inp-${char.id}" value="${char.nickname || ''}" maxlength="12" placeholder="최대 12자">
+      <button class="small-btn" onclick="trySetNickname(${char.id},document.getElementById('nick-inp-${char.id}').value);renderCharModal();">변경</button>
+    </div>
+    <div style="font-size:12px;color:#aaa;margin-bottom:8px">Lv.${char.level} &nbsp; EXP ${char.exp} / ${expRequired(char.level)}</div>
+    ${hasPoints ? `<div class="points-badge" style="margin-bottom:8px">잔여 포인트: <strong>${char.unspentPoints}</strong></div>` : ''}
+    <div class="eq-section-title" style="margin-bottom:6px">기본 스탯</div>
+    <div class="stat-grid" style="margin-bottom:12px">${statRows}</div>
+    <div class="eq-section-title" style="margin-bottom:6px">전투 능력치</div>
+    <div class="stat-grid" style="margin-bottom:12px">${combatRows}</div>
+    <button class="small-btn reset-btn ${canReset ? '' : 'disabled'}" style="width:100%"
+            onclick="tryResetStats(${char.id});renderCharModalBody();">
+      스탯 초기화 (${resetCost.toLocaleString()}G)
+    </button>`;
+}
+
+function buildModalEquipment(char) {
+  const baseClass = CLASSES[char.classId]?.parent || char.classId;
+  const slotList = (char.classId === 'rogue' || baseClass === 'rogue')
+    ? ['weapon', 'throwable', 'armor', 'accessory']
+    : ['weapon', 'armor', 'accessory'];
+
+  const slots = slotList.map(slot => {
+    const item = char.equipment[slot];
+    const e    = item ? EQUIPMENT[item.id] : null;
+    const col  = e ? (GRADE_COLORS[e.grade] || '#aaa') : '#333';
+    const canRemove = item && item.uid !== 0;
+    const enhBtn = item && item.uid !== 0 && item.enhance < ENHANCE_MAX ? (() => {
+      const cost   = enhanceCost(item);
+      const canAff = gameState.gold >= cost;
+      return `<button class="small-btn enhance-btn ${canAff ? '' : 'disabled'}"
+                      onclick="tryEnhanceEquipment(${item.uid});renderCharModalBody();"
+                      title="성공률 ${ENHANCE_SUCCESS[item.enhance]}%">강화 ${cost.toLocaleString()}G</button>`;
+    })() : (item && item.enhance >= ENHANCE_MAX ? `<span style="color:#e2b96f;font-size:10px">MAX</span>` : '');
+    return `
+      <div class="equip-slot">
+        <div class="equip-slot-label">${SLOT_NAMES[slot]}</div>
+        <div class="equip-slot-item" style="border-color:${col}">
+          ${e
+            ? `<span style="color:${col}">${e.name}${enhanceBadge(item.enhance)}</span>
+               <span class="equip-stat-text">${equipStatText(e, item.enhance)}</span>`
+            : `<span style="color:#444">— 없음 —</span>`}
+          <div style="display:flex;gap:4px;margin-left:auto;flex-shrink:0;align-items:center">
+            ${enhBtn}
+            ${canRemove ? `<button class="equip-remove" onclick="tryUnequipItem(${char.id},'${slot}');renderCharModalBody();">✕</button>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const inv = gameState.equipmentInventory;
+  const gradeCount = g => inv.filter(i => { const e = EQUIPMENT[i.id]; return e && e.grade === g; }).length;
+  const sellBtns = ['노멀', '레어', '에픽'].map(g => {
+    const cnt = gradeCount(g);
+    const col = GRADE_COLORS[g] || '#aaa';
+    return `<button class="small-btn ${cnt > 0 ? '' : 'disabled'}" style="color:${col}"
+                    onclick="trySellByGrade('${g}');renderCharModalBody();">
+              ${g} 일괄판매 (${cnt})
+            </button>`;
+  }).join('');
+
+  const invHtml = inv.length === 0
+    ? '<div style="color:#555;font-size:12px">보유 장비 없음</div>'
+    : inv.map(item => {
+        const e = EQUIPMENT[item.id];
+        if (!e) return '';
+        const col     = GRADE_COLORS[e.grade] || '#aaa';
+        const equipBtn = canEquipItem(char, item)
+          ? `<button class="assign-btn" onclick="tryEquipItem(${char.id},${item.uid});renderCharModalBody();">장착</button>`
+          : '';
+        const sellPrice = e.cost ? Math.floor(e.cost * 0.6) : 0;
+        const sellBtn = sellPrice > 0
+          ? `<button class="equip-remove sell-btn" onclick="trySellItem(${item.uid});renderCharModalBody();">판매 ${sellPrice.toLocaleString()}G</button>`
+          : '';
+        const canAff  = item.enhance < ENHANCE_MAX && gameState.gold >= enhanceCost(item);
+        const enhBtn  = item.enhance < ENHANCE_MAX
+          ? `<button class="small-btn enhance-btn ${canAff ? '' : 'disabled'}"
+                     onclick="tryEnhanceEquipment(${item.uid});renderCharModalBody();">강화 ${enhanceCost(item).toLocaleString()}G</button>`
+          : `<span style="color:#e2b96f;font-size:10px">MAX</span>`;
+        return `
+          <div class="inv-item">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="color:${col}">${e.name}${enhanceBadge(item.enhance)}</span>
+              <span class="equip-stat-text">${equipStatText(e, item.enhance)}</span>
+            </div>
+            <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;align-items:center">
+              ${equipBtn}${enhBtn}${sellBtn}
+            </div>
+          </div>`;
+      }).join('');
+
+  return `
+    <div class="eq-section-title" style="margin-bottom:6px">장착 중</div>
+    <div class="equip-slots" style="margin-bottom:12px">${slots}</div>
+    <div class="eq-section-title" style="margin-bottom:6px">인벤토리</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${sellBtns}</div>
+    <div class="inv-list">${invHtml}</div>`;
+}
+
+function buildModalSkills(char) {
+  const cls = CLASSES[char.classId];
+  const sp  = char.skillPoints || 0;
+  if (!cls.canSkill) return `<div style="color:#555;font-size:12px;padding:8px 0">전직 후 스킬을 배울 수 있습니다.</div>`;
+
+  const parentClassId = CLASSES[char.classId]?.parent;
+  const charSkills = Object.entries(SKILLS).filter(([, s]) =>
+    s.classId === char.classId || s.classId === parentClassId
+  );
+
+  const rows = charSkills.map(([id, s]) => {
+    const curLv   = char.skillLevels?.[id] || 0;
+    const learned = curLv > 0;
+    const isMax   = curLv >= SKILL_MAX_LEVEL;
+    const nextCost = learned ? (SKILL_SP_COSTS[curLv + 1] ?? Infinity) : (SKILL_SP_COSTS[1] ?? 1);
+    const canUp   = !isMax && sp >= nextCost;
+    const col     = CLASS_COLORS[char.classId] || '#aaa';
+    const lvBadge = learned
+      ? `<span style="color:${isMax ? '#e2b96f' : '#4caf50'};font-weight:bold;font-size:11px">${isMax ? 'MAX' : `Lv.${curLv}`}</span>`
+      : `<span style="color:#555;font-size:11px">미습득</span>`;
+    const btn = isMax
+      ? `<span style="color:#e2b96f;font-size:10px">MAX</span>`
+      : learned
+        ? `<button class="small-btn ${canUp ? '' : 'disabled'}" onclick="tryUpgradeSkill(${char.id},'${id}');renderCharModalBody();">Lv.${curLv}→${curLv+1} (${nextCost}SP)</button>`
+        : `<button class="small-btn ${canUp ? '' : 'disabled'}" onclick="tryLearnSkill(${char.id},'${id}');renderCharModalBody();">배우기 (${nextCost}SP)</button>`;
+    return `
+      <div class="skill-row">
+        <div class="skill-info">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="skill-name" style="color:${learned ? col : '#888'}">${s.name}</span>
+            ${lvBadge}
+          </div>
+          <span class="skill-meta" style="color:#999">${learned ? skillEffectDesc(id, s, curLv) : '—'}</span>
+        </div>
+        <div>${btn}</div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div style="font-size:12px;color:${sp > 0 ? '#f1c40f' : '#555'};margin-bottom:10px">
+      스킬 포인트: <strong>${sp}</strong>
+    </div>
+    ${rows}`;
 }

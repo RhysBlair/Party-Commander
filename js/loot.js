@@ -53,12 +53,13 @@ function updateLoot(dt) {
   // 2. 캐릭터별 드랍 수집 (각자 자신의 펫으로 독립 처리)
   for (const char of gameState.characters) {
     if (!char.pet) {
-      // 펫 없음: 캐릭터 근접 시 수집
+      // 펫 없음: 캐릭터가 직접 이동해서 수집 (이동은 combat.js의 moveCharTowardDrop이 담당)
+      // 여기서는 밀착(22px) 시에만 수집
       for (let i = gameState.drops.length - 1; i >= 0; i--) {
         const d = gameState.drops[i];
         if (d.stageIdx !== char.assignedStage) continue;
         const dx = d.x - char.x, dy = d.y - char.y;
-        if (dx * dx + dy * dy < 60 * 60) pickupDrop(i);
+        if (dx * dx + dy * dy < 22 * 22) pickupDrop(i);
       }
     } else if (char.pet === 'pet_magnet') {
       // 자석 펫: 주기마다 이 캐릭터 스테이지의 드랍 즉시 흡수

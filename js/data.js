@@ -121,7 +121,7 @@ const SKILLS = {
 
   // ── 2차 마법사 ────────────────────────────────────────────
   ice_strike:     { name: "아이스 스트라이크", classId: "wizard_tl", cooldown: 8.0,
-                    targeting: "aoe_freeze", freezeRange: 270, maxTargets: 8,
+                    targeting: "aoe_freeze", freezeRange: 405, maxTargets: 8,
                     dmgMultiplier: 3.0, freezeDuration: 5.0, cost: 500 },
   cleric_heal:    { name: "신성한 치유",     classId: "cleric",  cooldown: 8.0,
                     targeting: "heal",   healRange: 320, healMult: 3, cost: 500 },
@@ -236,6 +236,23 @@ const MONSTER_ATTACK_INTERVAL = 2.0;
 
 // 캐릭터 사망 후 부활 대기 시간 (초)
 const CHARACTER_RESPAWN_TIME = 8.0;
+
+// 스킬 레벨 시스템
+const SKILL_MAX_LEVEL    = 10;
+const SKILL_SP_PER_LEVEL = 5;  // 레벨 5당 SP 1 획득
+// 인덱스 = 목표 레벨(1~10), 값 = 필요 SP
+const SKILL_SP_COSTS = [0, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3];
+// 인덱스 = 스킬 레벨(1~10), 값 = 효과 배율 (점점 가속)
+const SKILL_LEVEL_MULTS = [0, 1.00, 1.15, 1.32, 1.52, 1.75, 2.02, 2.33, 2.68, 3.08, 3.55];
+
+// 랜덤 닉네임 풀
+const NICKNAME_LIST = [
+  '아르테', '리온', '세라', '카이', '루나', '제이', '미르', '나라', '다원', '소울',
+  '블레이드', '스톰', '에코', '아이스', '파이어', '섀도우', '라이트', '다크', '스타', '문',
+  '테라', '드래곤', '피닉스', '타이거', '울프', '이글', '호크', '레이', '크라우', '써니',
+  '강호', '민준', '지훈', '동현', '성현', '현우', '태양', '은하', '별빛', '바람',
+  '천둥', '번개', '폭풍', '서리', '화염', '독풍', '빛살', '그림자', '혼돈', '질서',
+];
 
 // 캐릭터 이동 속도 (픽셀/초)
 const CHAR_SPEED = 120;

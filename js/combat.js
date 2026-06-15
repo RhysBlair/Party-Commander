@@ -14,6 +14,7 @@ function updateCombat(dt) {
   }
 
   for (const char of gameState.characters) {
+    if (char.inRaid) continue;
     char.attackAnim = Math.max(0, char.attackAnim - dt);
     char.hitAnim    = Math.max(0, (char.hitAnim || 0) - dt);
     if (!char.isDead) updateShadow(char, dt);
@@ -28,7 +29,7 @@ function updateCombat(dt) {
     const field     = gameState.stageFields[i];
     if (!field) continue;
     const stageData = STAGES[i];
-    const aliveChars = gameState.characters.filter(c => c.assignedStage === i && !c.isDead);
+    const aliveChars = gameState.characters.filter(c => !c.inRaid && c.assignedStage === i && !c.isDead);
 
     for (const m of field.monsters) {
       m.hitAnim = Math.max(0, m.hitAnim - dt);
@@ -139,12 +140,16 @@ function getAttackInterval(char) {
   return Math.max(0.1, interval * (1 - spdPct));
 }
 
-// 패시브 스킬 중 공격 배율 반환 (없으면 1)
+// 패시브 스킬 중 공격 배율 반환 (없으면 1) — 스킬 레벨 배율 적용
 function getSkillAtkMult(char) {
   if (char.skills) {
     for (const id of char.skills) {
       const s = SKILLS[id];
-      if (s && s.attackInterval) return s.dmgMultiplier ?? 1;
+      if (s && s.attackInterval) {
+        const sLv  = char.skillLevels?.[id] || 1;
+        const sMult = SKILL_LEVEL_MULTS[sLv] ?? 1.0;
+        return (s.dmgMultiplier ?? 1) * sMult;
+      }
     }
   }
   return 1;
@@ -320,7 +325,11 @@ function updateCharacter(char, dt, stage, field) {
 
   const range  = RANGE_PIXELS[CLASSES[char.classId].range];
   const target = findNearestMonster(char, field);
-  if (!target) return;
+  if (!target) {
+    // 펫 없으면 몬스터가 없을 때 드랍 아이템을 주우러 이동
+    if (!char.pet) moveCharTowardDrop(char, dt);
+    return;
+  }
 
   char.skillAnim = Math.max(0, (char.skillAnim || 0) - dt);
 
@@ -344,9 +353,10 @@ function updateCharacter(char, dt, stage, field) {
       const rogueThrow    = (char.classId === 'rogue' || baseClass === 'rogue') && !!char.equipment?.throwable;
       const hasTriple     = rogueThrow && char.skills?.includes('triple_throw');
       if (hasTriple) {
-        // 트리플 스로우: 1/3 × 3타
-        dealDamage(char, target, stats, stage, field, 1 / 3);
-        char.quickHitDmgMult = 1 / 3;
+        // 트리플 스로우: 1/3 × 레벨배율 × 3타
+        const tMult = (1 / 3) * (SKILL_LEVEL_MULTS[char.skillLevels?.['triple_throw'] || 1] ?? 1);
+        dealDamage(char, target, stats, stage, field, tMult);
+        char.quickHitDmgMult = tMult;
         char.quickHitDelay   = 0.065;
         char.quickHitCount   = 2;
         char.quickHitTimer   = 0.065;
@@ -384,19 +394,24 @@ function useSkills(char, dt, stats, stage, field) {
     char.skillTimers[skillId] -= dt * cdMult;
     if (char.skillTimers[skillId] > 0) continue;
 
-    if (executeSkill(char, skill, stats, stage, field)) {
+    if (executeSkill(char, skillId, skill, stats, stage, field)) {
       // shadow_partner는 소멸 시 쿨다운을 설정하므로 여기선 0으로만
       if (skill.targeting !== 'shadow') {
-        char.skillTimers[skillId] = skill.cooldown;
+        const sLv    = char.skillLevels?.[skillId] || 1;
+        const cdScale = 1 + (sLv - 1) * 0.06; // 레벨당 6% CD 단축
+        char.skillTimers[skillId] = skill.cooldown / cdScale;
       } else {
-        char.skillTimers[skillId] = 9999; // 분신 소멸 전까지 재발동 방지
+        char.skillTimers[skillId] = 9999;
       }
       char.skillAnim = 0.5;
     }
   }
 }
 
-function executeSkill(char, skill, stats, stage, field) {
+function executeSkill(char, skillId, skill, stats, stage, field) {
+  const sLv   = char.skillLevels?.[skillId] || 1;
+  const sMult = SKILL_LEVEL_MULTS[sLv] ?? 1.0;
+
   // ── 몬스터 디버프 — 받는 피해 증가 (페이지 위협) ───────────
   if (skill.targeting === 'debuff_area') {
     const maxR2   = (skill.debuffRange || 250) ** 2;
@@ -406,24 +421,27 @@ function executeSkill(char, skill, stats, stage, field) {
       return dx * dx + dy * dy <= maxR2;
     });
     if (!targets.length) return false;
+    const debuffMult = 1 + (skill.debuffDmgMult - 1) * sMult;   // 레벨업 → 피해 증가폭 상승
+    const debuffDur  = (skill.debuffDuration || 8.0) * (1 + (sLv - 1) * 0.1);
     for (const t of targets) {
-      t.debuffDmgMult = skill.debuffDmgMult || 1.5;
-      t.debuffTimer   = skill.debuffDuration || 8.0;
-      spawnFloatingText(char.assignedStage, t.x, t.y - 28, '피해 +50%', '#e67e22', 12);
+      t.debuffDmgMult = debuffMult;
+      t.debuffTimer   = debuffDur;
+      spawnFloatingText(char.assignedStage, t.x, t.y - 28, `피해 +${Math.round((debuffMult - 1) * 100)}%`, '#e67e22', 12);
     }
     return true;
   }
 
   // ── 파티 버프 (스피어맨 오라, 나이트 분노) ─────────────────
   if (skill.targeting === 'party_buff') {
-    const stageIdx = char.assignedStage;
-    const allies   = gameState.characters.filter(c => c.assignedStage === stageIdx && !c.isDead);
+    const stageIdx  = char.assignedStage;
+    const buffDur   = (skill.buffDuration || 30) * (1 + (sLv - 1) * 0.12);
+    const allies    = gameState.characters.filter(c => c.assignedStage === stageIdx && !c.isDead);
     if (!allies.length) return false;
     for (const c of allies) {
       if (!c.activeBuffs) c.activeBuffs = {};
       if (skill.buffHp) {
         const wasBuffed = c.activeBuffs.hp && c.activeBuffs.hp.timer > 0;
-        c.activeBuffs.hp = { mult: skill.buffHp, timer: skill.buffDuration };
+        c.activeBuffs.hp = { mult: skill.buffHp, timer: buffDur };
         if (!wasBuffed) {
           const newMax = calcFinalStats(c).maxHp;
           c.currentHp  = Math.min(newMax, (c.currentHp || c.maxHpCache || 100) * skill.buffHp);
@@ -432,11 +450,11 @@ function executeSkill(char, skill, stats, stage, field) {
         spawnFloatingText(stageIdx, c.x, c.y - 30, '체력 ×2!', '#2ecc71', 13);
       }
       if (skill.buffCdMult) {
-        c.activeBuffs.cd = { mult: skill.buffCdMult, timer: skill.buffDuration };
+        c.activeBuffs.cd = { mult: skill.buffCdMult, timer: buffDur };
         spawnFloatingText(stageIdx, c.x, c.y - 44, '스킬 가속!', '#3498db', 13);
       }
       if (skill.buffAtk) {
-        c.activeBuffs.atk = { mult: skill.buffAtk, timer: skill.buffDuration };
+        c.activeBuffs.atk = { mult: skill.buffAtk, timer: buffDur };
         spawnFloatingText(stageIdx, c.x, c.y - 30, '공격 ×2!', '#e74c3c', 13);
       }
     }
@@ -446,18 +464,18 @@ function executeSkill(char, skill, stats, stage, field) {
   // 쉐도우파트너: 분신 소환
   if (skill.targeting === 'shadow') {
     char.shadowActive = true;
-    char.shadowTimer  = skill.duration;
+    char.shadowTimer  = (skill.duration || 60) * (1 + (sLv - 1) * 0.12);
     char.shadowX = char.x - char.facing * 28;
     char.shadowY = char.y + 4;
     return true;
   }
 
-  const dmg = Math.floor(stats.atk * skill.dmgMultiplier);
+  const dmg = Math.floor(stats.atk * (skill.dmgMultiplier || 1) * sMult);
 
   // ── 범위 회복 (클레릭) ──────────────────────────────────
   if (skill.targeting === 'heal') {
     const stageIdx = char.assignedStage;
-    const healAmt  = Math.floor(stats.atk * (skill.healMult || 2));
+    const healAmt  = Math.floor(stats.atk * (skill.healMult || 2) * sMult);
     const allies   = gameState.characters.filter(c => {
       if (c.isDead || c.assignedStage !== stageIdx) return false;
       const dx = c.x - char.x, dy = c.y - char.y;
@@ -483,10 +501,10 @@ function executeSkill(char, skill, stats, stage, field) {
       return dx * dx + dy * dy <= maxR2;
     }).slice(0, skill.maxTargets || 8);
     if (!targets.length) return false;
+    const freezeDur = (skill.freezeDuration || 5.0) + (sLv - 1) * 0.4;
     for (const t of targets) {
       dealSkillDamage(char, t, dmg, stage, field, stats);
-      t.frozen      = true;
-      t.frozenTimer = skill.freezeDuration || 5.0;
+      t.frozen = true; t.frozenTimer = freezeDur;
     }
     return true;
   }
@@ -505,7 +523,6 @@ function executeSkill(char, skill, stats, stage, field) {
     return true;
   }
 
-  // single_melee / single_long
   const t = findNearestMonster(char, field);
   if (!t) return false;
   dealSkillDamage(char, t, dmg, stage, field, stats);
@@ -550,6 +567,27 @@ function findNearestMonster(char, field) {
   return nearest;
 }
 
+function moveCharTowardDrop(char, dt) {
+  let nearest = null, minD2 = Infinity;
+  for (const d of gameState.drops) {
+    if (d.stageIdx !== char.assignedStage) continue;
+    const dx = d.x - char.x, dy = d.y - char.y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 < minD2) { minD2 = d2; nearest = d; }
+  }
+  if (!nearest) return;
+  const dist = Math.sqrt(minD2);
+  if (dist < 22) {
+    const idx = gameState.drops.findIndex(d => d.uid === nearest.uid);
+    if (idx !== -1) pickupDrop(idx);
+  } else {
+    const dx = nearest.x - char.x, dy = nearest.y - char.y;
+    char.x += (dx / dist) * CHAR_SPEED * dt;
+    char.y += (dy / dist) * CHAR_SPEED * dt;
+    char.facing = dx >= 0 ? 1 : -1;
+  }
+}
+
 // dmgMult: 도적 따닥 분할 타격 시 0.5 전달 (기본값 1.0)
 function dealDamage(char, monster, stats, stage, field, dmgMult = 1.0) {
   if (Math.random() * 100 >= stats.accuracy) return;
@@ -562,7 +600,9 @@ function dealDamage(char, monster, stats, stage, field, dmgMult = 1.0) {
 
   if (hasOrb && char.orbReady && dmgMult >= 1.0) {
     const skill = SKILLS['orb_strike'];
-    const mult  = skill ? skill.dmgMultiplier : 20;
+    const orbLv  = char.skillLevels?.['orb_strike'] || 1;
+    const orbMult = SKILL_LEVEL_MULTS[orbLv] ?? 1.0;
+    const mult   = (skill ? skill.dmgMultiplier : 20) * orbMult;
     baseDmg      = Math.max(1, Math.floor(stats.atk * mult) - mDef);
     char.orbReady   = false;
     char.orbCount   = 0;
@@ -733,7 +773,9 @@ function checkLevelUp(char) {
     char.level++;
     char.unspentPoints += STAT_POINTS_PER_LEVEL;
     if (char.autoAssign) autoAssignStats(char);
-    console.log(`[레벨업] ${char.level}레벨 달성!`);
+    if (char.level % SKILL_SP_PER_LEVEL === 0) {
+      char.skillPoints = (char.skillPoints || 0) + 1;
+    }
     needed = expRequired(char.level);
   }
   if (char.level !== prevLevel) markTabDirty();

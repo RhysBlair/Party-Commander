@@ -137,16 +137,39 @@ function tryEnhanceEquipment(uid) {
   // 실패 시 골드만 소모, 아이템 파괴 없음
 }
 
+// skillId에 대한 SP 비용 계산 (현재 레벨 → 다음 레벨)
+function skillUpgradeCost(char, skillId) {
+  const cur = char.skillLevels?.[skillId] || 0;
+  if (cur >= SKILL_MAX_LEVEL) return Infinity;
+  return SKILL_SP_COSTS[cur + 1] ?? Infinity;
+}
+
 function tryLearnSkill(charId, skillId) {
   const char  = gameState.characters.find(c => c.id === charId);
   const skill = SKILLS[skillId];
   if (!char || !skill) return;
   const parentClass = CLASSES[char.classId]?.parent || char.classId;
   if (skill.classId !== char.classId && skill.classId !== parentClass) return;
-  if (char.skills.includes(skillId)) return;
-  if (gameState.gold < skill.cost) return;
-  gameState.gold -= skill.cost;
-  char.skills.push(skillId);
+  if ((char.skillLevels?.[skillId] || 0) > 0) return; // 이미 습득
+  const cost = SKILL_SP_COSTS[1] ?? 1;
+  if ((char.skillPoints || 0) < cost) return;
+  char.skillPoints -= cost;
+  if (!char.skillLevels) char.skillLevels = {};
+  char.skillLevels[skillId] = 1;
+  if (!char.skills.includes(skillId)) char.skills.push(skillId);
+}
+
+function tryUpgradeSkill(charId, skillId) {
+  const char  = gameState.characters.find(c => c.id === charId);
+  const skill = SKILLS[skillId];
+  if (!char || !skill) return;
+  const cur  = char.skillLevels?.[skillId] || 0;
+  if (cur === 0) return; // 먼저 tryLearnSkill 사용
+  if (cur >= SKILL_MAX_LEVEL) return;
+  const cost = SKILL_SP_COSTS[cur + 1];
+  if ((char.skillPoints || 0) < cost) return;
+  char.skillPoints -= cost;
+  char.skillLevels[skillId] = cur + 1;
 }
 
 function tryBuyPet(charId, petId) {
@@ -168,6 +191,28 @@ function trySellItem(uid) {
   if (!e || !e.cost) return;
   gameState.gold += Math.floor(e.cost * 0.6);
   gameState.equipmentInventory.splice(idx, 1);
+}
+
+function trySetNickname(charId, name) {
+  const char = gameState.characters.find(c => c.id === charId);
+  if (!char) return;
+  const trimmed = (name || '').trim().slice(0, 12);
+  if (!trimmed) return;
+  char.nickname = trimmed;
+}
+
+function trySellByGrade(grade) {
+  let total = 0;
+  for (let i = gameState.equipmentInventory.length - 1; i >= 0; i--) {
+    const item = gameState.equipmentInventory[i];
+    if (item.uid === 0) continue;
+    const e = EQUIPMENT[item.id];
+    if (!e || e.grade !== grade) continue;
+    total += Math.floor((e.cost || 0) * 0.6);
+    gameState.equipmentInventory.splice(i, 1);
+  }
+  gameState.gold += total;
+  return total;
 }
 
 // ── 파티 업그레이드 ─────────────────────────────────────────

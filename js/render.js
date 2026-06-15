@@ -9,6 +9,8 @@ function render() {
   const W = ctx.canvas.width;
   const H = ctx.canvas.height;
 
+  if (gameState.viewRaid) { drawRaid(W, H); return; }
+
   const viewIdx = gameState.viewStage;
   const field   = gameState.stageFields[viewIdx];
 
