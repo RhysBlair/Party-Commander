@@ -247,7 +247,7 @@ const STAGES = [
     spawnCount: 6, killsToAdvance: 60 },
 
   { name: "심층 던전",
-    monster: { name: "쿨리좀비",     hp: 50000,     atk: 280,  physDef: 78,  magicDef: 32,  goldDrop: 9000,    expDrop: 7200,
+    monster: { name: "쿨리좀비",     hp: 50000,     atk: 280,  physDef: 234, magicDef: 32,  goldDrop: 9000,    expDrop: 7200,
                moveSpeed: 55,  attackRange: 65,  aggroRange: 420, attackType: "melee",  atkDamageType: "physical",
                aoeAtk: 200,  aoeRange: 110, aoeInterval: 4.5, aoeDamageType: "physical",
                undead: true },

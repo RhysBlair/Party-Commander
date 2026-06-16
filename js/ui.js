@@ -418,7 +418,7 @@ function renderEquipmentTab() {
         return `<button class="small-btn enhance-btn ${canAff ? '' : 'disabled'}"
                         onclick="this.disabled=true;showEnhanceFloat(this,tryEnhanceEquipment(${item.uid}));markTabDirty();"
                         title="성공률 ${succPct}%">
-                  강화 ${cost.toLocaleString()}G
+                  강화 ${cost.toLocaleString()}G (${succPct}%)
                 </button>`;
       })() : (item && _eMax > 0 && item.enhance >= _eMax ? `<span style="color:#e2b96f;font-size:10px">MAX</span>` : '');
 
@@ -1345,11 +1345,12 @@ function buildModalEquipment(char) {
     const canRemove = item && item.uid !== 0;
     const _mMax  = item ? itemMaxEnhance(item) : 0;
     const enhBtn = item && _mMax > 0 && item.enhance < _mMax ? (() => {
-      const cost   = enhanceCost(item);
-      const canAff = gameState.gold >= cost;
+      const cost    = enhanceCost(item);
+      const canAff  = gameState.gold >= cost;
+      const succPct = ENHANCE_SUCCESS[item.enhance];
       return `<button class="small-btn enhance-btn ${canAff ? '' : 'disabled'}"
                       onclick="this.disabled=true;showEnhanceFloat(this,tryEnhanceEquipment(${item.uid}));markCharModalDirty();"
-                      title="성공률 ${ENHANCE_SUCCESS[item.enhance]}%">강화 ${cost.toLocaleString()}G</button>`;
+                      title="성공률 ${succPct}%">강화 ${cost.toLocaleString()}G (${succPct}%)</button>`;
     })() : (item && _mMax > 0 && item.enhance >= _mMax ? `<span style="color:#e2b96f;font-size:10px">MAX</span>` : '');
     return `
       <div class="equip-slot">
