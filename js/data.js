@@ -128,7 +128,7 @@ const SKILLS = {
   ice_strike:     { name: "아이스 스트라이크", classId: "wizard_tl", cooldown: 8.0,
                     targeting: "aoe_freeze", freezeRange: 405, maxTargets: 8, maxTargetsBase: 1,
                     dmgMultiplier: 3.0, freezeDuration: 5.0, cost: 500, mpCost: 20 },
-  cleric_heal:    { name: "신성한 치유",     classId: "cleric",  cooldown: 5.0, cooldownDecay: 0.647,
+  cleric_heal:    { name: "힐",              classId: "cleric",  cooldown: 5.0, cooldownDecay: 0.647,
                     targeting: "heal",   healRange: 320, healMult: 3, cost: 500, mpCost: 15 },
 
   // ── 궁수 ──────────────────────────────────────────────────
@@ -247,9 +247,10 @@ const STAGES = [
     spawnCount: 6, killsToAdvance: 60 },
 
   { name: "심층 던전",
-    monster: { name: "어둠의 기사",  hp: 50000,     atk: 280,  physDef: 78,  magicDef: 32,  goldDrop: 9000,    expDrop: 7200,
+    monster: { name: "쿨리좀비",     hp: 50000,     atk: 280,  physDef: 78,  magicDef: 32,  goldDrop: 9000,    expDrop: 7200,
                moveSpeed: 55,  attackRange: 65,  aggroRange: 420, attackType: "melee",  atkDamageType: "physical",
-               aoeAtk: 200,  aoeRange: 110, aoeInterval: 4.5, aoeDamageType: "physical" },
+               aoeAtk: 200,  aoeRange: 110, aoeInterval: 4.5, aoeDamageType: "physical",
+               undead: true },
     spawnCount: 5, killsToAdvance: 70 },
 
   { name: "마법사 탑",

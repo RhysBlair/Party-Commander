@@ -200,7 +200,12 @@ x, y, attackTimer, skillTimers, shadowActive, shadowTimer, currentHp, currentMp,
 
 ## 개발 이력 (최신순)
 
-### 세션 4 (현재)
+### 세션 5 (현재)
+- 클레릭 스킬 "신성한 치유" → "힐" 이름 변경
+- 심층 던전 몬스터 "어둠의 기사" → "쿨리좀비" (undead: true 속성 추가)
+- 언데드 메커니즘: 클레릭 힐 스킬이 언데드 속성 몬스터에게 healAmt만큼 데미지 (방어 무시, 노란색 텍스트)
+
+### 세션 4
 - 포션 사용 쿨타임: 3.0초 → 0.5초 (combat.js, raid.js 동일 적용)
 - 스테이지 1 몬스터: 슬라임 → 고블린 (HP 300, ATK 14)
 - 스테이지 2 몬스터: 고블린 → 오크 (HP 1000, ATK 32)

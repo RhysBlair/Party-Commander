@@ -734,23 +734,42 @@ function executeSkill(char, skillId, skill, stats, stage, field) {
 
   const dmg = Math.floor(stats.atk * (skill.dmgMultiplier || 1) * sMult);
 
-  // ── 범위 회복 (클레릭) ──────────────────────────────────
+  // ── 범위 회복 (클레릭) — 언데드에게는 데미지 ────────────
   if (skill.targeting === 'heal') {
     const stageIdx = char.assignedStage;
     const healAmt  = Math.floor(stats.atk * (skill.healMult || 2) * sMult);
-    const allies   = gameState.characters.filter(c => {
+    const healR2   = (skill.healRange || 300) ** 2;
+
+    const allies = gameState.characters.filter(c => {
       if (c.isDead || c.assignedStage !== stageIdx) return false;
       const dx = c.x - char.x, dy = c.y - char.y;
-      return dx * dx + dy * dy <= (skill.healRange || 300) ** 2;
+      return dx * dx + dy * dy <= healR2;
     });
+
+    const undeadTargets = field.monsters.filter(m => {
+      if (!m.alive) return false;
+      if (!(m.def || STAGES[stageIdx].monster).undead) return false;
+      const dx = m.x - char.x, dy = m.y - char.y;
+      return dx * dx + dy * dy <= healR2;
+    });
+
     const needsHeal = allies.some(c => (c.currentHp || 0) < (c.maxHpCache || 100));
-    if (!needsHeal) return false;
+    if (!needsHeal && undeadTargets.length === 0) return false;
+
     for (const c of allies) {
       if ((c.currentHp || 0) < (c.maxHpCache || 100)) {
         c.currentHp = Math.min(c.maxHpCache || 100, (c.currentHp || 0) + healAmt);
         spawnFloatingText(stageIdx, c.x, c.y - 24, `+${healAmt}`, '#2ecc71', 14);
       }
     }
+
+    for (const m of undeadTargets) {
+      m.currentHp -= healAmt;
+      m.hitAnim = 0.2;
+      spawnFloatingText(stageIdx, m.x, m.y - 24, `${healAmt}`, '#f1c40f', 15);
+      if (m.currentHp <= 0 && m.alive) killMonster(char, m, STAGES[stageIdx], field);
+    }
+
     return true;
   }
 
