@@ -120,26 +120,21 @@ function updateCombat(dt) {
         }
       }
 
-      // 끌어당기기 (pullInterval 있는 몬스터)
-      if (md.pullInterval && m.alive && aliveChars.length > 0) {
-        if (m.pullTimer === undefined) m.pullTimer = md.pullInterval * Math.random();
-        m.pullTimer -= dt;
-        if (m.pullTimer <= 0) {
-          m.pullTimer = md.pullInterval;
-          const pullR2    = (md.pullRange || 400) ** 2;
-          const pullForce = md.pullForce || 90;
-          for (const c of aliveChars) {
-            const dx = m.x - c.x, dy = m.y - c.y;
-            const d2 = dx * dx + dy * dy;
-            if (d2 > 0 && d2 <= pullR2) {
-              const dist = Math.sqrt(d2);
-              c.x += (dx / dist) * Math.min(pullForce, dist * 0.8);
-              c.y += (dy / dist) * Math.min(pullForce, dist * 0.8);
-              c.x  = Math.max(24, Math.min(656, c.x));
-              c.y  = Math.max(24, Math.min(456, c.y));
-            }
+      // 끌어당기기 — 매 프레임 연속 인력 (pullForce px/s)
+      if (md.pullForce && m.alive && aliveChars.length > 0) {
+        const pullR2  = (md.pullRange || 400) ** 2;
+        const pullSpd = md.pullForce * dt;
+        for (const c of aliveChars) {
+          const dx = m.x - c.x, dy = m.y - c.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 > 0 && d2 <= pullR2) {
+            const dist = Math.sqrt(d2);
+            const move = Math.min(pullSpd, dist);
+            c.x += (dx / dist) * move;
+            c.y += (dy / dist) * move;
+            c.x  = Math.max(24, Math.min(656, c.x));
+            c.y  = Math.max(24, Math.min(456, c.y));
           }
-          spawnFloatingText(i, m.x, m.y - 44, '▼ 중력 당김', '#8e44ad', 13);
         }
       }
     }
@@ -386,13 +381,13 @@ function executeMonsterAttack(m, target, stageData, stageIdx) {
     takeDamage(target, dmg, stageIdx);
   }
 
-  // 화상 적용
+  // 화상 적용 (중첩: 피격마다 burnDmg 누적)
   if (md.burnDmg) {
-    target.burned          = true;
-    target.burnDmg         = md.burnDmg;
-    target.burnTimer       = md.burnDuration || 5.0;
-    target.burnTickInterval = md.burnTickInterval || 1.0;
-    target.burnTickTimer   = target.burnTickInterval;
+    target.burnDmg          = (target.burnDmg || 0) + md.burnDmg;
+    target.burned           = true;
+    target.burnTimer        = md.burnDuration || 5.0;
+    target.burnTickInterval = md.burnTickInterval || 0.2;
+    if (!target.burnTickTimer || target.burnTickTimer <= 0) target.burnTickTimer = target.burnTickInterval;
     spawnFloatingText(stageIdx, target.x, target.y - 46, '화상!', '#e67e22', 12);
   }
 }
@@ -435,11 +430,12 @@ function updateCharacter(char, dt, stage, field) {
   if (char.burned) {
     char.burnTimer = (char.burnTimer || 0) - dt;
     if (char.burnTimer <= 0) {
-      char.burned = false;
+      char.burned    = false;
+      char.burnDmg   = 0;
     } else {
-      char.burnTickTimer = (char.burnTickTimer ?? char.burnTickInterval ?? 1.0) - dt;
+      char.burnTickTimer = (char.burnTickTimer ?? char.burnTickInterval ?? 0.2) - dt;
       if (char.burnTickTimer <= 0) {
-        char.burnTickTimer = char.burnTickInterval || 1.0;
+        char.burnTickTimer = char.burnTickInterval || 0.2;
         takeDamage(char, char.burnDmg || 0, char.assignedStage);
       }
     }

@@ -162,7 +162,7 @@ const SKILLS = {
                     targeting: "party_buff", buffAtk: 2.0, buffAtkPerLv: 0.1111,
                     buffDuration: 30.0, cost: 500, mpCost: 30 },
   poison_field:   { name: "포이즌",          classId: "wizard_fp", cooldown: 10.0,
-                    targeting: "poison_area", poisonRange: 220, dmgMultiplier: 5.0,
+                    targeting: "poison_area", poisonRange: 220, dmgMultiplier: 25.0,
                     poisonDuration: 8.0, poisonFieldRadius: 220, poisonTickInterval: 0.1,
                     cost: 500, mpCost: 20 },
 
@@ -238,14 +238,14 @@ const STAGES = [
   { name: "사막",
     monster: { name: "모래 골렘",    hp: 3500,      atk: 72,   physDef: 22,  magicDef: 10,  goldDrop: 700,     expDrop: 560,
                moveSpeed: 22,  attackRange: 65,  aggroRange: 300, attackType: "melee",  atkDamageType: "physical",
-               pullInterval: 3.0, pullForce: 90, pullRange: 400 },
+               pullForce: 35, pullRange: 400 },
     spawnCount: 5, killsToAdvance: 50 },
 
   { name: "화산",
     monster: { name: "불꽃 도마뱀",  hp: 12000,     atk: 160,  physDef: 42,  magicDef: 20,  goldDrop: 2500,    expDrop: 2000,
                moveSpeed: 50,  attackRange: 60,  aggroRange: 380, attackType: "melee",  atkDamageType: "physical",
                aoeAtk: 120,  aoeRange: 120, aoeInterval: 5.0, aoeDamageType: "physical",
-               burnDmg: 40, burnDuration: 5.0, burnTickInterval: 1.0 },
+               burnDmg: 40, burnDuration: 5.0, burnTickInterval: 0.2 },
     spawnCount: 6, killsToAdvance: 60 },
 
   { name: "심층 던전",
