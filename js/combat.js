@@ -342,11 +342,8 @@ function updateMonsterMovement(m, dt, stageData, aliveChars) {
   const spd = md.moveSpeed || 0;
   if (!spd) return;
 
-  // 생존 캐릭터 없으면 스폰으로 귀환
-  if (aliveChars.length === 0) {
-    returnToSpawn(m, dt, spd);
-    return;
-  }
+  // 생존 캐릭터 없으면 그자리 대기
+  if (aliveChars.length === 0) return;
 
   let nearest = null, minD2 = Infinity;
   for (const c of aliveChars) {

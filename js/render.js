@@ -77,7 +77,9 @@ function drawProjectiles(viewIdx) {
 function drawMonster(m, stageIdx) {
   const R        = 24;
   const stageDef = STAGES[stageIdx];
-  const isRanged = stageDef.monster.attackType === 'ranged';
+  const monsterDef = m.def || stageDef.monster;
+  const isRanged   = monsterDef.attackType === 'ranged';
+  const isZombie   = monsterDef.type === 'zombie';
 
   if (!m.alive) {
     if (m.noRespawn) return;
@@ -104,9 +106,9 @@ function drawMonster(m, stageIdx) {
     ctx.globalAlpha = 1;
   }
 
-  // 원거리 몬스터: 파란 계열 / 근접: 빨간 계열
-  ctx.fillStyle   = isRanged ? '#1a3a8a' : '#c0392b';
-  ctx.strokeStyle = isRanged ? '#5b9bd5' : '#e74c3c';
+  // 좀비: 초록 계열 / 원거리: 파란 계열 / 근접: 빨간 계열
+  ctx.fillStyle   = isZombie ? '#2d6a2f' : isRanged ? '#1a3a8a' : '#c0392b';
+  ctx.strokeStyle = isZombie ? '#57c45a' : isRanged ? '#5b9bd5' : '#e74c3c';
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.arc(m.x, m.y, R, 0, Math.PI * 2);
