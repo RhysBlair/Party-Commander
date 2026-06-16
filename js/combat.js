@@ -1011,8 +1011,6 @@ function killMonster(char, monster, stage, field) {
     if (type === 'kingSlime') {
       monster.alive        = false;
       monster.respawnTimer = MONSTER_RESPAWN_TIME;
-      monster.spawnX       = monster.x;
-      monster.spawnY       = monster.y;
       spawnBossWaveMonsters(field, stage.slimeDef, 5, monster.x, monster.y);
       _giveKillRewards(char, mDef, monster);
     } else if (type === 'slime') {
