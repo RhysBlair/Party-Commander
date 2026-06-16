@@ -217,17 +217,17 @@ const DROP_EXPIRE_SECONDS = 30;
 // physDef: 물리방어 / magicDef: 마법방어 (분리 적용)
 // aoeAtk / aoeRange / aoeInterval / aoeDamageType : 범위 공격 (해당 필드 있으면 활성화)
 const STAGES = [
-  { name: "숲",
+  { name: "고블린 요새",
     monster: { name: "고블린",       hp: 300,       atk: 14,   physDef: 4,   magicDef: 2,   goldDrop: 55,      expDrop: 44,
                moveSpeed: 60,  attackRange: 55,  aggroRange: 360, attackType: "melee",  atkDamageType: "physical" },
     spawnCount: 4, killsToAdvance: 20 },
 
-  { name: "동굴",
+  { name: "오크의 숲",
     monster: { name: "오크",         hp: 1000,      atk: 32,   physDef: 10,  magicDef: 4,   goldDrop: 200,     expDrop: 160,
                moveSpeed: 35,  attackRange: 60,  aggroRange: 320, attackType: "melee",  atkDamageType: "physical" },
     spawnCount: 5, killsToAdvance: 30 },
 
-  { name: "킹슬라임 동굴",
+  { name: "킹슬라임 습지",
     isBossStage: true,
     monster: { name: "킹슬라임", type: "kingSlime",
                hp: 5000, atk: 40, physDef: 12, magicDef: 6, goldDrop: 500, expDrop: 400,
@@ -253,15 +253,15 @@ const STAGES = [
                burnDmg: 40, burnDuration: 5.0, burnTickInterval: 0.2 },
     spawnCount: 6, killsToAdvance: 60 },
 
-  { name: "심층 던전",
+  { name: "죽은자의 숲",
     monster: { name: "쿨리좀비",     hp: 50000,     atk: 280,  physDef: 234, magicDef: 32,  goldDrop: 9000,    expDrop: 7200,
                moveSpeed: 55,  attackRange: 65,  aggroRange: 420, attackType: "melee",  atkDamageType: "physical",
                aoeAtk: 200,  aoeRange: 110, aoeInterval: 4.5, aoeDamageType: "physical",
                undead: true },
     spawnCount: 5, killsToAdvance: 70 },
 
-  { name: "마법사 탑",
-    monster: { name: "화염 마법사",  hp: 160000,    atk: 380,  physDef: 8,   magicDef: 110, goldDrop: 32000,   expDrop: 26000,
+  { name: "지하묘지",
+    monster: { name: "네크로맨서",  hp: 160000,    atk: 380,  physDef: 8,   magicDef: 110, goldDrop: 32000,   expDrop: 26000,
                moveSpeed: 40,  attackRange: 270, aggroRange: 460, attackType: "ranged", atkDamageType: "magical",
                projSpeed: 220, projColor: "#ff6622",
                aoeAtk: 280,  aoeRange: 160, aoeInterval: 6.0, aoeDamageType: "magical" },
