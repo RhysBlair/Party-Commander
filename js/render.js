@@ -199,7 +199,7 @@ function drawMonster(m, stageIdx) {
   ctx.fillStyle = '#eee';
   ctx.font = '11px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(stageDef.monster.name, m.x, m.y + R + 13);
+  ctx.fillText((m.def || stageDef.monster).name, m.x, m.y + R + 13);
   ctx.textAlign = 'left';
 
   const barW = 50, barH = 6;

@@ -87,6 +87,7 @@ function initStageField(stageIdx) {
       respawnTimer: 0,
       hitAnim: 0,
       attackTimer: Math.random() * MONSTER_ATTACK_INTERVAL,
+      def: stage.monster,
     })),
     kills: 0,
   };

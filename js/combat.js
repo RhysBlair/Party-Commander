@@ -39,7 +39,7 @@ function updateCombat(dt) {
       }
 
       if (!m.alive) {
-        if (m.respawnTimer > 0) {
+        if (!m.noRespawn && m.respawnTimer > 0) {
           m.respawnTimer -= dt;
           if (m.respawnTimer <= 0) {
             m.alive        = true;
@@ -87,14 +87,14 @@ function updateCombat(dt) {
           if (d2 < minD2) { minD2 = d2; target = c; }
         }
         // aggroRange 체크, 빙결 중 공격 불가
-        if (target && minD2 <= (stageData.monster.aggroRange || 400) ** 2 && !m.frozen) {
+        if (target && minD2 <= ((m.def || stageData.monster).aggroRange || 400) ** 2 && !m.frozen) {
           m.attackTimer = MONSTER_ATTACK_INTERVAL;
           executeMonsterAttack(m, target, stageData, i);
         }
       }
 
       // 범위 공격 (aoeAtk 있는 몬스터만)
-      const md = stageData.monster;
+      const md = m.def || stageData.monster;
       if (md.aoeAtk && !m.frozen && aliveChars.length > 0) {
         if (m.aoeTimer === undefined) m.aoeTimer = md.aoeInterval * (0.3 + Math.random() * 0.7);
         m.aoeTimer -= dt;
@@ -266,7 +266,7 @@ function updateMonsterMovement(m, dt, stageData, aliveChars) {
     return;
   }
 
-  const md  = stageData.monster;
+  const md  = m.def || stageData.monster;
   const spd = md.moveSpeed || 0;
   if (!spd) return;
 
@@ -346,7 +346,7 @@ function updateProjectiles(dt) {
 
 // ── 몬스터 공격 실행 ─────────────────────────────────────
 function executeMonsterAttack(m, target, stageData, stageIdx) {
-  const md   = stageData.monster;
+  const md   = m.def || stageData.monster;
   const dist = Math.sqrt((target.x - m.x) ** 2 + (target.y - m.y) ** 2);
 
   // 근접: 공격 범위 내 있어야 함
@@ -463,7 +463,7 @@ function updateCharacter(char, dt, stage, field) {
       if (p) {
         char.currentHp = Math.min(stats.maxHp, char.currentHp + p.restoreAmt);
         pot.count--;
-        char.potionHpCd = 3.0;
+        char.potionHpCd = 0.5;
         spawnFloatingText(char.assignedStage, char.x, char.y - 50, `HP +${p.restoreAmt}`, '#2ecc71', 12);
       }
     }
@@ -477,7 +477,7 @@ function updateCharacter(char, dt, stage, field) {
       if (p) {
         char.currentMp = Math.min(maxMp, (char.currentMp || 0) + p.restoreAmt);
         pot.count--;
-        char.potionMpCd = 3.0;
+        char.potionMpCd = 0.5;
         spawnFloatingText(char.assignedStage, char.x, char.y - 62, `MP +${p.restoreAmt}`, '#3498db', 12);
       }
     }
@@ -843,7 +843,8 @@ function dealSkillDamage(char, monster, dmg, stage, field, stats) {
   const isCrit    = stats && Math.random() * 100 < stats.critRate;
   const critMult  = isCrit ? (stats?.critDmg ?? 2) : 1;
   const dmgType   = CLASSES[char.classId]?.damageType || 'physical';
-  const mDef      = dmgType === 'magical' ? stage.monster.magicDef : stage.monster.physDef;
+  const _monDef   = monster.def || stage.monster;
+  const mDef      = dmgType === 'magical' ? _monDef.magicDef : _monDef.physDef;
   const debuffMult = (monster.debuffTimer > 0) ? (monster.debuffDmgMult || 1) : 1;
   const actualDmg = Math.max(1, Math.floor((Math.floor(dmg * critMult) - mDef) * debuffMult));
 
@@ -906,7 +907,8 @@ function dealDamage(char, monster, stats, stage, field, dmgMult = 1.0) {
   let baseDmg, orbExplosion = false, isCrit = false;
 
   const dmgType = CLASSES[char.classId]?.damageType || 'physical';
-  const mDef    = dmgType === 'magical' ? stage.monster.magicDef : stage.monster.physDef;
+  const _monDef2 = monster.def || stage.monster;
+  const mDef    = dmgType === 'magical' ? _monDef2.magicDef : _monDef2.physDef;
 
   if (hasOrb && char.orbReady && dmgMult >= 1.0) {
     const skill = SKILLS['orb_strike'];
@@ -973,12 +975,79 @@ function calcExpDistribution(baseExp, levels, killerIdx) {
   });
 }
 
+function _giveKillRewards(char, mDef, monster) {
+  const goldMult = 1 + (gameState.upgrades?.gold_boost || 0) * 0.10;
+  gameState.gold += Math.floor(mDef.goldDrop * goldMult);
+  const expMult  = 1 + (gameState.upgrades?.exp_boost  || 0) * 0.10;
+  const allies   = gameState.characters.filter(c => c.assignedStage === char.assignedStage);
+  const killerI  = allies.indexOf(char);
+  const expArr   = calcExpDistribution(Math.floor(mDef.expDrop * expMult), allies.map(c => c.level), killerI);
+  allies.forEach((c, i) => { c.exp += expArr[i]; checkLevelUp(c); });
+  generateDrop(char.assignedStage, monster.x, monster.y);
+}
+
+function spawnBossWaveMonsters(field, def, count, parentX, parentY) {
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2;
+    const x = Math.max(60, Math.min(620, parentX + Math.cos(angle) * 50));
+    const y = Math.max(60, Math.min(440, parentY + Math.sin(angle) * 50));
+    field.monsters.push({
+      id: field.monsters.length,
+      spawnX: x, spawnY: y, x, y,
+      currentHp: def.hp, maxHp: def.hp,
+      alive: true, respawnTimer: 0, hitAnim: 0,
+      attackTimer: Math.random() * MONSTER_ATTACK_INTERVAL,
+      def,
+      noRespawn: true,
+    });
+  }
+}
+
 function killMonster(char, monster, stage, field) {
-  monster.alive         = false;
-  monster.respawnTimer  = MONSTER_RESPAWN_TIME;
+  const mDef = monster.def || stage.monster;
+
+  if (stage.isBossStage) {
+    const type = mDef.type;
+    if (type === 'kingSlime') {
+      monster.alive        = false;
+      monster.respawnTimer = MONSTER_RESPAWN_TIME;
+      spawnBossWaveMonsters(field, stage.slimeDef, 5, monster.x, monster.y);
+      _giveKillRewards(char, mDef, monster);
+    } else if (type === 'slime') {
+      monster.alive     = false;
+      monster.noRespawn = true;
+      spawnBossWaveMonsters(field, stage.miniSlimeDef, 3, monster.x, monster.y);
+      _giveKillRewards(char, mDef, monster);
+    } else if (type === 'miniSlime') {
+      monster.alive     = false;
+      monster.noRespawn = true;
+      _giveKillRewards(char, mDef, monster);
+      const anyMiniAlive  = field.monsters.some(m => m !== monster && m.def?.type === 'miniSlime' && m.alive);
+      const anySlimeAlive = field.monsters.some(m => m.def?.type === 'slime' && m.alive);
+      if (!anyMiniAlive && !anySlimeAlive) {
+        // 슬라임/미니슬라임 시체 정리
+        field.monsters = field.monsters.filter(m => !m.def || m.def.type === 'kingSlime');
+        // 웨이브 클리어 카운트
+        const nextIdx = char.assignedStage + 1;
+        const alreadyUnlocked = nextIdx < STAGES.length && nextIdx <= gameState.maxStageReached;
+        if (!alreadyUnlocked) {
+          field.kills++;
+          if (field.kills >= stage.killsToAdvance) {
+            advanceStageField(char.assignedStage);
+            markTabDirty();
+          }
+        }
+      }
+    }
+    return;
+  }
+
+  // 일반 스테이지
+  monster.alive        = false;
+  monster.respawnTimer = MONSTER_RESPAWN_TIME;
 
   const goldMult = 1 + (gameState.upgrades?.gold_boost || 0) * 0.10;
-  gameState.gold += Math.floor(stage.monster.goldDrop * goldMult);
+  gameState.gold += Math.floor(mDef.goldDrop * goldMult);
 
   // 처치수: 다음 스테이지가 아직 해금되지 않은 경우에만 카운트 + 자동 진행
   const nextIdx        = char.assignedStage + 1;
@@ -991,11 +1060,11 @@ function killMonster(char, monster, stage, field) {
     }
   }
 
-  // 경험치 분배 (항상)
+  // 경험치 분배
   const expMult  = 1 + (gameState.upgrades?.exp_boost || 0) * 0.10;
   const allies   = gameState.characters.filter(c => c.assignedStage === char.assignedStage);
   const killerI  = allies.indexOf(char);
-  const expArr   = calcExpDistribution(Math.floor(stage.monster.expDrop * expMult), allies.map(c => c.level), killerI);
+  const expArr   = calcExpDistribution(Math.floor(mDef.expDrop * expMult), allies.map(c => c.level), killerI);
   allies.forEach((c, i) => { c.exp += expArr[i]; checkLevelUp(c); });
 
   generateDrop(char.assignedStage, monster.x, monster.y);

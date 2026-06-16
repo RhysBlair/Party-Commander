@@ -417,7 +417,7 @@ function updateRaidCharacter(char, dt, rf) {
       if (p) {
         char.currentHp = Math.min(stats.maxHp, char.currentHp + p.restoreAmt);
         pot.count--;
-        char.potionHpCd = 3.0;
+        char.potionHpCd = 0.5;
         spawnRaidFT(char.x, char.y - 50, `HP +${p.restoreAmt}`, '#2ecc71', 12);
       }
     }
@@ -431,7 +431,7 @@ function updateRaidCharacter(char, dt, rf) {
       if (p) {
         char.currentMp = Math.min(maxMp, (char.currentMp || 0) + p.restoreAmt);
         pot.count--;
-        char.potionMpCd = 3.0;
+        char.potionMpCd = 0.5;
         spawnRaidFT(char.x, char.y - 62, `MP +${p.restoreAmt}`, '#3498db', 12);
       }
     }

@@ -212,20 +212,28 @@ const DROP_EXPIRE_SECONDS = 30;
 // physDef: 물리방어 / magicDef: 마법방어 (분리 적용)
 // aoeAtk / aoeRange / aoeInterval / aoeDamageType : 범위 공격 (해당 필드 있으면 활성화)
 const STAGES = [
-  { name: "초원",
-    monster: { name: "슬라임",       hp: 80,        atk: 5,    physDef: 1,   magicDef: 0,   goldDrop: 15,      expDrop: 12,
-               moveSpeed: 35,  attackRange: 55,  aggroRange: 300, attackType: "melee",  atkDamageType: "physical" },
-    spawnCount: 4, killsToAdvance: 20 },
-
   { name: "숲",
     monster: { name: "고블린",       hp: 300,       atk: 14,   physDef: 4,   magicDef: 2,   goldDrop: 55,      expDrop: 44,
                moveSpeed: 60,  attackRange: 55,  aggroRange: 360, attackType: "melee",  atkDamageType: "physical" },
-    spawnCount: 4, killsToAdvance: 30 },
+    spawnCount: 4, killsToAdvance: 20 },
 
   { name: "동굴",
     monster: { name: "오크",         hp: 1000,      atk: 32,   physDef: 10,  magicDef: 4,   goldDrop: 200,     expDrop: 160,
                moveSpeed: 35,  attackRange: 60,  aggroRange: 320, attackType: "melee",  atkDamageType: "physical" },
-    spawnCount: 5, killsToAdvance: 40 },
+    spawnCount: 5, killsToAdvance: 30 },
+
+  { name: "킹슬라임 동굴",
+    isBossStage: true,
+    monster: { name: "킹슬라임", type: "kingSlime",
+               hp: 5000, atk: 40, physDef: 12, magicDef: 6, goldDrop: 500, expDrop: 400,
+               moveSpeed: 25, attackRange: 80, aggroRange: 320, attackType: "melee", atkDamageType: "physical" },
+    slimeDef:  { name: "슬라임",    type: "slime",
+               hp: 600, atk: 60, physDef: 7, magicDef: 3, goldDrop: 80, expDrop: 60,
+               moveSpeed: 40, attackRange: 55, aggroRange: 320, attackType: "melee", atkDamageType: "physical" },
+    miniSlimeDef: { name: "미니슬라임", type: "miniSlime",
+               hp: 250, atk: 90, physDef: 4, magicDef: 1, goldDrop: 30, expDrop: 20,
+               moveSpeed: 55, attackRange: 45, aggroRange: 320, attackType: "melee", atkDamageType: "physical" },
+    spawnCount: 1, killsToAdvance: 5 },
 
   { name: "사막",
     monster: { name: "모래 골렘",    hp: 3500,      atk: 72,   physDef: 22,  magicDef: 10,  goldDrop: 700,     expDrop: 560,

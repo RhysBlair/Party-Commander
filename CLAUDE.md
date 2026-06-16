@@ -200,7 +200,15 @@ x, y, attackTimer, skillTimers, shadowActive, shadowTimer, currentHp, currentMp,
 
 ## 개발 이력 (최신순)
 
-### 세션 3 (현재)
+### 세션 4 (현재)
+- 포션 사용 쿨타임: 3.0초 → 0.5초 (combat.js, raid.js 동일 적용)
+- 스테이지 1 몬스터: 슬라임 → 고블린 (HP 300, ATK 14)
+- 스테이지 2 몬스터: 고블린 → 오크 (HP 1000, ATK 32)
+- 스테이지 3 보스 스테이지 신설 (isBossStage): 킹슬라임 (HP 5000, 1마리) → 사망 시 슬라임 5마리 스폰 (ATK 60) → 슬라임 1마리 사망 시 미니슬라임 3마리 스폰 (ATK 90) → 전체 전멸 시 웨이브 클리어 5회 → 다음 스테이지
+- 킹슬라임: 사망 즉시 리스폰 타이머(3초) 시작
+- 보스 웨이브 구현: 몬스터별 def 필드, noRespawn 플래그, spawnBossWaveMonsters/killMonster 분기, render.js 몬스터 이름 표시 수정
+
+### 세션 3
 - 아이스 스트라이크: 레벨별 빙결 대상 수 1→8 (maxTargetsBase 추가)
 - 메디테이션: wizard_tl/wizard_fp 2차 스킬 추가 (마법공격력 +100%~+200%)
 - 하이퍼바디: HP 상승 퍼센트 레벨별 스케일 (Lv1=+20%, Lv10=+200%), buffCdMult 제거
