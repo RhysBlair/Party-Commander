@@ -80,6 +80,7 @@ function drawMonster(m, stageIdx) {
   const isRanged = stageDef.monster.attackType === 'ranged';
 
   if (!m.alive) {
+    if (m.noRespawn) return;
     ctx.globalAlpha = 0.3;
     ctx.fillStyle = '#888';
     ctx.beginPath();
