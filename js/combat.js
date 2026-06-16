@@ -154,7 +154,7 @@ function updateCombat(dt) {
       }
 
       // 소환 타이머 (네크로맨서 등)
-      if (md.summonInterval && stageData.zombieDef) {
+      if (md.summonInterval && stageData.zombieDef && aliveChars.length > 0) {
         if (m.summonTimer === undefined) m.summonTimer = md.summonInterval;
         m.summonTimer -= dt;
         if (m.summonTimer <= 0) {
@@ -873,9 +873,10 @@ function executeSkill(char, skillId, skill, stats, stage, field) {
     }
 
     for (const m of undeadTargets) {
-      m.currentHp -= healAmt;
+      const holyDmg = healAmt * 2;
+      m.currentHp -= holyDmg;
       m.hitAnim = 0.2;
-      spawnFloatingText(stageIdx, m.x, m.y - 24, `${healAmt}`, '#f1c40f', 15);
+      spawnFloatingText(stageIdx, m.x, m.y - 24, `${holyDmg}`, '#f1c40f', 15);
       if (m.currentHp <= 0 && m.alive) killMonster(char, m, STAGES[stageIdx], field);
     }
 
