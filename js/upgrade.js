@@ -224,8 +224,9 @@ function tryEnhanceEquipment(uid) {
 
 // skillId에 대한 SP 비용 계산 (현재 레벨 → 다음 레벨)
 function skillUpgradeCost(char, skillId) {
-  const cur = char.skillLevels?.[skillId] || 0;
-  if (cur >= SKILL_MAX_LEVEL) return Infinity;
+  const cur   = char.skillLevels?.[skillId] || 0;
+  const maxLv = SKILLS[skillId]?.maxLevel || SKILL_MAX_LEVEL;
+  if (cur >= maxLv) return Infinity;
   return SKILL_SP_COSTS[cur + 1] ?? Infinity;
 }
 
@@ -248,9 +249,10 @@ function tryUpgradeSkill(charId, skillId) {
   const char  = gameState.characters.find(c => c.id === charId);
   const skill = SKILLS[skillId];
   if (!char || !skill) return;
-  const cur  = char.skillLevels?.[skillId] || 0;
+  const cur   = char.skillLevels?.[skillId] || 0;
+  const maxLv = skill.maxLevel || SKILL_MAX_LEVEL;
   if (cur === 0) return; // 먼저 tryLearnSkill 사용
-  if (cur >= SKILL_MAX_LEVEL) return;
+  if (cur >= maxLv) return;
   const cost = SKILL_SP_COSTS[cur + 1];
   if ((char.skillPoints || 0) < cost) return;
   char.skillPoints -= cost;

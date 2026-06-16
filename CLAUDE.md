@@ -200,10 +200,19 @@ x, y, attackTimer, skillTimers, shadowActive, shadowTimer, currentHp, currentMp,
 
 ## 개발 이력 (최신순)
 
-### 세션 5 (현재)
+### 세션 6 (현재)
+- 매직가드 (mage 1차): passive ML=1, 피해의 80%를 HP 대신 MP로 흡수 (mgAbsorb:0.8)
+- 리저렉션 (cleric 2차): ML=3, 쿨타임 Lv1=180s → Lv3=60s (cooldownPerLv:-60), 동 스테이지 사망 아군 전원 부활 HP 30%
+
+### 세션 5
 - 클레릭 스킬 "신성한 치유" → "힐" 이름 변경
 - 심층 던전 몬스터 "어둠의 기사" → "쿨리좀비" (undead: true 속성 추가)
 - 언데드 메커니즘: 클레릭 힐 스킬이 언데드 속성 몬스터에게 healAmt만큼 데미지 (방어 무시, 노란색 텍스트)
+- 쿨리좀비 물리방어력 3배 (78 → 234)
+- 강화 버튼에 성공 확률 표기 (xx%)
+- 모래골렘 지속 당김 메커니즘 (35px/s smooth pull, pullForce/pullRange)
+- 불꽃도마뱀 화상 상태이상: 중첩 데미지, 0.2s 틱 간격 (burnDmg/burnTimer/burnTickInterval)
+- 불독 포이즌 dmgMultiplier: 2.5 → 25.0 (5배 추가 강화)
 
 ### 세션 4
 - 포션 사용 쿨타임: 3.0초 → 0.5초 (combat.js, raid.js 동일 적용)

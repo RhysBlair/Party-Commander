@@ -251,6 +251,13 @@ function getSkillAtkMult(char) {
 
 function takeDamage(char, dmg, stageIdx) {
   if (char.isDead) return;
+  // 매직가드: 피해의 80%를 HP 대신 MP로 흡수
+  if (char.skills?.includes('magic_guard') && (char.skillLevels?.magic_guard || 0) > 0) {
+    const absorb  = Math.floor(dmg * (SKILLS['magic_guard']?.mgAbsorb || 0.8));
+    const mpUsed  = Math.min(absorb, char.currentMp || 0);
+    char.currentMp = (char.currentMp || 0) - mpUsed;
+    dmg -= mpUsed;
+  }
   char.currentHp = (char.currentHp || char.maxHpCache || 100) - dmg;
   char.hitAnim   = 0.2;
   if (char.currentHp <= 0) {
@@ -695,7 +702,9 @@ function useSkills(char, dt, stats, stage, field) {
         const sLv     = char.skillLevels?.[skillId] || 1;
         const baseCd  = skill.cooldownDecay
           ? Math.max(0.1, skill.cooldown * Math.pow(skill.cooldownDecay, sLv - 1))
-          : skill.cooldown / (1 + (sLv - 1) * 0.06);
+          : skill.cooldownPerLv
+            ? Math.max(1, skill.cooldown + skill.cooldownPerLv * (sLv - 1))
+            : skill.cooldown / (1 + (sLv - 1) * 0.06);
         const overshoot = Math.max(char.skillTimers[skillId], -dt);
         char.skillTimers[skillId] = baseCd + overshoot;
       } else {
@@ -813,6 +822,24 @@ function executeSkill(char, skillId, skill, stats, stage, field) {
       if (m.currentHp <= 0 && m.alive) killMonster(char, m, STAGES[stageIdx], field);
     }
 
+    return true;
+  }
+
+  // ── 리저렉션 (클레릭) ──────────────────────────────────
+  if (skill.targeting === 'resurrection') {
+    const stageIdx = char.assignedStage;
+    const deadAllies = gameState.characters.filter(c =>
+      c !== char && c.assignedStage === stageIdx && c.isDead
+    );
+    if (deadAllies.length === 0) return false;
+    for (const c of deadAllies) {
+      const cStats = calcFinalStats(c);
+      c.isDead = false;
+      c.respawnTimer = 0;
+      c.currentHp = Math.floor(cStats.maxHp * 0.3);
+      resetCharPos(c);
+      spawnFloatingText(stageIdx, c.x, c.y - 36, '부활!', '#f1c40f', 16);
+    }
     return true;
   }
 

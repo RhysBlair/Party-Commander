@@ -123,6 +123,8 @@ const SKILLS = {
   // ── 마법사 ────────────────────────────────────────────────
   mage_blast:     { name: "마력 폭발",      classId: "mage",    cooldown: 4.0,
                     targeting: "aoe",    maxTargets: 5, dmgMultiplier: 1.2, cost: 500, mpCost: 12 },
+  magic_guard:    { name: "매직가드",       classId: "mage",
+                    targeting: "passive", maxLevel: 1, mgAbsorb: 0.8, cost: 300, mpCost: 0 },
 
   // ── 2차 마법사 ────────────────────────────────────────────
   ice_strike:     { name: "아이스 스트라이크", classId: "wizard_tl", cooldown: 8.0,
@@ -130,6 +132,9 @@ const SKILLS = {
                     dmgMultiplier: 3.0, freezeDuration: 5.0, cost: 500, mpCost: 20 },
   cleric_heal:    { name: "힐",              classId: "cleric",  cooldown: 5.0, cooldownDecay: 0.647,
                     targeting: "heal",   healRange: 320, healMult: 3, cost: 500, mpCost: 15 },
+  resurrection:   { name: "리저렉션",       classId: "cleric",  cooldown: 180,
+                    targeting: "resurrection", maxLevel: 3, cooldownPerLv: -60,
+                    cost: 500, mpCost: 30 },
 
   // ── 궁수 ──────────────────────────────────────────────────
   double_shot:    { name: "더블샷",          classId: "archer",  cooldown: 3.0,

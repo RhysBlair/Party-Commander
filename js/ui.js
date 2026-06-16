@@ -573,7 +573,9 @@ function skillEffectDesc(id, s, level) {
   const cd  = s.cooldown
     ? (s.cooldownDecay
         ? Math.max(0.1, s.cooldown * Math.pow(s.cooldownDecay, level - 1)).toFixed(1)
-        : (s.cooldown / (1 + (level - 1) * 0.06)).toFixed(1))
+        : s.cooldownPerLv
+          ? Math.max(1, s.cooldown + s.cooldownPerLv * (level - 1)).toFixed(0)
+          : (s.cooldown / (1 + (level - 1) * 0.06)).toFixed(1))
     : null;
   const mp  = s.mpCost > 0 ? `MP ${s.mpCost}` : null;
   const meta = [cd ? `쿨타임 ${cd}초` : null, mp].filter(Boolean).join(' · ');
@@ -592,7 +594,11 @@ function skillEffectDesc(id, s, level) {
         const bonus = s.critDmgBonus + (level - 1) * (s.critDmgBonusPerLv || 0);
         return `크리티컬 데미지 +${Math.round(bonus * 100)}% 증가 [패시브]`;
       }
+      if (s.mgAbsorb)
+        return `받는 피해의 ${Math.round(s.mgAbsorb * 100)}%를 HP 대신 MP로 대체 [패시브]`;
       return '[패시브]';
+    case 'resurrection':
+      return `스테이지 내 사망한 아군 전원을 즉시 부활 (HP 30%) · 경험치 손실 없음${suffix}`;
 
     case 'aoe':
       return `최대 ${s.maxTargets || 5}마리에게 ${pct((s.dmgMultiplier || 1) * m)} 범위 마법 공격${suffix}`;
@@ -684,7 +690,8 @@ function renderSkillTab() {
     function makeSkillCard(id, s) {
       const curLv    = char.skillLevels?.[id] || 0;
       const learned  = curLv > 0;
-      const isMax    = curLv >= SKILL_MAX_LEVEL;
+      const skillMaxLv = s.maxLevel || SKILL_MAX_LEVEL;
+      const isMax    = curLv >= skillMaxLv;
       const nextCost = learned ? (SKILL_SP_COSTS[curLv + 1] ?? Infinity) : (SKILL_SP_COSTS[1] ?? 1);
       const canUp    = !isMax && sp >= nextCost;
 
