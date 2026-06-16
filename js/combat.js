@@ -76,6 +76,20 @@ function updateCombat(dt) {
 
       updateMonsterMovement(m, dt, stageData, aliveChars);
 
+      // 자폭 몬스터: 범위 내 진입 즉시 폭발 (attackTimer 무시)
+      if (md.attackType === 'suicide' && aliveChars.length > 0) {
+        let nearestChar = null, nearD2 = Infinity;
+        for (const c of aliveChars) {
+          const dx = c.x - m.x, dy = c.y - m.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < nearD2) { nearD2 = d2; nearestChar = c; }
+        }
+        if (nearestChar && nearD2 <= (md.attackRange || 55) ** 2) {
+          executeMonsterAttack(m, nearestChar, stageData, i);
+        }
+        continue;
+      }
+
       // 몬스터 공격 타이머
       m.attackTimer -= dt;
       if (m.attackTimer <= 0 && aliveChars.length > 0) {
@@ -135,6 +149,31 @@ function updateCombat(dt) {
             c.x  = Math.max(24, Math.min(656, c.x));
             c.y  = Math.max(24, Math.min(456, c.y));
           }
+        }
+      }
+
+      // 소환 타이머 (네크로맨서 등)
+      if (md.summonInterval && stageData.zombieDef) {
+        if (m.summonTimer === undefined) m.summonTimer = md.summonInterval;
+        m.summonTimer -= dt;
+        if (m.summonTimer <= 0) {
+          m.summonTimer = md.summonInterval;
+          const count = md.summonCount || 3;
+          for (let si = 0; si < count; si++) {
+            const angle = (si / count) * Math.PI * 2;
+            const sx = Math.max(60, Math.min(620, m.x + Math.cos(angle) * 55));
+            const sy = Math.max(60, Math.min(440, m.y + Math.sin(angle) * 55));
+            field.monsters.push({
+              id: field.monsters.length,
+              spawnX: sx, spawnY: sy, x: sx, y: sy,
+              currentHp: stageData.zombieDef.hp, maxHp: stageData.zombieDef.hp,
+              alive: true, respawnTimer: 0, hitAnim: 0,
+              attackTimer: 0,
+              def: stageData.zombieDef,
+              noRespawn: true,
+            });
+          }
+          spawnFloatingText(i, m.x, m.y - 54, '좀비 소환!', '#8e44ad', 13);
         }
       }
     }
@@ -371,7 +410,24 @@ function updateProjectiles(dt) {
 
 // ── 몬스터 공격 실행 ─────────────────────────────────────
 function executeMonsterAttack(m, target, stageData, stageIdx) {
-  const md   = m.def || stageData.monster;
+  const md = m.def || stageData.monster;
+
+  // 자폭 (좀비): 범위 내 모든 캐릭터에게 폭발 데미지 후 즉사
+  if (md.attackType === 'suicide') {
+    const blastR2 = (md.attackRange || 55) ** 2;
+    const stageChars = gameState.characters.filter(c =>
+      c.assignedStage === stageIdx && !c.isDead && !c.inRaid
+    );
+    for (const c of stageChars) {
+      const dx = c.x - m.x, dy = c.y - m.y;
+      if (dx * dx + dy * dy <= blastR2) takeDamage(c, md.suicideDmg || md.atk, stageIdx);
+    }
+    spawnFloatingText(stageIdx, m.x, m.y - 20, '자폭!', '#e74c3c', 18);
+    m.alive     = false;
+    m.noRespawn = true;
+    return;
+  }
+
   const dist = Math.sqrt((target.x - m.x) ** 2 + (target.y - m.y) ** 2);
 
   // 근접: 공격 범위 내 있어야 함
