@@ -6,6 +6,8 @@ const gameState = {
   gold: 0,
   gems: 0,
 
+  potionStock: {},   // { hp_s: 0, hp_m: 0, ... } 전역 물약 재고
+
   characters: [],
   equipmentInventory: [],  // [{ id, uid, enhance }, ...]
   unlockedSkills: [],
@@ -16,6 +18,7 @@ const gameState = {
   upgrades: {},            // { upgradeId: level }
   floatingTexts: [],       // 런타임 전용 — 저장 제외
   projectiles:   [],       // 런타임 전용 — 저장 제외
+  poisonFields:  [],       // 런타임 전용 — 저장 제외
 
   // 런타임 전용 (저장 제외)
   viewStage: 0,
@@ -35,12 +38,16 @@ function createCharacter(assignedStage = 0) {
     stats: { STR: 5, DEX: 5, INT: 5, LUK: 5 },
     unspentPoints: 0,
     autoAssign: true,
-    equipment: { weapon: { id: 'beginner_sword', uid: 0, enhance: 0 }, armor: null, accessory: null, throwable: null },
+    equipment: { weapon: { id: 'beginner_sword', uid: 0, enhance: 0 }, armor: null, accessory: null, throwable: null, weapon2: null },
     skills: [],
     skillLevels: {},
     skillPoints: 0,
     pet: null,
     assignedStage,
+    selectedHpPotion: 'hp_s',              // 사용할 HP 물약 타입
+    selectedMpPotion: 'mp_s',              // 사용할 MP 물약 타입
+    equippedHpPotion: { id: 'hp_s', count: 0 },  // 현재 장착된 HP 물약 (자동 관리)
+    equippedMpPotion: { id: 'mp_s', count: 0 },  // 현재 장착된 MP 물약 (자동 관리)
     // 런타임 필드 상태 (저장 제외)
     x: 80, y: 240, attackTimer: 0, attackAnim: 0, facing: 1,
   };
@@ -49,12 +56,14 @@ function createCharacter(assignedStage = 0) {
 // 스폰 영역 (Canvas 640×480 기준)
 const SPAWN_AREA = { x1: 280, x2: 600, y1: 80, y2: 400 };
 
-// 캐릭터 시작 위치 — 한 필드에 여러 명이 배치될 때 순서대로 배정
+// 캐릭터 시작 위치 — 한 필드에 최대 6명 배치
 const CHAR_START_POS = [
   { x: 80, y: 240 },
   { x: 80, y: 150 },
   { x: 80, y: 330 },
-  { x: 60, y: 240 },
+  { x: 60, y: 195 },
+  { x: 60, y: 285 },
+  { x: 100, y: 240 },
 ];
 
 // 특정 스테이지의 필드를 (재)초기화
@@ -121,10 +130,21 @@ function initField() {
 }
 
 // 캐릭터를 다른 스테이지에 배치 (UI에서 호출)
+// 이미 배정된 스테이지 재클릭 시 배정 해제 (assignedStage = -1)
 function assignCharToStage(charId, stageIdx) {
   if (stageIdx < 0 || stageIdx > gameState.maxStageReached) return;
   const char = gameState.characters.find(c => c.id === charId);
-  if (!char || char.assignedStage === stageIdx) return;
+  if (!char) return;
+
+  // 재클릭 → 배정 해제
+  if (char.assignedStage === stageIdx) {
+    char.assignedStage = -1;
+    return;
+  }
+
+  // 스테이지당 최대 6명 제한
+  const inTarget = gameState.characters.filter(c => c.assignedStage === stageIdx).length;
+  if (inTarget >= 6) return;
 
   char.assignedStage = stageIdx;
   if (!gameState.stageFields[stageIdx]) initStageField(stageIdx);
@@ -170,10 +190,26 @@ function goToStage(index) {
   if (!gameState.stageFields[index]) initStageField(index);
 }
 
+// 직업별 장비 슬롯 목록 반환
+// 시프:           weapon(무기1) + weapon2(무기2)
+// 도적/어쌔신:    weapon(무기 or 아대) + throwable(표창)
+//   └ weapon에 아대(isAedae) 착용 시에만 표창 공격력이 대미지에 반영 (sumEquipStat에서 처리)
+// 기타: weapon
+function getCharSlotList(char) {
+  if (char.classId === 'thief') {
+    return ['weapon', 'weapon2', 'armor', 'accessory'];
+  }
+  const baseClass = CLASSES[char.classId]?.parent || char.classId;
+  if (char.classId === 'rogue' || baseClass === 'rogue') {
+    return ['weapon', 'throwable', 'armor', 'accessory'];
+  }
+  return ['weapon', 'armor', 'accessory'];
+}
+
 const SAVE_KEY = 'party_commander_save';
 
 // 런타임 전용 캐릭터 필드 (저장 제외)
-const RUNTIME_CHAR_KEYS = ['x', 'y', 'attackTimer', 'attackAnim', 'facing', 'skillTimers', 'skillAnim', 'petX', 'petY', 'magnetTimer', 'shadowActive', 'shadowTimer', 'shadowX', 'shadowY', 'orbCount', 'orbReady', 'currentHp', 'maxHpCache', 'hitAnim', 'isDead', 'respawnTimer', 'quickHitTimer', 'quickHitCount', 'quickHitDmgMult', 'quickHitDelay', 'activeBuffs', 'inRaid', 'raidAccDown', 'raidSkillSeal'];
+const RUNTIME_CHAR_KEYS = ['x', 'y', 'attackTimer', 'attackAnim', 'facing', 'skillTimers', 'skillAnim', 'petX', 'petY', 'magnetTimer', 'shadowActive', 'shadowTimer', 'shadowX', 'shadowY', 'orbCount', 'orbReady', 'currentHp', 'maxHpCache', 'currentMp', 'maxMpCache', 'potionHpCd', 'potionMpCd', 'hpRefillTimer', 'mpRefillTimer', 'hitAnim', 'isDead', 'respawnTimer', 'quickHitTimer', 'quickHitCount', 'quickHitDmgMult', 'quickHitDelay', 'activeBuffs', 'inRaid', 'raidAccDown', 'raidSkillSeal', 'poisonMoveTarget'];
 
 function saveGame() {
   const chars = gameState.characters.map(c => {
@@ -181,7 +217,7 @@ function saveGame() {
     RUNTIME_CHAR_KEYS.forEach(k => delete s[k]);
     return s;
   });
-  const { stageFields, viewStage, raidField, viewRaid, drops, floatingTexts, projectiles, ...rest } = gameState;
+  const { stageFields, viewStage, raidField, viewRaid, drops, floatingTexts, projectiles, poisonFields, ...rest } = gameState;
   localStorage.setItem(SAVE_KEY, JSON.stringify({ ...rest, characters: chars, lastTick: Date.now() }));
 }
 
@@ -204,9 +240,18 @@ function loadGame() {
         }
       }
       if (!char.equipment) {
-        char.equipment = { weapon: { id: 'beginner_sword', uid: 0, enhance: 0 }, armor: null, accessory: null, throwable: null };
-      } else if (char.equipment.throwable === undefined) {
-        char.equipment.throwable = null;
+        char.equipment = { weapon: { id: 'beginner_sword', uid: 0, enhance: 0 }, armor: null, accessory: null, throwable: null, weapon2: null };
+      } else {
+        if (char.equipment.throwable === undefined) char.equipment.throwable = null;
+        if (char.equipment.weapon2   === undefined) char.equipment.weapon2   = null;
+        // 구형 subweapon 슬롯 → 인벤토리로 이관
+        if (char.equipment.subweapon) {
+          gameState.equipmentInventory.push(char.equipment.subweapon);
+          char.equipment.subweapon = undefined;
+          delete char.equipment.subweapon;
+        } else {
+          delete char.equipment.subweapon;
+        }
       }
     }
     // 인벤토리: string → object
@@ -241,7 +286,16 @@ function loadGame() {
         char.skillPoints = Math.floor((char.level - 1) / SKILL_SP_PER_LEVEL);
       if (!char.nickname)
         char.nickname = NICKNAME_LIST[Math.floor(Math.random() * NICKNAME_LIST.length)];
+      // 물약 시스템 마이그레이션
+      if (!char.selectedHpPotion) char.selectedHpPotion = 'hp_s';
+      if (!char.selectedMpPotion) char.selectedMpPotion = 'mp_s';
+      if (!char.equippedHpPotion || !char.equippedHpPotion.id)
+        char.equippedHpPotion = { id: char.selectedHpPotion, count: 0 };
+      if (!char.equippedMpPotion || !char.equippedMpPotion.id)
+        char.equippedMpPotion = { id: char.selectedMpPotion, count: 0 };
     }
+    if (!gameState.potionStock) gameState.potionStock = {};
+    if (!gameState.poisonFields) gameState.poisonFields = [];
 
     // 구형 세이브: upgrades 필드 없으면 초기화
     if (!gameState.upgrades) gameState.upgrades = {};

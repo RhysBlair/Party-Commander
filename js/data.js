@@ -57,18 +57,18 @@ const EQUIPMENT = {
   // ── 스타터 ──────────────────────────────────────────────
   beginner_sword:  { name: "초보자의 검",   type: "weapon",    grade: "노멀", atk: 3,                       req: {},                               cost: 0,    minDropStage: 99 },
 
-  // ── 무기 (공용) ─────────────────────────────────────────
-  iron_sword:      { name: "철검",           type: "weapon",    grade: "노멀", atk: 8,                       req: { level: 5 },                     cost: 200,  minDropStage: 0 },
-  steel_sword:     { name: "강철검",         type: "weapon",    grade: "노멀", atk: 16,                      req: { level: 10 },                    cost: 600,  minDropStage: 1 },
+  // ── 무기 (전사 전용) ────────────────────────────────────
+  iron_sword:      { name: "철검",           type: "weapon",    grade: "노멀", atk: 8,  bonusSTR: 3,  bonusDEX: 1, req: { level: 5,  classId: "warrior" }, cost: 200,  minDropStage: 0 },
+  steel_sword:     { name: "강철검",         type: "weapon",    grade: "노멀", atk: 16, bonusSTR: 6,  bonusDEX: 2, req: { level: 10, classId: "warrior" }, cost: 600,  minDropStage: 1 },
 
   // ── 무기 (직업 전용) ────────────────────────────────────
-  knight_sword:    { name: "기사검",         type: "weapon",    grade: "레어", atk: 28,                      req: { level: 15, classId: "warrior" }, cost: 1500, minDropStage: 2 },
+  knight_sword:    { name: "기사검",         type: "weapon",    grade: "에픽", atk: 40, bonusSTR: 15, bonusDEX: 5, req: { level: 15, classId: "warrior" }, cost: 5000, minDropStage: 4 },
   long_bow:        { name: "장궁",           type: "weapon",    grade: "노멀", atk: 12,                      req: { level: 5,  classId: "archer"  }, cost: 280,  minDropStage: 0 },
   compound_bow:    { name: "복합궁",         type: "weapon",    grade: "레어", atk: 22,                      req: { level: 10, classId: "archer"  }, cost: 750,  minDropStage: 1 },
   magic_staff:     { name: "마법 지팡이",    type: "weapon",    grade: "노멀", atk: 5,  bonusINT: 5,         req: { level: 5,  classId: "mage"    }, cost: 280,  minDropStage: 0 },
   great_staff:     { name: "대마법 지팡이",  type: "weapon",    grade: "레어", atk: 8,  bonusINT: 10,        req: { level: 10, classId: "mage"    }, cost: 750,  minDropStage: 1 },
   dagger:          { name: "단검",           type: "weapon",    grade: "노멀", atk: 11,                      req: { level: 5,  classId: "rogue"   }, cost: 260,  minDropStage: 0 },
-  shadow_blade:    { name: "그림자 검",      type: "weapon",    grade: "레어", atk: 20,                      req: { level: 10, classId: "rogue"   }, cost: 720,  minDropStage: 1 },
+  shadow_blade:    { name: "그림자 단검",    type: "weapon",    grade: "레어", atk: 20,                      req: { level: 10, classId: "rogue"   }, cost: 720,  minDropStage: 1 },
 
   // ── 방어구 ──────────────────────────────────────────────
   leather_armor:   { name: "가죽 갑옷",      type: "armor",     grade: "노멀", physDef: 5,                   req: { level: 5 },                     cost: 200,  minDropStage: 0 },
@@ -82,13 +82,18 @@ const EQUIPMENT = {
   dex_bracelet:    { name: "민첩의 팔찌",    type: "accessory", grade: "레어", bonusDEX: 8,                  req: { level: 10 },                    cost: 700,  minDropStage: 1 },
   int_necklace:    { name: "지성의 목걸이",  type: "accessory", grade: "레어", bonusINT: 8,                  req: { level: 10 },                    cost: 700,  minDropStage: 1 },
 
-  // ── 표창 (도적 전용, throwable 슬롯) ────────────────────
-  su_shuriken:     { name: "수비표창",   type: "throwable", grade: "노멀", atk: 10, req: { classId: "rogue" },              cost: 300,  minDropStage: 0 },
-  geum_shuriken:   { name: "금비표창",   type: "throwable", grade: "노멀", atk: 15, req: { classId: "rogue", level: 5  },  cost: 700,  minDropStage: 0 },
-  to_shuriken:     { name: "토비표창",   type: "throwable", grade: "노멀", atk: 20, req: { classId: "rogue", level: 10 },  cost: 1500, minDropStage: 1 },
-  rae_shuriken:    { name: "뇌전수리검", type: "throwable", grade: "레어", atk: 25, req: { classId: "rogue", level: 15 },  cost: 3000, minDropStage: 2 },
-  il_shuriken:     { name: "일비표창",   type: "throwable", grade: "레어", atk: 30, req: { classId: "rogue", level: 15 },  cost: 5000, minDropStage: 3 },
-  hwa_shuriken:    { name: "화비표창",   type: "throwable", grade: "에픽", atk: 35, req: { classId: "rogue", level: 20 },  cost: 9000, minDropStage: 4 },
+  // ── 표창 (도적 전용, throwable 슬롯) ── 수비→화비 지수적 증가 ──
+  su_shuriken:     { name: "수비표창",   type: "throwable", grade: "노멀", atk: 10,  req: { classId: "rogue" },              cost: 300,  minDropStage: 0, maxEnhance: 0 },
+  geum_shuriken:   { name: "금비표창",   type: "throwable", grade: "노멀", atk: 16,  req: { classId: "rogue", level: 5  },  cost: 700,  minDropStage: 0, maxEnhance: 0 },
+  to_shuriken:     { name: "토비표창",   type: "throwable", grade: "노멀", atk: 26,  req: { classId: "rogue", level: 10 },  cost: 1500, minDropStage: 1, maxEnhance: 0 },
+  rae_shuriken:    { name: "뇌전수리검", type: "throwable", grade: "레어", atk: 42,  req: { classId: "rogue", level: 15 },  cost: 3000, minDropStage: 2, maxEnhance: 0 },
+  il_shuriken:     { name: "일비표창",   type: "throwable", grade: "레어", atk: 67,  req: { classId: "rogue", level: 15 },  cost: 5000, minDropStage: 3, maxEnhance: 0 },
+  hwa_shuriken:    { name: "화비표창",   type: "throwable", grade: "에픽", atk: 107, req: { classId: "rogue", level: 20 },  cost: 9000, minDropStage: 4, maxEnhance: 0 },
+
+  // ── 아대 (도적/어쌔신 전용 무기 슬롯) — 착용 시 표창 공격력 활성화, 시프 착용 불가 ──
+  shadow_subweapon:  { name: "그림자 아대", type: "weapon", isAedae: true, grade: "노멀", atk: 8,  bonusLUK: 3,              req: { level: 10, classId: "rogue" }, cost: 800,  minDropStage: 1 },
+  silence_subweapon: { name: "침묵의 아대", type: "weapon", isAedae: true, grade: "레어", atk: 18, bonusLUK: 6,  bonusDEX: 3, req: { level: 20, classId: "rogue" }, cost: 2000, minDropStage: 3 },
+  moon_subweapon:    { name: "월식아대",    type: "weapon", isAedae: true, grade: "에픽", atk: 32, bonusLUK: 12, bonusDEX: 8, req: { level: 30, classId: "rogue" }, cost: 6000, minDropStage: 5 },
 };
 
 const GRADE_COLORS = { "노멀": "#aaa", "레어": "#5b9bd5", "에픽": "#9b59b6", "유니크": "#e2b96f" };
@@ -102,45 +107,76 @@ const ENHANCE_SUCCESS = [100, 100, 100, 100, 100, 80, 60, 40, 25, 10];
 const SKILLS = {
   // ── 전사 ──────────────────────────────────────────────────
   orb_strike:     { name: "오브 스트라이크", classId: "warrior",
-                    targeting: "passive", orbsRequired: 5, dmgMultiplier: 20.0, cost: 500 },
+                    targeting: "passive", orbsRequired: 5, dmgMultiplier: 20.0, cost: 500, mpCost: 30 },
 
   // ── 2차 전사 ──────────────────────────────────────────────
   threat:         { name: "위협",            classId: "page",     cooldown: 15.0,
                     targeting: "debuff_area", debuffRange: 250, debuffDmgMult: 1.5,
-                    debuffDuration: 8.0, cost: 500 },
-  spear_aura:     { name: "성스러운 오라",   classId: "spearman", cooldown: 90.0,
+                    debuffDuration: 8.0, cost: 500, mpCost: 15 },
+  spear_aura:     { name: "하이퍼바디",       classId: "spearman", cooldown: 90.0,
                     targeting: "party_buff",
-                    buffHp: 2.0, buffCdMult: 2.0, buffDuration: 60.0, cost: 500 },
+                    buffHp: 1.2, buffHpPerLv: 0.2, buffDuration: 60.0, cost: 500, mpCost: 50 },
   rage:           { name: "분노",            classId: "knight",   cooldown: 60.0,
                     targeting: "party_buff",
-                    buffAtk: 2.0, buffDuration: 30.0, cost: 500 },
+                    buffAtk: 2.0, buffDuration: 30.0, cost: 500, mpCost: 50 },
 
   // ── 마법사 ────────────────────────────────────────────────
   mage_blast:     { name: "마력 폭발",      classId: "mage",    cooldown: 4.0,
-                    targeting: "aoe",    maxTargets: 5, dmgMultiplier: 1.2, cost: 500 },
+                    targeting: "aoe",    maxTargets: 5, dmgMultiplier: 1.2, cost: 500, mpCost: 12 },
 
   // ── 2차 마법사 ────────────────────────────────────────────
   ice_strike:     { name: "아이스 스트라이크", classId: "wizard_tl", cooldown: 8.0,
-                    targeting: "aoe_freeze", freezeRange: 405, maxTargets: 8,
-                    dmgMultiplier: 3.0, freezeDuration: 5.0, cost: 500 },
-  cleric_heal:    { name: "신성한 치유",     classId: "cleric",  cooldown: 8.0,
-                    targeting: "heal",   healRange: 320, healMult: 3, cost: 500 },
+                    targeting: "aoe_freeze", freezeRange: 405, maxTargets: 8, maxTargetsBase: 1,
+                    dmgMultiplier: 3.0, freezeDuration: 5.0, cost: 500, mpCost: 20 },
+  cleric_heal:    { name: "신성한 치유",     classId: "cleric",  cooldown: 5.0, cooldownDecay: 0.647,
+                    targeting: "heal",   healRange: 320, healMult: 3, cost: 500, mpCost: 15 },
 
   // ── 궁수 ──────────────────────────────────────────────────
   double_shot:    { name: "더블샷",          classId: "archer",  cooldown: 3.0,
-                    targeting: "double_hit", hits: 2, dmgMultiplier: 0.8, cost: 500 },
+                    targeting: "double_hit", hits: 2, dmgMultiplier: 0.8, cost: 500, mpCost: 10 },
 
   // ── 2차 궁수 (헌터가 연사 계승) ──────────────────────────
   archer_shot:    { name: "연사",            classId: "hunter",
-                    targeting: "passive", attackInterval: 0.2, dmgMultiplier: 1.2, cost: 500 },
+                    targeting: "passive", attackInterval: 0.2, dmgMultiplier: 1.2, cost: 500, mpCost: 0 },
 
   // ── 도적 ──────────────────────────────────────────────────
   shadow_partner: { name: "쉐도우파트너",    classId: "rogue",   cooldown: 1.5,
-                    targeting: "shadow", duration: 60.0, cost: 500 },
+                    targeting: "shadow", duration: 60.0, cost: 500, mpCost: 3 },
 
   // ── 2차 도적 (어쌔신) ────────────────────────────────────
   triple_throw:   { name: "트리플 스로우",   classId: "assassin",
-                    targeting: "passive", hits: 3, cost: 500 },
+                    targeting: "passive", hits: 3, cost: 500, mpCost: 0 },
+
+  // ── 2차 도적 (시프) ──────────────────────────────────────
+  savage_blow:    { name: "세비지 블로우",   classId: "thief",    cooldown: 4.0,
+                    targeting: "savage_blow", hits: 10, hitDelay: 0.2,
+                    dmgMultiplier: 0.8, cost: 500, mpCost: 20 },
+
+  // ── 2차 마법사 (썬콜) ─────────────────────────────────────
+  meditation_tl:  { name: "메디테이션",      classId: "wizard_tl", cooldown: 60.0,
+                    targeting: "party_buff", buffAtk: 2.0, buffAtkPerLv: 0.1111,
+                    buffDuration: 30.0, cost: 500, mpCost: 30 },
+
+  // ── 2차 마법사 (불독) ─────────────────────────────────────
+  meditation_fp:  { name: "메디테이션",      classId: "wizard_fp", cooldown: 60.0,
+                    targeting: "party_buff", buffAtk: 2.0, buffAtkPerLv: 0.1111,
+                    buffDuration: 30.0, cost: 500, mpCost: 30 },
+  poison_field:   { name: "포이즌",          classId: "wizard_fp", cooldown: 10.0,
+                    targeting: "poison_area", poisonRange: 220, dmgMultiplier: 2.5,
+                    poisonDuration: 8.0, poisonFieldRadius: 220, poisonTickInterval: 0.1,
+                    cost: 500, mpCost: 20 },
+
+  // ── 2차 궁수 (사수) ──────────────────────────────────────
+  piercing:       { name: "피어싱",          classId: "marksman",  cooldown: 10.0,
+                    targeting: "piercing", chargeTime: 3.0, dmgMultiplier: 15.0, cost: 500, mpCost: 50 },
+  sharp_eyes_mk:  { name: "샤프아이즈",      classId: "marksman", cooldown: 60.0,
+                    targeting: "party_buff", buffCritDmg: 0.20, buffCritDmgPerLv: 0.1444,
+                    buffDuration: 30.0, cost: 500, mpCost: 30 },
+
+  // ── 2차 궁수 (헌터) 추가 ────────────────────────────────
+  sharp_eyes_ht:  { name: "샤프아이즈",      classId: "hunter",   cooldown: 60.0,
+                    targeting: "party_buff", buffCritDmg: 0.20, buffCritDmgPerLv: 0.1444,
+                    buffDuration: 30.0, cost: 500, mpCost: 30 },
 };
 
 // ── 파티 업그레이드 정의 ─────────────────────────────────────
@@ -158,64 +194,81 @@ const PETS = {
   pet_magnet: { name: "자석 펫", pickupRange: 9999, pickupInterval: 0.5, cost: 5000 },
 };
 
+// 물약 정의
+const POTIONS = {
+  hp_s: { name: "체력 물약 (소)", type: "hp", restoreAmt: 500,  cost: 200  },
+  hp_m: { name: "체력 물약 (중)", type: "hp", restoreAmt: 2000, cost: 700  },
+  hp_l: { name: "체력 물약 (대)", type: "hp", restoreAmt: 8000, cost: 2500 },
+  mp_s: { name: "마나 물약 (소)", type: "mp", restoreAmt: 150,  cost: 250  },
+  mp_m: { name: "마나 물약 (중)", type: "mp", restoreAmt: 600,  cost: 900  },
+  mp_l: { name: "마나 물약 (대)", type: "mp", restoreAmt: 2500, cost: 3000 },
+};
+
 // 드랍 아이템 소멸 시간(초)
 const DROP_EXPIRE_SECONDS = 30;
 
 // 스테이지 / 몬스터 정의
 // attackType: "melee" | "ranged"   atkDamageType: "physical" | "magical"
 // physDef: 물리방어 / magicDef: 마법방어 (분리 적용)
+// aoeAtk / aoeRange / aoeInterval / aoeDamageType : 범위 공격 (해당 필드 있으면 활성화)
 const STAGES = [
   { name: "초원",
-    monster: { name: "슬라임",       hp: 50,    atk: 4,   physDef: 1,  magicDef: 1,  goldDrop: 10,   expDrop: 8,
-               moveSpeed: 35,  attackRange: 55,  aggroRange: 300, attackType: "melee",   atkDamageType: "physical" },
+    monster: { name: "슬라임",       hp: 80,        atk: 5,    physDef: 1,   magicDef: 0,   goldDrop: 15,      expDrop: 12,
+               moveSpeed: 35,  attackRange: 55,  aggroRange: 300, attackType: "melee",  atkDamageType: "physical" },
     spawnCount: 4, killsToAdvance: 20 },
 
   { name: "숲",
-    monster: { name: "고블린",       hp: 120,   atk: 8,   physDef: 2,  magicDef: 1,  goldDrop: 22,   expDrop: 18,
-               moveSpeed: 60,  attackRange: 55,  aggroRange: 360, attackType: "melee",   atkDamageType: "physical" },
+    monster: { name: "고블린",       hp: 300,       atk: 14,   physDef: 4,   magicDef: 2,   goldDrop: 55,      expDrop: 44,
+               moveSpeed: 60,  attackRange: 55,  aggroRange: 360, attackType: "melee",  atkDamageType: "physical" },
     spawnCount: 4, killsToAdvance: 30 },
 
   { name: "동굴",
-    monster: { name: "오크",         hp: 280,   atk: 15,  physDef: 5,  magicDef: 2,  goldDrop: 50,   expDrop: 40,
-               moveSpeed: 35,  attackRange: 60,  aggroRange: 320, attackType: "melee",   atkDamageType: "physical" },
+    monster: { name: "오크",         hp: 1000,      atk: 32,   physDef: 10,  magicDef: 4,   goldDrop: 200,     expDrop: 160,
+               moveSpeed: 35,  attackRange: 60,  aggroRange: 320, attackType: "melee",  atkDamageType: "physical" },
     spawnCount: 5, killsToAdvance: 40 },
 
   { name: "사막",
-    monster: { name: "모래 골렘",    hp: 600,   atk: 25,  physDef: 10, magicDef: 5,  goldDrop: 110,  expDrop: 90,
-               moveSpeed: 22,  attackRange: 65,  aggroRange: 300, attackType: "melee",   atkDamageType: "physical" },
+    monster: { name: "모래 골렘",    hp: 3500,      atk: 72,   physDef: 22,  magicDef: 10,  goldDrop: 700,     expDrop: 560,
+               moveSpeed: 22,  attackRange: 65,  aggroRange: 300, attackType: "melee",  atkDamageType: "physical" },
     spawnCount: 5, killsToAdvance: 50 },
 
   { name: "화산",
-    monster: { name: "불꽃 도마뱀",  hp: 1200,  atk: 40,  physDef: 18, magicDef: 8,  goldDrop: 240,  expDrop: 200,
-               moveSpeed: 50,  attackRange: 60,  aggroRange: 380, attackType: "melee",   atkDamageType: "physical" },
+    monster: { name: "불꽃 도마뱀",  hp: 12000,     atk: 160,  physDef: 42,  magicDef: 20,  goldDrop: 2500,    expDrop: 2000,
+               moveSpeed: 50,  attackRange: 60,  aggroRange: 380, attackType: "melee",  atkDamageType: "physical",
+               aoeAtk: 120,  aoeRange: 120, aoeInterval: 5.0, aoeDamageType: "physical" },
     spawnCount: 6, killsToAdvance: 60 },
 
   { name: "심층 던전",
-    monster: { name: "어둠의 기사",  hp: 3000,  atk: 60,  physDef: 25, magicDef: 10, goldDrop: 500,  expDrop: 440,
-               moveSpeed: 55,  attackRange: 65,  aggroRange: 420, attackType: "melee",   atkDamageType: "physical" },
+    monster: { name: "어둠의 기사",  hp: 50000,     atk: 280,  physDef: 78,  magicDef: 32,  goldDrop: 9000,    expDrop: 7200,
+               moveSpeed: 55,  attackRange: 65,  aggroRange: 420, attackType: "melee",  atkDamageType: "physical",
+               aoeAtk: 200,  aoeRange: 110, aoeInterval: 4.5, aoeDamageType: "physical" },
     spawnCount: 5, killsToAdvance: 70 },
 
   { name: "마법사 탑",
-    monster: { name: "화염 마법사",  hp: 2500,  atk: 80,  physDef: 5,  magicDef: 25, goldDrop: 720,  expDrop: 640,
-               moveSpeed: 40,  attackRange: 270, aggroRange: 460, attackType: "ranged",  atkDamageType: "magical",
-               projSpeed: 220, projColor: "#ff6622" },
+    monster: { name: "화염 마법사",  hp: 160000,    atk: 380,  physDef: 8,   magicDef: 110, goldDrop: 32000,   expDrop: 26000,
+               moveSpeed: 40,  attackRange: 270, aggroRange: 460, attackType: "ranged", atkDamageType: "magical",
+               projSpeed: 220, projColor: "#ff6622",
+               aoeAtk: 280,  aoeRange: 160, aoeInterval: 6.0, aoeDamageType: "magical" },
     spawnCount: 4, killsToAdvance: 60 },
 
   { name: "고대 유적",
-    monster: { name: "고대 골렘",    hp: 7000,  atk: 95,  physDef: 42, magicDef: 20, goldDrop: 1200, expDrop: 1050,
-               moveSpeed: 18,  attackRange: 70,  aggroRange: 340, attackType: "melee",   atkDamageType: "physical" },
+    monster: { name: "고대 골렘",    hp: 520000,    atk: 520,  physDef: 160, magicDef: 65,  goldDrop: 110000,  expDrop: 88000,
+               moveSpeed: 18,  attackRange: 70,  aggroRange: 340, attackType: "melee",  atkDamageType: "physical",
+               aoeAtk: 400,  aoeRange: 130, aoeInterval: 5.0, aoeDamageType: "physical" },
     spawnCount: 3, killsToAdvance: 50 },
 
   { name: "어비스",
-    monster: { name: "어비스 궁수",  hp: 4500,  atk: 120, physDef: 15, magicDef: 30, goldDrop: 1700, expDrop: 1500,
-               moveSpeed: 65,  attackRange: 320, aggroRange: 520, attackType: "ranged",  atkDamageType: "magical",
-               projSpeed: 280, projColor: "#9b59b6" },
+    monster: { name: "어비스 궁수",  hp: 1600000,   atk: 750,  physDef: 55,  magicDef: 200, goldDrop: 380000,  expDrop: 300000,
+               moveSpeed: 65,  attackRange: 320, aggroRange: 520, attackType: "ranged", atkDamageType: "magical",
+               projSpeed: 280, projColor: "#9b59b6",
+               aoeAtk: 580,  aoeRange: 180, aoeInterval: 5.0, aoeDamageType: "magical" },
     spawnCount: 4, killsToAdvance: 65 },
 
   { name: "신성 신전",
-    monster: { name: "천상의 파수꾼", hp: 12000, atk: 150, physDef: 35, magicDef: 45, goldDrop: 3000, expDrop: 2600,
-               moveSpeed: 45,  attackRange: 340, aggroRange: 600, attackType: "ranged",  atkDamageType: "magical",
-               projSpeed: 320, projColor: "#f1c40f" },
+    monster: { name: "천상의 파수꾼", hp: 5000000,  atk: 1100, physDef: 240, magicDef: 380, goldDrop: 1300000, expDrop: 1050000,
+               moveSpeed: 45,  attackRange: 340, aggroRange: 600, attackType: "ranged", atkDamageType: "magical",
+               projSpeed: 320, projColor: "#f1c40f",
+               aoeAtk: 850,  aoeRange: 200, aoeInterval: 4.0, aoeDamageType: "magical" },
     spawnCount: 3, killsToAdvance: 70 },
 ];
 

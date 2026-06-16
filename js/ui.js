@@ -12,6 +12,16 @@ function markTabDirty() {
   });
 }
 
+let charModalDirty = false;
+function markCharModalDirty() {
+  if (charModalDirty) return;
+  charModalDirty = true;
+  requestAnimationFrame(() => {
+    charModalDirty = false;
+    if (charModalOpenId !== null) renderCharModalBody();
+  });
+}
+
 function initUI() {
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -33,6 +43,9 @@ function initUI() {
       }
     });
   }
+
+  // 스테이지 바 — DOM 1회 생성, 이후 클래스만 갱신
+  initStageBar();
 }
 
 function updateUI(dt) {
@@ -41,8 +54,75 @@ function updateUI(dt) {
   uiTimer = 0;
   updateHUD();
   updateCharList();
+  updateStageBar();
   // 탭 콘텐츠는 여기서 갱신하지 않음
   // → 버튼 onclick 또는 markTabDirty()에서만 갱신
+}
+
+// 스테이지 바 DOM을 최초 1회 생성 — 이후 updateStageBar로 클래스만 갱신
+function initStageBar() {
+  const el = document.getElementById('stage-bar');
+  if (!el) return;
+  el.innerHTML = '';
+
+  for (let i = 0; i < STAGES.length; i++) {
+    const wrap = document.createElement('div');
+    wrap.className = 'sdot-wrap';
+    wrap.id = `sdot-wrap-${i}`;
+
+    const dot = document.createElement('div');
+    dot.className = 'sdot';
+    dot.id = `sdot-${i}`;
+    dot.title = STAGES[i].name;
+    dot.textContent = i + 1;
+
+    const cnt = document.createElement('div');
+    cnt.className = 'sdot-cnt';
+    cnt.id = `sdot-cnt-${i}`;
+
+    wrap.appendChild(dot);
+    wrap.appendChild(cnt);
+
+    // 직접 이벤트 리스너 — innerHTML 갱신과 무관하게 항상 동작
+    wrap.addEventListener('click', () => {
+      if (i <= gameState.maxStageReached) goToStage(i);
+    });
+
+    el.appendChild(wrap);
+
+    if (i < STAGES.length - 1) {
+      const line = document.createElement('div');
+      line.className = 'sdot-line';
+      line.id = `sdot-line-${i}`;
+      el.appendChild(line);
+    }
+  }
+}
+
+function updateStageBar() {
+  const view = gameState.viewStage;
+  const max  = gameState.maxStageReached;
+
+  for (let i = 0; i < STAGES.length; i++) {
+    const wrap = document.getElementById(`sdot-wrap-${i}`);
+    const dot  = document.getElementById(`sdot-${i}`);
+    const cnt  = document.getElementById(`sdot-cnt-${i}`);
+    const line = document.getElementById(`sdot-line-${i}`);
+    if (!wrap || !dot || !cnt) continue;
+
+    const unlocked = i <= max;
+    const isView   = i === view;
+    const n        = gameState.characters.filter(c => c.assignedStage === i).length;
+
+    wrap.classList.toggle('sdot-wrap-locked', !unlocked);
+
+    dot.className = 'sdot' +
+      (!unlocked ? ' sdot-locked' : isView ? ' sdot-view' : n > 0 ? ' sdot-chars' : '');
+
+    cnt.textContent = n > 0 ? `${n}명` : '';
+
+    if (line) line.className = 'sdot-line' + (unlocked && i < max ? ' sdot-line-on' : '');
+  }
 }
 
 function updateHUD() {
@@ -67,12 +147,10 @@ function renderActiveTab() {
   if (!activeBtn) return;
   const tab = activeBtn.dataset.tab;
   if (tab === 'characters') renderCharacterTab();
-  else if (tab === 'stats')      renderStatsTab();
   else if (tab === 'equipment')  renderEquipmentTab();
   else if (tab === 'shop')       renderShopTab();
   else if (tab === 'skills')     renderSkillTab();
   else if (tab === 'pets')       renderPetTab();
-  else if (tab === 'stage')      renderStageTab();
   else if (tab === 'upgrades')   renderUpgradeTab();
   else if (tab === 'raid')       renderRaidTab();
 }
@@ -119,6 +197,9 @@ function renderCharacterTab() {
     const pct = Math.floor((char.exp / needed) * 100);
     const hasPoints = char.unspentPoints > 0 && !char.autoAssign;
     const canAdvance = char.classId === 'novice' && char.level >= JOB_ADVANCE_LEVEL;
+    const fs = calcFinalStats(char);
+    const resetCost = 100 * char.level;
+    const canReset = gameState.gold >= resetCost;
 
     const jobSection = canAdvance ? `
       <div class="job-advance-box">
@@ -150,31 +231,70 @@ function renderCharacterTab() {
 
     const classColor = CLASS_COLORS[char.classId] || '#aaa';
 
+    const stageLabel = char.assignedStage >= 0
+      ? `<span style="color:#f39c12;font-size:11px">${STAGES[char.assignedStage]?.name || ''}</span>`
+      : `<span style="color:#666;font-size:11px">미배정</span>`;
+
     return `
-      <div class="char-card">
+      <div class="char-card" style="cursor:pointer"
+           onclick="if(!event.target.closest('button,input')){${char.assignedStage >= 0 ? `goToStage(${char.assignedStage})` : ''}}">
         <h3 style="color:${classColor}">${char.nickname || '???'}
           <span style="color:#888;font-size:12px;font-weight:normal"> (${charClassName(char.classId)})</span>
           <span style="color:#666;font-size:11px;font-weight:normal"> Lv.${char.level}</span>
+          <span style="float:right;margin-top:2px">${stageLabel}</span>
         </h3>
         <div style="font-size:12px;color:#888;margin-bottom:4px">
           EXP ${char.exp} / ${needed} (${pct}%)
         </div>
         <div class="exp-bar-wrap"><div class="exp-bar-fill" style="width:${pct}%"></div></div>
-        <div style="margin-top:6px;font-size:12px;color:#aaa">
-          STR ${char.stats.STR} &nbsp; DEX ${char.stats.DEX} &nbsp;
-          INT ${char.stats.INT} &nbsp; LUK ${char.stats.LUK}
+
+        <div class="stat-inline-row">
+          ${['STR','DEX','INT','LUK'].map(stat => {
+            const bonus = equipStatBonus(char, stat);
+            return `<div class="stat-inline-item">
+              <span class="stat-lbl-tip" title="${STAT_LABELS[stat]}">${stat}</span>
+              <span class="stat-val" id="sv-${char.id}-${stat}">${statValHtml(char.stats[stat], bonus)}</span>
+              <button class="stat-plus-btn" id="sb-${char.id}-${stat}"
+                      style="${hasPoints ? '' : 'display:none'}"
+                      onclick="tryAddStatPoint(${char.id},'${stat}');updateStatDisplay(${char.id});">＋</button>
+            </div>`;
+          }).join('')}
+          <div style="margin-left:auto;display:flex;align-items:center;gap:5px">
+            <span id="sp-${char.id}" style="color:#f1c40f;font-size:11px${char.unspentPoints > 0 ? '' : ';display:none'}">잔여&nbsp;<strong id="spv-${char.id}">${char.unspentPoints}</strong>pt</span>
+            <button class="toggle-btn ${char.autoAssign ? 'active' : ''}"
+                    onclick="tryToggleAutoAssign(${char.id});renderCharacterTab();">
+              자동배분 ${char.autoAssign ? 'ON' : 'OFF'}
+            </button>
+            <button id="freset-${char.id}" class="reset-stat-btn ${canReset ? '' : 'disabled'}"
+                    onclick="tryResetStats(${char.id});renderCharacterTab();"
+                    title="골드 ${resetCost.toLocaleString()} 소모">스텟초기화</button>
+          </div>
         </div>
-        ${char.unspentPoints > 0
-          ? `<div class="points-badge">⬆ 잔여 포인트 (${char.unspentPoints}pt)${char.autoAssign ? ' · 레벨업 시 자동 배분' : ''}</div>`
-          : ''}
+
+        <div class="char-fs-line" id="fs-${char.id}" style="margin-bottom:5px">
+          <span>HP <strong style="color:#e74c3c">${char.maxHpCache ? Math.ceil(char.currentHp||0) : fs.maxHp}/${fs.maxHp}</strong></span>
+          <span>공격력 <strong>${fs.atk}</strong></span>
+          <span>물방 <strong>${fs.physDef}</strong></span>
+          <span>마방 <strong>${fs.magicDef}</strong></span>
+          <span>명중 <strong>${fs.accuracy.toFixed(0)}%</strong></span>
+          <span>회피 <strong>${fs.evade.toFixed(0)}%</strong></span>
+          <span>크리 <strong style="color:#f1c40f">${fs.critRate.toFixed(1)}%</strong></span>
+        </div>
+
         <div class="assign-section">
-          <span class="assign-label">배치 필드</span>
+          <span class="assign-label">배치 필드 <span style="color:#555;font-size:10px">(스테이지당 최대 6명)</span></span>
           <div class="assign-btns">
-            ${Array.from({ length: gameState.maxStageReached + 1 }, (_, i) => `
-              <button class="assign-btn ${char.assignedStage === i ? 'active' : ''}"
-                      onclick="assignCharToStage(${char.id}, ${i}); renderCharacterTab();">
-                ${STAGES[i].name}
-              </button>`).join('')}
+            ${Array.from({ length: gameState.maxStageReached + 1 }, (_, i) => {
+              const inStage = gameState.characters.filter(c => c.assignedStage === i).length;
+              const isCurrent = char.assignedStage === i;
+              const isFull = !isCurrent && inStage >= 6;
+              return `<button class="assign-btn ${isCurrent ? 'active' : isFull ? 'disabled' : ''}"
+                              onclick="assignCharToStage(${char.id}, ${i}); renderCharacterTab();"
+                              title="${isFull ? '파티 만원' : ''}"
+                              ${isFull ? 'disabled' : ''}>
+                        ${STAGES[i].name} <span style="font-size:9px;opacity:0.7">${inStage}/6</span>
+                      </button>`;
+            }).join('')}
           </div>
         </div>
         ${jobSection}
@@ -200,7 +320,7 @@ function renderCharacterTab() {
   el.innerHTML = html + addSection;
 }
 
-// ── 스탯 탭 (전체 재빌드) ───────────────────────────────────
+// ── 스탯 헬퍼 (캐릭터 탭에서 사용) ─────────────────────────
 const STAT_LABELS = {
   STR: '공격력 +0.5 · 물리방어 +0.5 · (전사/파이터/페이지/스피어맨) 추가 배율',
   DEX: '명중 +0.5% · 회피 +0.1% · (궁수/헌터/사수) 추가 배율',
@@ -208,79 +328,13 @@ const STAT_LABELS = {
   LUK: '회피 +0.3% · (도적/어쌔신/시프) 추가 배율',
 };
 
-// 장비로 인한 스탯 보너스 (bonusSTR 등)
 function equipStatBonus(char, stat) {
-  return sumEquipStat(char, 'bonus' + stat); // bonusSTR, bonusDEX, bonusINT, bonusLUK
+  return sumEquipStat(char, 'bonus' + stat);
 }
 
-// "17(10+7)" 형식 스탯 문자열
 function statValHtml(base, bonus) {
   if (bonus <= 0) return `${base}`;
   return `${base + bonus}<span class="stat-equip-bonus">(${base}+${bonus})</span>`;
-}
-
-function renderStatsTab() {
-  const el = document.getElementById('tab-stats');
-  if (gameState.characters.length === 0) {
-    el.innerHTML = '<p style="color:#888">캐릭터가 없습니다.</p>';
-    return;
-  }
-
-  const html = gameState.characters.map(char => {
-    const fs = calcFinalStats(char);
-    const resetCost = 100 * char.level;
-    const canReset = gameState.gold >= resetCost;
-    const hasPoints = char.unspentPoints > 0;
-
-    const statRows = ['STR', 'DEX', 'INT', 'LUK'].map(stat => {
-      const bonus = equipStatBonus(char, stat);
-      return `
-      <div class="stat-row">
-        <span class="stat-label" title="${STAT_LABELS[stat]}">${stat}</span>
-        <span class="stat-val" id="sv-${char.id}-${stat}">${statValHtml(char.stats[stat], bonus)}</span>
-        <button class="stat-plus-btn" id="sb-${char.id}-${stat}"
-                style="${hasPoints ? '' : 'display:none'}"
-                onclick="tryAddStatPoint(${char.id}, '${stat}'); updateStatDisplay(${char.id});">＋</button>
-        <span class="stat-desc">${STAT_LABELS[stat]}</span>
-      </div>`;
-    }).join('');
-
-    return `
-      <div class="char-card">
-        <div class="stat-card-header">
-          <h3>${char.nickname || '???'} <span style="color:#888;font-size:12px;font-weight:normal">(${charClassName(char.classId)})</span> Lv.${char.level}</h3>
-          <button class="toggle-btn ${char.autoAssign ? 'active' : ''}"
-                  onclick="tryToggleAutoAssign(${char.id}); renderStatsTab();">
-            자동배분 ${char.autoAssign ? 'ON' : 'OFF'}
-          </button>
-        </div>
-
-        <div class="points-badge" id="sp-${char.id}"
-             style="margin-bottom:8px${char.unspentPoints === 0 ? ';display:none' : ''}">
-          잔여 포인트: <strong id="spv-${char.id}">${char.unspentPoints}</strong>
-          ${char.autoAssign ? '<span style="color:#aaa;font-size:11px"> (자동배분 ON · 레벨업 시 자동 배분)</span>' : ''}
-        </div>
-
-        <div class="stat-grid">${statRows}</div>
-
-        <div class="final-stats" id="fs-${char.id}">
-          <span>HP <strong style="color:#e74c3c">${char.maxHpCache ? Math.ceil(char.currentHp || 0) : fs.maxHp} / ${fs.maxHp}</strong></span>
-          <span>공격력 <strong>${fs.atk}</strong></span>
-          <span>물리방어 <strong>${fs.physDef}</strong></span>
-          <span>마법방어 <strong>${fs.magicDef}</strong></span>
-          <span>명중 <strong>${fs.accuracy.toFixed(0)}%</strong></span>
-          <span>회피 <strong>${fs.evade.toFixed(0)}%</strong></span>
-          <span>크리티컬 <strong style="color:#f1c40f">${fs.critRate.toFixed(1)}%</strong></span>
-        </div>
-
-        <button class="small-btn reset-btn ${canReset ? '' : 'disabled'}"
-                onclick="tryResetStats(${char.id}); renderStatsTab();">
-          스탯 초기화 &nbsp;(골드 ${resetCost.toLocaleString()})
-        </button>
-      </div>`;
-  }).join('');
-
-  el.innerHTML = html;
 }
 
 // ── 스탯 인플레이스 업데이트 (DOM 재빌드 없음) ──────────────
@@ -307,18 +361,18 @@ function updateStatDisplay(charId) {
   const fsEl = document.getElementById(`fs-${charId}`);
   if (fsEl) {
     fsEl.innerHTML = `
-      <span>HP <strong style="color:#e74c3c">${char.maxHpCache ? Math.ceil(char.currentHp || 0) : fs.maxHp} / ${fs.maxHp}</strong></span>
+      <span>HP <strong style="color:#e74c3c">${char.maxHpCache ? Math.ceil(char.currentHp || 0) : fs.maxHp}/${fs.maxHp}</strong></span>
       <span>공격력 <strong>${fs.atk}</strong></span>
-      <span>물리방어 <strong>${fs.physDef}</strong></span>
-      <span>마법방어 <strong>${fs.magicDef}</strong></span>
+      <span>물방 <strong>${fs.physDef}</strong></span>
+      <span>마방 <strong>${fs.magicDef}</strong></span>
       <span>명중 <strong>${fs.accuracy.toFixed(0)}%</strong></span>
       <span>회피 <strong>${fs.evade.toFixed(0)}%</strong></span>
-      <span>크리티컬 <strong style="color:#f1c40f">${fs.critRate.toFixed(1)}%</strong></span>`;
+      <span>크리 <strong style="color:#f1c40f">${fs.critRate.toFixed(1)}%</strong></span>`;
   }
 }
 
 // ── 장비 탭 ────────────────────────────────────────────────
-const SLOT_NAMES = { weapon: '무기', throwable: '표창', armor: '방어구', accessory: '장신구' };
+const SLOT_NAMES = { weapon: '무기', weapon2: '무기 2', throwable: '표창', armor: '방어구', accessory: '장신구' };
 
 // 강화 보너스가 적용된 실제 스탯 문자열 반환
 function equipStatText(e, enhance) {
@@ -350,25 +404,23 @@ function renderEquipmentTab() {
 
   // ── 장착 중 ─────────────────────────────────────────────
   const charCards = gameState.characters.map(char => {
-    const baseClass = CLASSES[char.classId]?.parent || char.classId;
-    const slotList = (char.classId === 'rogue' || baseClass === 'rogue')
-      ? ['weapon', 'throwable', 'armor', 'accessory']
-      : ['weapon', 'armor', 'accessory'];
+    const slotList = getCharSlotList(char);
     const slots = slotList.map(slot => {
       const item = char.equipment[slot];
       const e    = item ? EQUIPMENT[item.id] : null;
       const col  = e ? (GRADE_COLORS[e.grade] || '#aaa') : '#333';
       const canRemove = item && item.uid !== 0;
-      const enhBtn = item && item.uid !== 0 && item.enhance < ENHANCE_MAX ? (() => {
+      const _eMax  = item ? itemMaxEnhance(item) : 0;
+      const enhBtn = item && _eMax > 0 && item.enhance < _eMax ? (() => {
         const cost    = enhanceCost(item);
         const canAff  = gameState.gold >= cost;
         const succPct = ENHANCE_SUCCESS[item.enhance];
         return `<button class="small-btn enhance-btn ${canAff ? '' : 'disabled'}"
-                        onclick="tryEnhanceEquipment(${item.uid});renderEquipmentTab();"
+                        onclick="this.disabled=true;showEnhanceFloat(this,tryEnhanceEquipment(${item.uid}));markTabDirty();"
                         title="성공률 ${succPct}%">
                   강화 ${cost.toLocaleString()}G
                 </button>`;
-      })() : (item && item.enhance >= ENHANCE_MAX ? `<span style="color:#e2b96f;font-size:10px">MAX</span>` : '');
+      })() : (item && _eMax > 0 && item.enhance >= _eMax ? `<span style="color:#e2b96f;font-size:10px">MAX</span>` : '');
 
       return `
         <div class="equip-slot">
@@ -402,22 +454,26 @@ function renderEquipmentTab() {
         const e = EQUIPMENT[item.id];
         if (!e) return '';
         const col = GRADE_COLORS[e.grade] || '#aaa';
-        const equipBtns = gameState.characters.map(char =>
-          canEquipItem(char, item)
-            ? `<button class="assign-btn" onclick="tryEquipItem(${char.id},${item.uid});renderEquipmentTab();">
-                 ${charClassName(char.classId)[0]} 장착
-               </button>`
-            : ''
-        ).join('');
-        const canAff  = item.enhance < ENHANCE_MAX && gameState.gold >= enhanceCost(item);
+        const equipBtns = gameState.characters.map(char => {
+          if (!canEquipItem(char, item)) return '';
+          const isThiefWeapon = char.classId === 'thief' && e.type === 'weapon';
+          if (isThiefWeapon) {
+            return `<button class="assign-btn" onclick="tryEquipItem(${char.id},${item.uid});renderEquipmentTab();">${charClassName(char.classId)[0]} 무기1</button>` +
+                   `<button class="assign-btn" onclick="tryEquipItem(${char.id},${item.uid},'weapon2');renderEquipmentTab();">${charClassName(char.classId)[0]} 무기2</button>`;
+          }
+          return `<button class="assign-btn" onclick="tryEquipItem(${char.id},${item.uid});renderEquipmentTab();">${charClassName(char.classId)[0]} 장착</button>`;
+        }).join('');
+        const _iMax   = itemMaxEnhance(item);
+        const canAff  = _iMax > 0 && item.enhance < _iMax && gameState.gold >= enhanceCost(item);
         const succPct = ENHANCE_SUCCESS[item.enhance] ?? 0;
-        const enhBtn  = item.enhance < ENHANCE_MAX
-          ? `<button class="small-btn enhance-btn ${canAff ? '' : 'disabled'}"
-                     onclick="tryEnhanceEquipment(${item.uid});renderEquipmentTab();"
-                     title="성공률 ${succPct}%">
-               강화 ${enhanceCost(item).toLocaleString()}G (${succPct}%)
-             </button>`
-          : `<span style="color:#e2b96f;font-size:10px">MAX</span>`;
+        const enhBtn  = _iMax === 0 ? ''
+          : item.enhance < _iMax
+            ? `<button class="small-btn enhance-btn ${canAff ? '' : 'disabled'}"
+                       onclick="this.disabled=true;showEnhanceFloat(this,tryEnhanceEquipment(${item.uid}));markTabDirty();"
+                       title="성공률 ${succPct}%">
+                 강화 ${enhanceCost(item).toLocaleString()}G (${succPct}%)
+               </button>`
+            : `<span style="color:#e2b96f;font-size:10px">MAX</span>`;
 
         const sellPrice = e.cost ? Math.floor(e.cost * 0.6) : 0;
         const sellBtn   = sellPrice > 0
@@ -459,50 +515,43 @@ function renderEquipmentTab() {
     <div class="inv-list">${invHtml}</div>`;
 }
 
-// ── 상점 탭 ──────────────────────────────────────────────────
+// ── 상점 탭 (물약 상점 — 전역 재고) ──────────────────────────
 function renderShopTab() {
-  const el  = document.getElementById('tab-shop');
-  const inv = gameState.equipmentInventory;
+  const el = document.getElementById('tab-shop');
 
-  const shopRows = Object.entries(EQUIPMENT)
-    .filter(([id]) => id !== 'beginner_sword')
-    .sort((a, b) => (a[1].req.level || 0) - (b[1].req.level || 0))
-    .map(([id, e]) => {
-      const col      = GRADE_COLORS[e.grade] || '#aaa';
-      const ownedInv = inv.filter(x => x.id === id).length;
-      const ownedEqp = gameState.characters.filter(c =>
-        Object.values(c.equipment).some(eq => eq?.id === id)
-      ).length;
-      const owned    = ownedInv + ownedEqp;
-      const canAff   = gameState.gold >= e.cost;
-      const reqParts = [];
-      if (e.req.level)   reqParts.push(`Lv.${e.req.level}`);
-      if (e.req.classId) reqParts.push(charClassName(e.req.classId) + ' 전용');
-      const reqStr = reqParts.join(' · ');
+  function potionMini(potionId) {
+    const p     = POTIONS[potionId];
+    const col   = p.type === 'hp' ? '#2ecc71' : '#3498db';
+    const label = p.type === 'hp' ? `HP +${p.restoreAmt.toLocaleString()}` : `MP +${p.restoreAmt.toLocaleString()}`;
+    const stock = gameState.potionStock[potionId] || 0;
 
-      return `
-        <div class="shop-item">
-          <span style="color:${col};font-weight:bold;font-size:13px">${e.name}</span>
-          <span style="color:${col};font-size:10px">[${e.grade}]</span>
-          <span class="equip-stat-text">${equipStatText(e, 0)}</span>
-          ${reqStr ? `<span class="shop-req">${reqStr}</span>` : ''}
-          <div class="shop-item-bottom">
-            <div>
-              <span class="shop-cost">${e.cost.toLocaleString()}G</span>
-              ${owned ? `<span style="color:#555;font-size:10px;margin-left:4px">×${owned}</span>` : ''}
-            </div>
-            <button class="small-btn ${canAff ? '' : 'disabled'}"
-                    onclick="tryBuyEquipment('${id}');renderShopTab();">구매</button>
-          </div>
-        </div>`;
+    const buyBtns = [100, 500].map(qty => {
+      const cost   = p.cost * qty;
+      const canAff = gameState.gold >= cost;
+      return `<button class="potion-buy-btn ${canAff ? '' : 'disabled'}"
+                      onclick="tryBuyPotion('${potionId}',${qty});renderShopTab();">
+                +${qty}<br><span style="font-size:9px;color:#aaa">${cost.toLocaleString()}G</span>
+              </button>`;
     }).join('');
+
+    return `
+      <div class="potion-mini-card">
+        <div style="font-size:12px;font-weight:bold;color:${col}">${p.name}</div>
+        <div style="font-size:10px;color:${col};margin:2px 0">${label} · ${p.cost}G/개</div>
+        <div style="font-size:10px;color:#aaa;margin-bottom:5px">재고 <strong style="color:#e2b96f">${stock}</strong>개</div>
+        <div style="display:flex;gap:4px">${buyBtns}</div>
+      </div>`;
+  }
 
   el.innerHTML = `
     <div class="eq-section-title">
-      상점 <span style="color:#e2b96f;font-size:11px"> 골드: ${gameState.gold.toLocaleString()}</span>
+      물약 상점 <span style="color:#e2b96f;font-size:11px"> 골드: ${gameState.gold.toLocaleString()}G</span>
     </div>
-    <div style="font-size:11px;color:#666;margin-bottom:8px">장비를 구매하여 캐릭터에게 장착하세요.</div>
-    <div class="shop-list">${shopRows}</div>`;
+    <div style="font-size:10px;color:#555;margin-bottom:10px">HP 50% 이하·MP 30% 이하 시 자동 사용 · 소진 시 100개 자동 충전 (5초 행동 중지)</div>
+    <div class="shop-potion-label" style="color:#2ecc71">체력 물약</div>
+    <div class="potion-mini-row">${['hp_s','hp_m','hp_l'].map(potionMini).join('')}</div>
+    <div class="shop-potion-label" style="color:#3498db;margin-top:10px">마나 물약</div>
+    <div class="potion-mini-row">${['mp_s','mp_m','mp_l'].map(potionMini).join('')}</div>`;
 }
 
 // ── 스킬 탭 ────────────────────────────────────────────────
@@ -520,39 +569,86 @@ const SKILL_TARGET_DESC = {
 };
 
 function skillEffectDesc(id, s, level) {
-  const m = SKILL_LEVEL_MULTS[level] ?? 1.0;
-  const cd = level >= 1 ? (s.cooldown / (1 + (level - 1) * 0.06)).toFixed(1) : s.cooldown;
+  const m   = SKILL_LEVEL_MULTS[level] ?? 1.0;
+  const cd  = s.cooldown
+    ? (s.cooldownDecay
+        ? Math.max(0.1, s.cooldown * Math.pow(s.cooldownDecay, level - 1)).toFixed(1)
+        : (s.cooldown / (1 + (level - 1) * 0.06)).toFixed(1))
+    : null;
+  const mp  = s.mpCost > 0 ? `MP ${s.mpCost}` : null;
+  const meta = [cd ? `쿨타임 ${cd}초` : null, mp].filter(Boolean).join(' · ');
+  const suffix = meta ? ` [${meta}]` : '';
+  const pct = v => `${Math.round(v * 100)}%`;
+
   switch (s.targeting) {
     case 'passive':
-      if (s.orbsRequired)   return `위력 ×${(s.dmgMultiplier * m).toFixed(1)} (구슬 ${s.orbsRequired}개)`;
-      if (s.attackInterval) return `위력 ×${((s.dmgMultiplier ?? 1) * m).toFixed(2)} · ${s.attackInterval}s/발`;
-      if (s.hits)           return `표창 3연속 · 타격당 ×${(m / 3).toFixed(2)}`;
-      return '패시브';
+      if (s.orbsRequired)
+        return `구슬 ${s.orbsRequired}개가 모이면 강력한 일격 자동 발동 · 위력 ${pct(s.dmgMultiplier * m)}${mp ? ` [${mp}]` : ''}`;
+      if (s.attackInterval)
+        return `${s.attackInterval}초마다 자동 연사 · 타격당 위력 ${pct((s.dmgMultiplier ?? 1) * m)} [패시브]`;
+      if (s.hits)
+        return `한번에 ${s.hits}개의 표창을 타격당 ${pct(m / s.hits)} 데미지로 공격 [패시브]`;
+      if (s.critDmgBonus) {
+        const bonus = s.critDmgBonus + (level - 1) * (s.critDmgBonusPerLv || 0);
+        return `크리티컬 데미지 +${Math.round(bonus * 100)}% 증가 [패시브]`;
+      }
+      return '[패시브]';
+
+    case 'aoe':
+      return `최대 ${s.maxTargets || 5}마리에게 ${pct((s.dmgMultiplier || 1) * m)} 범위 마법 공격${suffix}`;
+
+    case 'aoe_freeze': {
+      const freeze = ((s.freezeDuration || 5) + (level - 1) * 0.4).toFixed(1);
+      const tgt = s.maxTargetsBase !== undefined
+        ? Math.round(s.maxTargetsBase + (level - 1) * ((s.maxTargets - s.maxTargetsBase) / 9))
+        : (s.maxTargets || 8);
+      return `최대 ${tgt}마리에게 ${pct((s.dmgMultiplier || 1) * m)} 범위 공격 후 ${freeze}초 빙결${suffix}`;
+    }
     case 'debuff_area': {
-      const dm = 1 + (s.debuffDmgMult - 1) * m;
+      const dmBonus = Math.round(((s.debuffDmgMult - 1) * m) * 100);
       const dur = ((s.debuffDuration || 8) * (1 + (level - 1) * 0.1)).toFixed(0);
-      return `받는피해 +${Math.round((dm - 1) * 100)}% · ${dur}s · CD ${cd}s`;
+      return `범위(${s.debuffRange}px) 내 모든 몬스터에게 ${dur}s간 받는 피해 +${dmBonus}% 부여${suffix}`;
     }
     case 'party_buff': {
       const dur = ((s.buffDuration || 30) * (1 + (level - 1) * 0.12)).toFixed(0);
-      const parts = [`CD ${cd}s · 지속 ${dur}s`];
-      if (s.buffHp)     parts.push(`HP ×${s.buffHp}`);
-      if (s.buffCdMult) parts.push(`스킬CD ${Math.round(100/s.buffCdMult)}%`);
-      if (s.buffAtk)    parts.push(`ATK ×${s.buffAtk}`);
-      return parts.join(' · ');
+      const effects = [];
+      if (s.buffHp) {
+        const hpMult = s.buffHp + (level - 1) * (s.buffHpPerLv || 0);
+        effects.push(`HP +${Math.round((hpMult - 1) * 100)}%`);
+      }
+      if (s.buffCdMult)  effects.push(`스킬 쿨타임 ${Math.round(100 / s.buffCdMult)}%`);
+      if (s.buffAtk) {
+        const atkMult = s.buffAtk + (level - 1) * (s.buffAtkPerLv || 0);
+        effects.push(`마법공격력 +${Math.round((atkMult - 1) * 100)}%`);
+      }
+      if (s.buffCritDmg) {
+        const critBonus = s.buffCritDmg + (level - 1) * (s.buffCritDmgPerLv || 0);
+        effects.push(`크리 데미지 +${Math.round(critBonus * 100)}%`);
+      }
+      return `파티 전원 ${effects.join(' · ')}를 ${dur}초간 강화${suffix}`;
     }
-    case 'heal':
-      return `힐 ATK×${((s.healMult || 2) * m).toFixed(2)} · CD ${cd}s`;
-    case 'aoe_freeze': {
-      const freeze = ((s.freezeDuration || 5) + (level - 1) * 0.4).toFixed(1);
-      return `위력 ×${((s.dmgMultiplier || 1) * m).toFixed(2)} · 빙결 ${freeze}s · CD ${cd}s`;
+    case 'heal': {
+      const h = ((s.healMult || 2) * m).toFixed(2);
+      return `범위(${s.healRange}px) 내 아군 HP를 공격력의 ${h}배만큼 회복${suffix}`;
     }
     case 'shadow': {
       const dur = ((s.duration || 60) * (1 + (level - 1) * 0.12)).toFixed(0);
-      return `분신 지속 ${dur}s · CD ${cd}s`;
+      return `${dur}s간 분신이 나타나 함께 공격${suffix}`;
     }
+    case 'double_hit':
+      return `같은 대상에게 ${s.hits || 2}번 연속 공격 · 타격당 ${pct((s.dmgMultiplier || 1) * m)} 데미지${suffix}`;
+
+    case 'savage_blow':
+      return `${s.hits}타 연속 난타 · 타격당 ${pct((s.dmgMultiplier || 1) * m)} 데미지${suffix}`;
+
+    case 'poison_area':
+      return `${s.poisonDuration}s간 독 구름 설치 · ${s.poisonTickInterval}s마다 ${pct((s.dmgMultiplier || 1) * m)} 피해${suffix}`;
+
+    case 'piercing':
+      return `${s.chargeTime}s 차지 후 전방 관통 · 위력 ${pct((s.dmgMultiplier || 1) * m)}${suffix}`;
+
     default:
-      return `위력 ×${((s.dmgMultiplier || 1) * m).toFixed(2)} · CD ${cd}s`;
+      return `위력 ${pct((s.dmgMultiplier || 1) * m)}${suffix}`;
   }
 }
 
@@ -577,105 +673,87 @@ function renderSkillTab() {
     }
 
     const parentClassId = CLASSES[char.classId]?.parent;
-    const charSkills = Object.entries(SKILLS).filter(([, s]) =>
-      s.classId === char.classId || s.classId === parentClassId
-    );
+    const col = CLASS_COLORS[char.classId] || '#aaa';
 
-    const skillRows = charSkills.map(([id, s]) => {
-      const curLv     = char.skillLevels?.[id] || 0;
-      const learned   = curLv > 0;
-      const isMax     = curLv >= SKILL_MAX_LEVEL;
-      const nextCost  = learned ? (SKILL_SP_COSTS[curLv + 1] ?? Infinity) : (SKILL_SP_COSTS[1] ?? 1);
-      const canUp     = !isMax && sp >= nextCost;
-      const col       = CLASS_COLORS[char.classId] || '#aaa';
-      const cd        = char.skillTimers?.[id];
-      const isShadow  = s.targeting === 'shadow';
-      const isPassive = s.targeting === 'passive';
+    // 1차 / 2차 스킬 분리
+    const tier1Skills = Object.entries(SKILLS).filter(([, s]) => s.classId === (parentClassId || char.classId) && parentClassId);
+    const tier2Skills = Object.entries(SKILLS).filter(([, s]) => s.classId === char.classId);
+    // 1차 직업은 tier2에만 있음
+    const onlyTier = !parentClassId ? Object.entries(SKILLS).filter(([, s]) => s.classId === char.classId) : null;
 
-      let cdText = '', cdStyle = '';
-      if (learned) {
-        if (isPassive) {
-          if (s.orbsRequired) {
-            cdText  = char.orbReady ? '⚡ 충전 완료!' : `구슬 ${char.orbCount || 0}/${s.orbsRequired}`;
-            cdStyle = char.orbReady ? 'color:#f1c40f;font-weight:bold' : '';
-          } else if (s.attackInterval) {
-            cdText  = `연사 활성 · ${s.attackInterval}s/발`;
-            cdStyle = 'color:#27ae60';
-          } else if (s.hits) {
-            cdText  = `${s.hits}연속 공격 활성`;
-            cdStyle = 'color:#2c3e50';
-          }
-        } else if (s.targeting === 'party_buff') {
-          const t = Math.max(
-            s.buffHp     ? (char.activeBuffs?.hp?.timer  || 0) : 0,
-            s.buffCdMult ? (char.activeBuffs?.cd?.timer  || 0) : 0,
-            s.buffAtk    ? (char.activeBuffs?.atk?.timer || 0) : 0
-          );
-          cdText  = t > 0 ? `버프 ${t.toFixed(1)}s 남음` : (cd > 0 ? `쿨타임 ${cd.toFixed(1)}s` : '');
-          cdStyle = t > 0 ? 'color:#2ecc71;font-weight:bold' : '';
-        } else if (isShadow && char.shadowActive) {
-          cdText  = `분신 ${(char.shadowTimer || 0).toFixed(1)}s`;
-          cdStyle = 'color:#9b59b6';
-        } else if (cd > 0 && cd < 9999) {
-          cdText = `쿨타임 ${cd.toFixed(1)}s`;
-        }
-      }
-
-      const curDesc  = learned ? skillEffectDesc(id, s, curLv) : '—';
-      const nextDesc = !isMax  ? skillEffectDesc(id, s, Math.max(1, curLv + 1)) : '';
+    function makeSkillCard(id, s) {
+      const curLv    = char.skillLevels?.[id] || 0;
+      const learned  = curLv > 0;
+      const isMax    = curLv >= SKILL_MAX_LEVEL;
+      const nextCost = learned ? (SKILL_SP_COSTS[curLv + 1] ?? Infinity) : (SKILL_SP_COSTS[1] ?? 1);
+      const canUp    = !isMax && sp >= nextCost;
 
       const lvBadge = learned
-        ? `<span style="color:${isMax ? '#e2b96f' : '#4caf50'};font-weight:bold;font-size:11px">
-             ${isMax ? 'MAX' : `Lv.${curLv}`}
-           </span>`
-        : `<span style="color:#555;font-size:11px">미습득</span>`;
+        ? `<span style="color:${isMax ? '#e2b96f' : '#4caf50'};font-size:10px;font-weight:bold">${isMax ? 'MAX' : `Lv.${curLv}`}</span>`
+        : `<span style="color:#444;font-size:10px">미습득</span>`;
+
+      // 미습득: Lv.1 효과 표시, 습득: 현재 레벨 효과
+      const showLv  = learned ? curLv : 1;
+      const desc    = skillEffectDesc(id, s, showLv);
+      const nextDesc = (!isMax && learned) ? skillEffectDesc(id, s, curLv + 1) : '';
 
       const btn = isMax
-        ? `<span style="color:#e2b96f;font-size:10px">MAX</span>`
+        ? `<span style="color:#e2b96f;font-size:10px;display:block;text-align:center">MAX</span>`
         : learned
-          ? `<button class="small-btn ${canUp ? '' : 'disabled'}"
+          ? `<button class="skill-card-btn-el ${canUp ? '' : 'disabled'}"
                      onclick="tryUpgradeSkill(${char.id},'${id}');renderSkillTab();">
-               Lv.${curLv}→${curLv+1} (${nextCost}SP)
+               ${curLv}→${curLv+1} <span style="color:#888">(${nextCost}SP)</span>
              </button>`
-          : `<button class="small-btn ${canUp ? '' : 'disabled'}"
+          : `<button class="skill-card-btn-el ${canUp ? '' : 'disabled'}"
                      onclick="tryLearnSkill(${char.id},'${id}');renderSkillTab();">
-               배우기 (${nextCost}SP)
+               배우기 <span style="color:#888">(${nextCost}SP)</span>
              </button>`;
 
       return `
-        <div class="skill-row">
-          <div class="skill-info">
-            <div style="display:flex;align-items:center;gap:6px">
-              <span class="skill-name" style="color:${learned ? col : '#888'}">${s.name}</span>
-              ${lvBadge}
-            </div>
-            <span class="skill-meta" style="color:#999">${curDesc}</span>
-            ${!isMax && learned ? `<span class="skill-meta" style="color:#666">→ ${nextDesc}</span>` : ''}
-            ${cdText ? `<span class="skill-cd" style="${cdStyle}">${cdText}</span>` : ''}
+        <div class="skill-card ${learned ? 'skill-card-learned' : ''}">
+          <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">
+            <span style="font-size:12px;font-weight:bold;color:${learned ? col : '#666'}">${s.name}</span>
+            ${lvBadge}
           </div>
-          <div>${btn}</div>
+          <div style="font-size:10px;color:${learned ? '#aaa' : '#555'};flex:1;line-height:1.4">
+            ${!learned ? '<span style="color:#444;font-size:9px">Lv.1 효과: </span>' : ''}${desc}
+          </div>
+          ${nextDesc ? `<div style="font-size:10px;color:#3a5a3a;margin-top:2px">▲ ${nextDesc}</div>` : ''}
+          <div style="margin-top:5px">${btn}</div>
         </div>`;
-    }).join('');
+    }
+
+    const tier1Html = tier1Skills.length
+      ? `<div class="skill-tier-label">1차 스킬</div>
+         <div class="skill-tier-row">${tier1Skills.map(([id, s]) => makeSkillCard(id, s)).join('')}</div>`
+      : '';
+    const tier2Html = tier2Skills.length
+      ? `<div class="skill-tier-label" style="margin-top:6px">2차 스킬</div>
+         <div class="skill-tier-row">${tier2Skills.map(([id, s]) => makeSkillCard(id, s)).join('')}</div>`
+      : '';
+    const onlyHtml = onlyTier
+      ? `<div class="skill-tier-row">${onlyTier.map(([id, s]) => makeSkillCard(id, s)).join('')}</div>`
+      : '';
+
+    const resetCost     = 100 * char.level;
+    const canResetSkill = gameState.gold >= resetCost;
 
     return `
       <div class="char-card">
-        <h3 style="color:${CLASS_COLORS[char.classId]||'#aaa'};margin-bottom:4px">
-          ${char.nickname || '???'} <span style="color:#888;font-size:12px;font-weight:normal">(${charClassName(char.classId)})</span> Lv.${char.level}
-        </h3>
-        <div style="font-size:12px;color:${sp > 0 ? '#f1c40f' : '#555'};margin-bottom:8px">
-          스킬 포인트: <strong>${sp}</strong>
-          <span style="color:#444;font-size:10px"> (5레벨마다 1 획득)</span>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+          <h3 style="color:${col};flex:1;margin:0">
+            ${char.nickname || '???'} <span style="color:#888;font-size:12px;font-weight:normal">(${charClassName(char.classId)})</span> Lv.${char.level}
+          </h3>
+          <span style="color:${sp > 0 ? '#f1c40f' : '#555'};font-size:12px">SP <strong>${sp}</strong></span>
+          <button class="reset-stat-btn ${canResetSkill ? '' : 'disabled'}"
+                  onclick="tryResetSkills(${char.id});renderSkillTab();"
+                  title="골드 ${resetCost.toLocaleString()} 소모">스킬초기화</button>
         </div>
-        ${skillRows}
+        ${onlyHtml}${tier1Html}${tier2Html}
       </div>`;
   }).join('');
 
-  el.innerHTML = `
-    <div class="eq-section-title">스킬</div>
-    <div style="font-size:11px;color:#666;margin-bottom:8px">
-      스킬 포인트(SP)로 스킬을 습득·강화합니다. 레벨이 높을수록 효율이 크게 증가합니다.
-    </div>
-    ${html}`;
+  el.innerHTML = html;
 }
 
 // ── 펫 탭 ──────────────────────────────────────────────────
@@ -873,8 +951,9 @@ function renderRaidTab() {
   if (!el) return;
 
   const rf = gameState.raidField;
-  const raidChars   = gameState.characters.filter(c => c.inRaid);
-  const normalChars = gameState.characters.filter(c => !c.inRaid);
+  const raidChars    = gameState.characters.filter(c => c.inRaid);
+  const killedChars  = gameState.characters.filter(c => !c.inRaid && c.raidKilled);
+  const normalChars  = gameState.characters.filter(c => !c.inRaid && !c.raidKilled);
 
   const bossSection = (() => {
     if (!rf) return `<div style="color:#999;font-size:12px">레이드가 초기화되지 않았습니다.</div>`;
@@ -898,7 +977,7 @@ function renderRaidTab() {
     const s    = calcFinalStats(c);
     const hp   = Math.max(0, c.currentHp || 0);
     const hpPct = Math.min(100, (hp / s.maxHp) * 100).toFixed(0);
-    const dead = c.isDead ? `<span style="color:#e74c3c"> (사망 ${(c.respawnTimer || 0).toFixed(1)}s)</span>` : '';
+    const dead = c.isDead ? `<span style="color:#e74c3c"> (전사 복귀 중…)</span>` : '';
     const seal = (c.raidSkillSeal || 0) > 0 ? `<span style="color:#8e44ad"> 봉인${c.raidSkillSeal.toFixed(0)}s</span>` : '';
     const acc  = (c.raidAccDown   || 0) > 0 ? `<span style="color:#7f8c8d"> 암흑${c.raidAccDown.toFixed(0)}s</span>` : '';
     const col  = CLASS_COLORS[c.classId] || '#aaa';
@@ -938,6 +1017,9 @@ function renderRaidTab() {
     : `<button class="small-btn" onclick="gameState.viewRaid=true;renderRaidTab();">레이드 보기</button>`;
 
   const resetBtn = `<button class="small-btn" style="margin-left:8px" onclick="if(confirm('레이드를 리셋하시겠습니까?')){resetRaid();}renderRaidTab();">리셋</button>`;
+  const leaveAllBtn = raidChars.length
+    ? `<button class="small-btn" style="margin-left:8px" onclick="gameState.characters.filter(c=>c.inRaid).forEach(c=>leaveRaid(c.id));renderRaidTab();">전체 복귀</button>`
+    : '';
 
   el.innerHTML = `
     <div class="eq-section-title">⚔️ 자쿰 레이드</div>
@@ -945,15 +1027,30 @@ function renderRaidTab() {
       캐릭터를 레이드에 참전시켜 자쿰을 처치하세요.<br>
       레이드 중인 캐릭터는 일반 스테이지 전투에 참여하지 않습니다.
     </div>
-    <div style="margin-bottom:10px;display:flex;align-items:center">
-      ${viewBtn}${resetBtn}
+    <div style="margin-bottom:10px;display:flex;align-items:center;flex-wrap:wrap;gap:4px">
+      ${viewBtn}${resetBtn}${leaveAllBtn}
     </div>
     <div class="eq-section-title" style="font-size:12px">보스 상태</div>
     ${bossSection}
     <div class="eq-section-title" style="font-size:12px;margin-top:10px">레이드 참전 중 (${raidChars.length}명)</div>
     ${raidChars.length ? raidCharRows : `<div style="color:#555;font-size:11px">참전 중인 캐릭터 없음</div>`}
+    ${killedChars.length ? `
+    <div class="eq-section-title" style="font-size:12px;margin-top:10px;color:#e74c3c">전사 (${killedChars.length}명) — 재참전 불가</div>
+    ${killedChars.map(c => {
+      const col = CLASS_COLORS[c.classId] || '#aaa';
+      return `<div class="upgrade-row" style="opacity:0.55">
+        <div class="upgrade-info">
+          <div style="font-size:12px;font-weight:bold">
+            <span style="color:${col}">${c.nickname || '???'}</span>
+            <span style="color:#888;font-weight:normal"> (${CLASSES[c.classId]?.name || c.classId}) Lv.${c.level}</span>
+          </div>
+          <div style="font-size:10px;color:#e74c3c">이번 레이드에서 전사</div>
+        </div>
+        <span style="color:#e74c3c;font-size:12px">✕</span>
+      </div>`;
+    }).join('')}` : ''}
     <div class="eq-section-title" style="font-size:12px;margin-top:10px">참전 가능 캐릭터 (${normalChars.length}명)</div>
-    ${normalChars.length ? normalCharRows : `<div style="color:#555;font-size:11px">모든 캐릭터가 레이드 중</div>`}`;
+    ${normalChars.length ? normalCharRows : `<div style="color:#555;font-size:11px">참전 가능한 캐릭터 없음</div>`}`;
 }
 
 // ── 오프라인 보상 모달 ──────────────────────────────────────
@@ -983,6 +1080,33 @@ function showOfflineModal(result) {
 function closeOfflineModal() {
   const el = document.getElementById('offline-modal');
   if (el) el.classList.remove('active');
+}
+
+// ── 강화 결과 플로팅 텍스트 (버튼 위로 떠오름) ───────────────
+function showEnhanceFloat(btn, result) {
+  if (!result || !btn) return;
+  const rect = btn.getBoundingClientRect();
+  const el   = document.createElement('div');
+  el.textContent = result.success ? `+${result.newLevel} 성공!` : '강화 실패';
+  el.style.cssText = [
+    'position:fixed',
+    `left:${Math.round(rect.left + rect.width / 2)}px`,
+    `top:${Math.round(rect.top - 4)}px`,
+    'transform:translateX(-50%)',
+    `color:${result.success ? '#4caf50' : '#e74c3c'}`,
+    'font-size:15px', 'font-weight:bold',
+    'pointer-events:none', 'z-index:9999',
+    'text-shadow:0 1px 6px #000c',
+    'transition:top 0.75s ease-out, opacity 0.75s ease-out',
+  ].join(';');
+  document.body.appendChild(el);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      el.style.top  = `${Math.round(rect.top - 52)}px`;
+      el.style.opacity = '0';
+    });
+  });
+  setTimeout(() => el.remove(), 800);
 }
 
 // ── 공통 헬퍼 ──────────────────────────────────────────────
@@ -1177,6 +1301,7 @@ function buildModalStats(char) {
       </div>`;
   }).join('');
 
+  const curMp  = Math.floor(char.currentMp ?? fs.maxMp);
   const combatRows = [
     ['공격력',    `${fs.atk}`],
     ['물리방어',  `${fs.physDef}`],
@@ -1185,6 +1310,7 @@ function buildModalStats(char) {
     ['명중률',    `${fs.accuracy.toFixed(0)}%`],
     ['회피율',    `${fs.evade.toFixed(0)}%`],
     ['이동속도',  `${CHAR_SPEED} px/s`],
+    ['최대 MP',   `<span style="color:#3498db">${fs.maxMp}</span> <span style="color:#555;font-size:10px">(현재 ${curMp})</span>`],
   ].map(([label, val]) => `
     <div class="stat-row">
       <span class="stat-label" style="width:64px;color:#aaa">${label}</span>
@@ -1210,23 +1336,21 @@ function buildModalStats(char) {
 }
 
 function buildModalEquipment(char) {
-  const baseClass = CLASSES[char.classId]?.parent || char.classId;
-  const slotList = (char.classId === 'rogue' || baseClass === 'rogue')
-    ? ['weapon', 'throwable', 'armor', 'accessory']
-    : ['weapon', 'armor', 'accessory'];
+  const slotList = getCharSlotList(char);
 
   const slots = slotList.map(slot => {
     const item = char.equipment[slot];
     const e    = item ? EQUIPMENT[item.id] : null;
     const col  = e ? (GRADE_COLORS[e.grade] || '#aaa') : '#333';
     const canRemove = item && item.uid !== 0;
-    const enhBtn = item && item.uid !== 0 && item.enhance < ENHANCE_MAX ? (() => {
+    const _mMax  = item ? itemMaxEnhance(item) : 0;
+    const enhBtn = item && _mMax > 0 && item.enhance < _mMax ? (() => {
       const cost   = enhanceCost(item);
       const canAff = gameState.gold >= cost;
       return `<button class="small-btn enhance-btn ${canAff ? '' : 'disabled'}"
-                      onclick="tryEnhanceEquipment(${item.uid});renderCharModalBody();"
+                      onclick="this.disabled=true;showEnhanceFloat(this,tryEnhanceEquipment(${item.uid}));markCharModalDirty();"
                       title="성공률 ${ENHANCE_SUCCESS[item.enhance]}%">강화 ${cost.toLocaleString()}G</button>`;
-    })() : (item && item.enhance >= ENHANCE_MAX ? `<span style="color:#e2b96f;font-size:10px">MAX</span>` : '');
+    })() : (item && _mMax > 0 && item.enhance >= _mMax ? `<span style="color:#e2b96f;font-size:10px">MAX</span>` : '');
     return `
       <div class="equip-slot">
         <div class="equip-slot-label">${SLOT_NAMES[slot]}</div>
@@ -1254,24 +1378,29 @@ function buildModalEquipment(char) {
             </button>`;
   }).join('');
 
-  const invHtml = inv.length === 0
-    ? '<div style="color:#555;font-size:12px">보유 장비 없음</div>'
-    : inv.map(item => {
+  const equipableInv = inv.filter(item => canEquipItem(char, item));
+  const invHtml = equipableInv.length === 0
+    ? '<div style="color:#555;font-size:12px">장착 가능한 장비 없음</div>'
+    : equipableInv.map(item => {
         const e = EQUIPMENT[item.id];
         if (!e) return '';
-        const col     = GRADE_COLORS[e.grade] || '#aaa';
-        const equipBtn = canEquipItem(char, item)
-          ? `<button class="assign-btn" onclick="tryEquipItem(${char.id},${item.uid});renderCharModalBody();">장착</button>`
-          : '';
+        const col      = GRADE_COLORS[e.grade] || '#aaa';
+        const isThiefWeapon2 = char.classId === 'thief' && e.type === 'weapon';
+        const equipBtn = isThiefWeapon2
+          ? `<button class="assign-btn" onclick="tryEquipItem(${char.id},${item.uid});renderCharModalBody();">무기 1</button>` +
+            `<button class="assign-btn" onclick="tryEquipItem(${char.id},${item.uid},'weapon2');renderCharModalBody();">무기 2</button>`
+          : `<button class="assign-btn" onclick="tryEquipItem(${char.id},${item.uid});renderCharModalBody();">장착</button>`;
         const sellPrice = e.cost ? Math.floor(e.cost * 0.6) : 0;
         const sellBtn = sellPrice > 0
           ? `<button class="equip-remove sell-btn" onclick="trySellItem(${item.uid});renderCharModalBody();">판매 ${sellPrice.toLocaleString()}G</button>`
           : '';
-        const canAff  = item.enhance < ENHANCE_MAX && gameState.gold >= enhanceCost(item);
-        const enhBtn  = item.enhance < ENHANCE_MAX
-          ? `<button class="small-btn enhance-btn ${canAff ? '' : 'disabled'}"
-                     onclick="tryEnhanceEquipment(${item.uid});renderCharModalBody();">강화 ${enhanceCost(item).toLocaleString()}G</button>`
-          : `<span style="color:#e2b96f;font-size:10px">MAX</span>`;
+        const _invMax = itemMaxEnhance(item);
+        const canAff  = _invMax > 0 && item.enhance < _invMax && gameState.gold >= enhanceCost(item);
+        const enhBtn  = _invMax === 0 ? ''
+          : item.enhance < _invMax
+            ? `<button class="small-btn enhance-btn ${canAff ? '' : 'disabled'}"
+                       onclick="this.disabled=true;showEnhanceFloat(this,tryEnhanceEquipment(${item.uid}));markCharModalDirty();">강화 ${enhanceCost(item).toLocaleString()}G</button>`
+            : `<span style="color:#e2b96f;font-size:10px">MAX</span>`;
         return `
           <div class="inv-item">
             <div style="display:flex;align-items:center;gap:6px">
@@ -1284,9 +1413,71 @@ function buildModalEquipment(char) {
           </div>`;
       }).join('');
 
+  const allSlots2  = getCharSlotList(char);
+  const canAutoEquip = allSlots2.some(slot => {
+    const cur = char.equipment[slot];
+    if (cur && cur.uid !== 0) return false;
+    return gameState.equipmentInventory.some(item => {
+      const e = EQUIPMENT[item.id];
+      return e && e.type === slot && canEquipItem(char, item);
+    });
+  });
+  const autoBtn = canAutoEquip
+    ? `<button class="small-btn" style="margin-bottom:10px;width:100%"
+               onclick="tryAutoEquip(${char.id});markCharModalDirty();">빈 슬롯 자동 장착</button>`
+    : '';
+
+  // 물약 타입 선택 섹션
+  function potionSelectHtml(slotType, label, col, potionIds) {
+    const selectedKey = slotType === 'hp' ? 'selectedHpPotion' : 'selectedMpPotion';
+    const equippedKey = slotType === 'hp' ? 'equippedHpPotion' : 'equippedMpPotion';
+    const timerKey    = slotType === 'hp' ? 'hpRefillTimer'    : 'mpRefillTimer';
+    const selected    = char[selectedKey];
+    const equipped    = char[equippedKey] || { id: null, count: 0 };
+    const refillTimer = char[timerKey] || 0;
+
+    const statusText = refillTimer > 0
+      ? `<span style="color:#f39c12;font-size:11px">충전 중 ${refillTimer.toFixed(1)}s</span>`
+      : equipped.count > 0
+        ? `<span style="color:${col};font-size:11px">장착 ${equipped.count}개</span>`
+        : selected
+          ? `<span style="color:#888;font-size:11px">소진 (재고 대기 중)</span>`
+          : `<span style="color:#555;font-size:11px">미사용</span>`;
+
+    const opts = [
+      { id: null,  name: '없음' },
+      ...potionIds.map(id => ({ id, name: POTIONS[id].name.replace(/(체력|마나) 물약 /, '') })),
+    ];
+
+    const btns = opts.map(opt => {
+      const isActive = (selected === opt.id) || (!opt.id && !selected);
+      const onclick  = `selectCharPotion(${char.id},'${slotType}',${opt.id ? `'${opt.id}'` : 'null'});renderCharModalBody();`;
+      const stock    = opt.id ? (gameState.potionStock[opt.id] || 0) : 0;
+      const stockTip = opt.id ? ` (재고 ${stock})` : '';
+      return `<button class="assign-btn ${isActive ? 'active' : ''}"
+                      style="${isActive ? `color:${col};` : ''}"
+                      onclick="${onclick}" title="${opt.name}${stockTip}">${opt.name}</button>`;
+    }).join('');
+
+    return `
+      <div style="margin-bottom:10px">
+        <div style="font-size:11px;color:#888;margin-bottom:4px">${label} &nbsp; ${statusText}</div>
+        <div class="assign-btns">${btns}</div>
+      </div>`;
+  }
+
+  const potionSlots = [
+    potionSelectHtml('hp', 'HP 물약', '#2ecc71', ['hp_s', 'hp_m', 'hp_l']),
+    potionSelectHtml('mp', 'MP 물약', '#3498db', ['mp_s', 'mp_m', 'mp_l']),
+  ].join('');
+
   return `
+    ${autoBtn}
     <div class="eq-section-title" style="margin-bottom:6px">장착 중</div>
     <div class="equip-slots" style="margin-bottom:12px">${slots}</div>
+    <div class="eq-section-title" style="margin-bottom:6px">물약 설정</div>
+    <div style="font-size:10px;color:#666;margin-bottom:6px">HP 50% 이하 자동 사용 · MP 30% 이하 자동 사용 · 소진 시 100개 자동 충전 (5초)</div>
+    <div style="margin-bottom:12px">${potionSlots}</div>
     <div class="eq-section-title" style="margin-bottom:6px">인벤토리</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${sellBtns}</div>
     <div class="inv-list">${invHtml}</div>`;
@@ -1330,9 +1521,16 @@ function buildModalSkills(char) {
       </div>`;
   }).join('');
 
+  const resetCost  = 100 * char.level;
+  const canReset   = gameState.gold >= resetCost && char.skills.length > 0;
+
   return `
     <div style="font-size:12px;color:${sp > 0 ? '#f1c40f' : '#555'};margin-bottom:10px">
       스킬 포인트: <strong>${sp}</strong>
     </div>
-    ${rows}`;
+    ${rows}
+    <button class="small-btn reset-btn ${canReset ? '' : 'disabled'}" style="width:100%;margin-top:12px"
+            onclick="tryResetSkills(${char.id});renderCharModalBody();">
+      스킬 초기화 (${resetCost.toLocaleString()}G)
+    </button>`;
 }

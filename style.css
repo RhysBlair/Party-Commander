@@ -50,6 +50,63 @@ body {
   overflow: hidden;
 }
 
+/* 스테이지 도트 바 */
+#stage-bar {
+  display: flex;
+  align-items: flex-start;
+  padding: 5px 10px 3px;
+  background: #070d17;
+  border-bottom: 1px solid #1a2a3a;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#stage-bar::-webkit-scrollbar { display: none; }
+
+.sdot-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.sdot-wrap-locked { cursor: default; }
+.sdot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #1a2535;
+  border: 2px solid #2a3a55;
+  color: #556;
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  transition: all 0.15s;
+  user-select: none;
+}
+.sdot-wrap:not(.sdot-wrap-locked):hover .sdot { border-color: #4caf50; color: #4caf50; }
+.sdot-view   { background: #0d2a0d; border-color: #4caf50 !important; color: #4caf50 !important; box-shadow: 0 0 6px #4caf5055; }
+.sdot-chars  { border-color: #e2b96f !important; color: #e2b96f !important; }
+.sdot-locked { background: #0d1017; border-color: #1a2030; color: #2a3040; cursor: default; }
+.sdot-cnt {
+  font-size: 9px;
+  color: #e2b96f;
+  font-weight: bold;
+  min-height: 12px;
+  line-height: 1;
+}
+.sdot-line {
+  width: 18px;
+  height: 2px;
+  background: #1a2535;
+  margin-top: 9px;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+.sdot-line-on { background: #2a3a55; }
+
 /* 전투 필드 Canvas */
 #field-canvas {
   background: #0d1b2a;
@@ -62,7 +119,7 @@ body {
 /* 캐릭터 리스트 오버레이 패널 */
 #char-list-panel {
   position: absolute;
-  top: 8px;
+  top: 50px;
   left: 8px;
   width: 138px;
   display: flex;
@@ -335,6 +392,58 @@ body {
   font-size: 12px;
   font-weight: bold;
 }
+
+/* 캐릭터 탭 — 인라인 스탯 행 */
+.stat-inline-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 12px;
+  margin: 5px 0 3px;
+}
+.stat-inline-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.stat-lbl-tip {
+  font-weight: bold;
+  color: #e2b96f;
+  cursor: help;
+  font-size: 12px;
+}
+
+/* 캐릭터 탭 — 최종 스탯 한 줄 */
+.char-fs-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px 8px;
+  font-size: 11px;
+  color: #aaa;
+  padding: 4px 8px;
+  background: #0a1525;
+  border-radius: 4px;
+  flex: 1;
+}
+.char-fs-line strong { color: #e0e0e0; }
+
+/* 스탯 초기화 버튼 */
+.reset-stat-btn {
+  padding: 0 8px;
+  border-radius: 4px;
+  border: 1px solid #444;
+  background: #1a1a1a;
+  color: #888;
+  cursor: pointer;
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: border-color 0.15s, color 0.15s;
+}
+.reset-stat-btn:hover:not(.disabled) { border-color: #e74c3c; color: #e74c3c; }
+.reset-stat-btn.disabled { opacity: 0.35; cursor: default; }
 
 /* 스탯 탭 */
 .stat-card-header {
@@ -791,7 +900,126 @@ body {
   color: #5b9bd5;
 }
 
-/* 스킬 탭 */
+/* 물약 상점 */
+.potion-shop-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.potion-card {
+  border: 1px solid #1a2a3a;
+  border-radius: 6px;
+  background: #0a1525;
+  overflow: hidden;
+}
+
+.potion-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #0d1e30;
+  border-bottom: 1px solid #1a2a3a;
+  flex-wrap: wrap;
+}
+
+.potion-card-chars {
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.potion-char-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 3px 2px;
+  border-bottom: 1px solid #0d1e30;
+}
+
+.potion-char-row:last-child {
+  border-bottom: none;
+}
+
+/* 스킬 탭 — 카드 그리드 */
+.skill-tier-label {
+  font-size: 10px;
+  color: #556;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+.skill-tier-row {
+  display: flex;
+  gap: 6px;
+}
+.skill-card {
+  flex: 1;
+  padding: 7px 8px;
+  border: 1px solid #1a2535;
+  border-radius: 6px;
+  background: #0a1525;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.skill-card-learned {
+  border-color: #1e3a2a;
+  background: #08170f;
+}
+.skill-card-btn-el {
+  width: 100%;
+  padding: 4px 4px;
+  border-radius: 4px;
+  border: 1px solid #0f3460;
+  background: #0f3460;
+  color: #e0e0e0;
+  cursor: pointer;
+  font-size: 11px;
+  text-align: center;
+  transition: background 0.1s;
+}
+.skill-card-btn-el:hover:not(.disabled) { background: #1a4a80; }
+.skill-card-btn-el.disabled { opacity: 0.35; cursor: default; }
+
+/* 상점 탭 — 물약 미니 카드 */
+.shop-potion-label {
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+.potion-mini-row {
+  display: flex;
+  gap: 6px;
+}
+.potion-mini-card {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #1a2a3a;
+  border-radius: 6px;
+  background: #0a1525;
+}
+.potion-buy-btn {
+  flex: 1;
+  padding: 4px 2px;
+  border-radius: 4px;
+  border: 1px solid #0f3460;
+  background: #0f3460;
+  color: #e0e0e0;
+  cursor: pointer;
+  font-size: 11px;
+  text-align: center;
+  line-height: 1.3;
+  transition: background 0.1s;
+}
+.potion-buy-btn:hover:not(.disabled) { background: #1a4a80; }
+.potion-buy-btn.disabled { opacity: 0.35; cursor: default; }
+
+/* 구버전 스킬 스타일 (모달에서 재사용) */
 .skill-row {
   display: flex;
   align-items: center;
@@ -803,28 +1031,10 @@ body {
   background: #0a1525;
   margin-bottom: 5px;
 }
-
-.skill-info {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  flex: 1;
-}
-
-.skill-name {
-  font-size: 14px;
-  font-weight: bold;
-}
-
-.skill-meta {
-  font-size: 11px;
-  color: #666;
-}
-
-.skill-cd {
-  font-size: 11px;
-  color: #f39c12;
-}
+.skill-info { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+.skill-name { font-size: 14px; font-weight: bold; }
+.skill-meta { font-size: 11px; color: #666; }
+.skill-cd   { font-size: 11px; color: #f39c12; }
 
 .skill-learned {
   font-size: 11px;

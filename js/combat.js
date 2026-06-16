@@ -42,16 +42,37 @@ function updateCombat(dt) {
         if (m.respawnTimer > 0) {
           m.respawnTimer -= dt;
           if (m.respawnTimer <= 0) {
-            m.alive       = true;
-            m.currentHp   = m.maxHp;
+            m.alive        = true;
+            m.currentHp    = m.maxHp;
             m.respawnTimer = 0;
             m.attackTimer  = MONSTER_ATTACK_INTERVAL;
+            m.aoeTimer     = undefined;
+            m.poisoned     = false;
             m.x = m.spawnX;
             m.y = m.spawnY;
           }
         }
         continue;
       }
+
+      // 독 틱 처리
+      if (m.poisoned) {
+        m.poisonTimer -= dt;
+        m.poisonTickTimer = (m.poisonTickTimer ?? 1.0) - dt;
+        if (m.poisonTickTimer <= 0) {
+          m.poisonTickTimer = 1.0;
+          const pd = m.poisonDmg || 0;
+          m.currentHp -= pd;
+          spawnFloatingText(i, m.x, m.y - 32, `${pd}`, '#9b59b6', 12);
+          if (m.currentHp <= 0) {
+            const killer = m.poisonChar || aliveChars[0];
+            if (killer) killMonster(killer, m, stageData, field);
+          }
+        }
+        if (m.poisonTimer <= 0) { m.poisoned = false; m.poisonDmg = 0; m.poisonChar = null; }
+      }
+
+      if (!m.alive) continue;
 
       updateMonsterMovement(m, dt, stageData, aliveChars);
 
@@ -69,6 +90,61 @@ function updateCombat(dt) {
         if (target && minD2 <= (stageData.monster.aggroRange || 400) ** 2 && !m.frozen) {
           m.attackTimer = MONSTER_ATTACK_INTERVAL;
           executeMonsterAttack(m, target, stageData, i);
+        }
+      }
+
+      // 범위 공격 (aoeAtk 있는 몬스터만)
+      const md = stageData.monster;
+      if (md.aoeAtk && !m.frozen && aliveChars.length > 0) {
+        if (m.aoeTimer === undefined) m.aoeTimer = md.aoeInterval * (0.3 + Math.random() * 0.7);
+        m.aoeTimer -= dt;
+        if (m.aoeTimer <= 0) {
+          m.aoeTimer = md.aoeInterval;
+          const aoeR2  = (md.aoeRange || 120) ** 2;
+          let hit = false;
+          for (const c of aliveChars) {
+            const dx = c.x - m.x, dy = c.y - m.y;
+            if (dx * dx + dy * dy <= aoeR2) {
+              const cStats  = calcFinalStats(c);
+              const cDef    = (md.aoeDamageType || md.atkDamageType) === 'magical' ? cStats.magicDef : cStats.physDef;
+              const minDmg  = Math.max(1, Math.floor(md.aoeAtk * 0.2));
+              const aoeDmg  = Math.max(minDmg, md.aoeAtk - cDef);
+              takeDamage(c, aoeDmg, i);
+              hit = true;
+            }
+          }
+          if (hit) {
+            spawnFloatingText(i, m.x, m.y - 44, '★ 범위 공격!', '#e67e22', 13);
+            m.hitAnim = 0.3;
+          }
+        }
+      }
+    }
+  }
+
+  // 포이즌 장판 업데이트
+  for (let pi = gameState.poisonFields.length - 1; pi >= 0; pi--) {
+    const pf = gameState.poisonFields[pi];
+    pf.duration -= dt;
+    if (pf.duration <= 0) { gameState.poisonFields.splice(pi, 1); continue; }
+    pf.tickTimer = (pf.tickTimer || 0) - dt;
+    if (pf.tickTimer <= 0) {
+      pf.tickTimer += pf.tickInterval;
+      const pField = gameState.stageFields[pf.stageIdx];
+      if (!pField) continue;
+      const r2 = pf.radius * pf.radius;
+      for (const m of pField.monsters) {
+        if (!m.alive) continue;
+        const dx = m.x - pf.x, dy = m.y - pf.y;
+        if (dx * dx + dy * dy > r2) continue;
+        m.currentHp -= pf.dmgPerTick;
+        m.hitAnim    = 0.1;
+        spawnFloatingText(pf.stageIdx, m.x + (Math.random() - 0.5) * 30, m.y - 20, `${pf.dmgPerTick}`, '#9b59b6', 10);
+        if (m.currentHp <= 0 && m.alive) {
+          const pStageData   = STAGES[pf.stageIdx];
+          const pfAliveChars = gameState.characters.filter(c => !c.inRaid && c.assignedStage === pf.stageIdx && !c.isDead);
+          const killer = gameState.characters.find(c => c.id === pf.charId) || pfAliveChars[0];
+          if (killer) killMonster(killer, m, pStageData, pField);
         }
       }
     }
@@ -171,6 +247,12 @@ function takeDamage(char, dmg, stageIdx) {
     }
     char.shadowActive = false;
     char.shadowTimer  = 0;
+    // 사망 경험치 패널티 (-5%, 현재 레벨 0% 미만 불가)
+    const expLoss = Math.floor(expRequired(char.level) * 0.05);
+    if (expLoss > 0) {
+      char.exp = Math.max(0, char.exp - expLoss);
+      spawnFloatingText(stageIdx, char.x, char.y - 46, `EXP -${expLoss}`, '#f39c12', 12);
+    }
   }
   spawnFloatingText(stageIdx, char.x, char.y - 30, `-${dmg}`, '#e74c3c', 13);
 }
@@ -289,6 +371,12 @@ function updateCharacter(char, dt, stage, field) {
   if (char.currentHp === undefined) char.currentHp = stats.maxHp;
   char.maxHpCache = stats.maxHp;
 
+  // MP 초기화 및 자연 회복 (초당 0.5%)
+  const maxMp = stats.maxMp ?? 200;
+  char.maxMpCache = maxMp;
+  if (char.currentMp === undefined) char.currentMp = maxMp;
+  char.currentMp = Math.min(maxMp, (char.currentMp || 0) + maxMp * 0.005 * dt);
+
   // 버프 타이머 감소
   if (char.activeBuffs) {
     for (const key of Object.keys(char.activeBuffs)) {
@@ -310,6 +398,91 @@ function updateCharacter(char, dt, stage, field) {
   // 자연 HP 회복 (초당 1%)
   char.currentHp = Math.min(stats.maxHp, char.currentHp + stats.maxHp * 0.01 * dt);
 
+  // 포션 쿨타임 감소
+  if ((char.potionHpCd || 0) > 0) char.potionHpCd = Math.max(0, char.potionHpCd - dt);
+  if ((char.potionMpCd || 0) > 0) char.potionMpCd = Math.max(0, char.potionMpCd - dt);
+
+  // 장착 물약 초기화 (undefined 방어)
+  if (!char.equippedHpPotion) char.equippedHpPotion = { id: char.selectedHpPotion || 'hp_s', count: 0 };
+  if (!char.equippedMpPotion) char.equippedMpPotion = { id: char.selectedMpPotion || 'mp_s', count: 0 };
+
+  // HP 물약 재충전 타이머 (소진 시 스톡에서 100개 자동 충전, 5초 소요)
+  if ((char.hpRefillTimer || 0) > 0) {
+    char.hpRefillTimer = Math.max(0, char.hpRefillTimer - dt);
+    if (char.hpRefillTimer <= 0) {
+      const selId = char.selectedHpPotion;
+      const avail = selId ? (gameState.potionStock[selId] || 0) : 0;
+      const take  = Math.min(100, avail);
+      if (take > 0) {
+        gameState.potionStock[selId] -= take;
+        char.equippedHpPotion = { id: selId, count: take };
+        spawnFloatingText(char.assignedStage, char.x, char.y - 50, `HP 물약 ${take}개 충전`, '#2ecc71', 11);
+      } else {
+        spawnFloatingText(char.assignedStage, char.x, char.y - 50, 'HP 물약 부족!', '#e74c3c', 11);
+      }
+    }
+  } else if ((char.equippedHpPotion.count || 0) === 0 && char.selectedHpPotion) {
+    const selId = char.selectedHpPotion;
+    if ((gameState.potionStock[selId] || 0) > 0) {
+      char.hpRefillTimer = 5.0;
+      spawnFloatingText(char.assignedStage, char.x, char.y - 50, 'HP 물약 충전 중...', '#95a5a6', 10);
+    }
+  }
+
+  // MP 물약 재충전 타이머
+  if ((char.mpRefillTimer || 0) > 0) {
+    char.mpRefillTimer = Math.max(0, char.mpRefillTimer - dt);
+    if (char.mpRefillTimer <= 0) {
+      const selId = char.selectedMpPotion;
+      const avail = selId ? (gameState.potionStock[selId] || 0) : 0;
+      const take  = Math.min(100, avail);
+      if (take > 0) {
+        gameState.potionStock[selId] -= take;
+        char.equippedMpPotion = { id: selId, count: take };
+        spawnFloatingText(char.assignedStage, char.x, char.y - 62, `MP 물약 ${take}개 충전`, '#3498db', 11);
+      } else {
+        spawnFloatingText(char.assignedStage, char.x, char.y - 62, 'MP 물약 부족!', '#e74c3c', 11);
+      }
+    }
+  } else if ((char.equippedMpPotion.count || 0) === 0 && char.selectedMpPotion) {
+    const selId = char.selectedMpPotion;
+    if ((gameState.potionStock[selId] || 0) > 0) {
+      char.mpRefillTimer = 5.0;
+      spawnFloatingText(char.assignedStage, char.x, char.y - 62, 'MP 물약 충전 중...', '#95a5a6', 10);
+    }
+  }
+
+  // 충전 중에는 행동 불가
+  if ((char.hpRefillTimer || 0) > 0 || (char.mpRefillTimer || 0) > 0) return;
+
+  // HP 포션 자동 사용 (HP 50% 이하)
+  if ((char.potionHpCd || 0) <= 0 && char.currentHp < stats.maxHp * 0.5) {
+    const pot = char.equippedHpPotion;
+    if (pot && pot.id && (pot.count || 0) > 0) {
+      const p = POTIONS[pot.id];
+      if (p) {
+        char.currentHp = Math.min(stats.maxHp, char.currentHp + p.restoreAmt);
+        pot.count--;
+        char.potionHpCd = 3.0;
+        spawnFloatingText(char.assignedStage, char.x, char.y - 50, `HP +${p.restoreAmt}`, '#2ecc71', 12);
+      }
+    }
+  }
+
+  // MP 포션 자동 사용 (MP 30% 이하)
+  if ((char.potionMpCd || 0) <= 0 && (char.currentMp || 0) < maxMp * 0.3) {
+    const pot = char.equippedMpPotion;
+    if (pot && pot.id && (pot.count || 0) > 0) {
+      const p = POTIONS[pot.id];
+      if (p) {
+        char.currentMp = Math.min(maxMp, (char.currentMp || 0) + p.restoreAmt);
+        pot.count--;
+        char.potionMpCd = 3.0;
+        spawnFloatingText(char.assignedStage, char.x, char.y - 62, `MP +${p.restoreAmt}`, '#3498db', 12);
+      }
+    }
+  }
+
   // 다중 타격 타이머 (따닥/트리플 스로우)
   if ((char.quickHitTimer || 0) > 0) {
     char.quickHitTimer -= dt;
@@ -323,6 +496,51 @@ function updateCharacter(char, dt, stage, field) {
     }
   }
 
+  // 세비지 블로우 연속 타격
+  if ((char.savageHitsLeft || 0) > 0) {
+    char.savageHitTimer = (char.savageHitTimer || 0) - dt;
+    if (char.savageHitTimer <= 0) {
+      char.savageHitTimer = char.savageHitDelay || 0.2;
+      const sv = findNearestMonster(char, field);
+      if (sv) dealSkillDamage(char, sv, char.savageHitDmg || 0, stage, field, stats);
+      char.savageHitsLeft = Math.max(0, (char.savageHitsLeft || 1) - 1);
+    }
+  }
+
+  // 피어싱 충전 중: 충전 완료 후 몬스터 등장 시 발사, 그 사이 행동 금지
+  if (char.charging) {
+    char.chargeTimer = Math.max(0, (char.chargeTimer || 0) - dt);
+    if (char.chargeTimer <= 0) {
+      const pt = findNearestMonster(char, field);
+      if (pt) {
+        const cDmg = Math.floor(stats.atk * (char.chargeDmgMult || 15));
+        dealSkillDamage(char, pt, cDmg, stage, field, stats);
+        spawnFloatingText(char.assignedStage, pt.x, pt.y - 40, '피어싱!', '#e2b96f', 20);
+        char.charging = false;
+      }
+      // 몬스터 없으면 충전 상태 유지 (chargeTimer = 0 고정, 몬스터 등장 대기)
+    }
+    return;
+  }
+
+  // 스킬 쿨타임은 항상 감소, 공격 스킬은 쿨 차는 즉시 발동
+  char.skillAnim = Math.max(0, (char.skillAnim || 0) - dt);
+  useSkills(char, dt, stats, stage, field);
+
+  // 포이즌 장판 최적 위치 이동 (일반 이동/공격 억제)
+  if (char.poisonMoveTarget) {
+    const pmDx = char.poisonMoveTarget.x - char.x;
+    const pmDy = char.poisonMoveTarget.y - char.y;
+    const pmDist = Math.sqrt(pmDx * pmDx + pmDy * pmDy);
+    if (pmDist > 28) {
+      char.x += (pmDx / pmDist) * CHAR_SPEED * dt;
+      char.y += (pmDy / pmDist) * CHAR_SPEED * dt;
+      char.facing = pmDx >= 0 ? 1 : -1;
+      return;
+    }
+    char.poisonMoveTarget = null;
+  }
+
   const range  = RANGE_PIXELS[CLASSES[char.classId].range];
   const target = findNearestMonster(char, field);
   if (!target) {
@@ -330,8 +548,6 @@ function updateCharacter(char, dt, stage, field) {
     if (!char.pet) moveCharTowardDrop(char, dt);
     return;
   }
-
-  char.skillAnim = Math.max(0, (char.skillAnim || 0) - dt);
 
   const dx = target.x - char.x;
   const dy = target.y - char.y;
@@ -350,7 +566,7 @@ function updateCharacter(char, dt, stage, field) {
     if (char.attackTimer <= 0) {
       char.attackTimer = atkInterval;
       const baseClass     = CLASSES[char.classId]?.parent || char.classId;
-      const rogueThrow    = (char.classId === 'rogue' || baseClass === 'rogue') && !!char.equipment?.throwable;
+      const rogueThrow    = (char.classId === 'rogue' || (baseClass === 'rogue' && char.classId !== 'thief')) && !!char.equipment?.throwable;
       const hasTriple     = rogueThrow && char.skills?.includes('triple_throw');
       if (hasTriple) {
         // 트리플 스로우: 1/3 × 레벨배율 × 3타
@@ -372,12 +588,31 @@ function updateCharacter(char, dt, stage, field) {
       }
     }
   }
+}
 
-  useSkills(char, dt, stats, stage, field);
+// 독 장판을 놓기 가장 좋은 위치 계산 (살아있는 몬스터 커버 최대화)
+function findBestPoisonPosition(field, radius) {
+  const alive = field.monsters.filter(m => m.alive);
+  if (!alive.length) return null;
+  const r2 = radius * radius;
+  let bestPos = null, bestCount = 0;
+  for (const pivot of alive) {
+    let cnt = 0, sx = 0, sy = 0;
+    for (const m of alive) {
+      const dx = m.x - pivot.x, dy = m.y - pivot.y;
+      if (dx * dx + dy * dy <= r2) { cnt++; sx += m.x; sy += m.y; }
+    }
+    if (cnt > bestCount) {
+      bestCount = cnt;
+      bestPos = { x: sx / cnt, y: sy / cnt };
+    }
+  }
+  return bestPos;
 }
 
 function useSkills(char, dt, stats, stage, field) {
   if (!char.skills || !char.skills.length) return;
+  if (char.charging) return;
   if (!char.skillTimers) char.skillTimers = {};
 
   for (const skillId of char.skills) {
@@ -394,12 +629,32 @@ function useSkills(char, dt, stats, stage, field) {
     char.skillTimers[skillId] -= dt * cdMult;
     if (char.skillTimers[skillId] > 0) continue;
 
+    // MP 부족 시 스킬 사용 불가 (쿨타임은 계속 감소)
+    const mpCost = skill.mpCost || 0;
+    if (mpCost > 0 && (char.currentMp || 0) < mpCost) continue;
+
+    // 포이즌 장판: 최대 커버 위치로 먼저 이동 후 시전
+    if (skill.targeting === 'poison_area') {
+      const bestPos = findBestPoisonPosition(field, skill.poisonFieldRadius || 200);
+      if (!bestPos) continue;
+      const pdx = bestPos.x - char.x, pdy = bestPos.y - char.y;
+      if (pdx * pdx + pdy * pdy > 28 * 28) {
+        char.poisonMoveTarget = bestPos;
+        continue;
+      }
+      char.poisonMoveTarget = null;
+    }
+
     if (executeSkill(char, skillId, skill, stats, stage, field)) {
+      if (mpCost > 0) char.currentMp = Math.max(0, (char.currentMp || 0) - mpCost);
       // shadow_partner는 소멸 시 쿨다운을 설정하므로 여기선 0으로만
       if (skill.targeting !== 'shadow') {
-        const sLv    = char.skillLevels?.[skillId] || 1;
-        const cdScale = 1 + (sLv - 1) * 0.06; // 레벨당 6% CD 단축
-        char.skillTimers[skillId] = skill.cooldown / cdScale;
+        const sLv     = char.skillLevels?.[skillId] || 1;
+        const baseCd  = skill.cooldownDecay
+          ? Math.max(0.1, skill.cooldown * Math.pow(skill.cooldownDecay, sLv - 1))
+          : skill.cooldown / (1 + (sLv - 1) * 0.06);
+        const overshoot = Math.max(char.skillTimers[skillId], -dt);
+        char.skillTimers[skillId] = baseCd + overshoot;
       } else {
         char.skillTimers[skillId] = 9999;
       }
@@ -441,21 +696,28 @@ function executeSkill(char, skillId, skill, stats, stage, field) {
       if (!c.activeBuffs) c.activeBuffs = {};
       if (skill.buffHp) {
         const wasBuffed = c.activeBuffs.hp && c.activeBuffs.hp.timer > 0;
-        c.activeBuffs.hp = { mult: skill.buffHp, timer: buffDur };
+        const hpMult = skill.buffHp + (sLv - 1) * (skill.buffHpPerLv || 0);
+        c.activeBuffs.hp = { mult: hpMult, timer: buffDur };
         if (!wasBuffed) {
           const newMax = calcFinalStats(c).maxHp;
-          c.currentHp  = Math.min(newMax, (c.currentHp || c.maxHpCache || 100) * skill.buffHp);
+          c.currentHp  = Math.min(newMax, (c.currentHp || c.maxHpCache || 100) * hpMult);
           c.maxHpCache = newMax;
         }
-        spawnFloatingText(stageIdx, c.x, c.y - 30, '체력 ×2!', '#2ecc71', 13);
+        spawnFloatingText(stageIdx, c.x, c.y - 30, `HP +${Math.round((hpMult - 1) * 100)}%!`, '#2ecc71', 13);
       }
       if (skill.buffCdMult) {
         c.activeBuffs.cd = { mult: skill.buffCdMult, timer: buffDur };
         spawnFloatingText(stageIdx, c.x, c.y - 44, '스킬 가속!', '#3498db', 13);
       }
       if (skill.buffAtk) {
-        c.activeBuffs.atk = { mult: skill.buffAtk, timer: buffDur };
-        spawnFloatingText(stageIdx, c.x, c.y - 30, '공격 ×2!', '#e74c3c', 13);
+        const atkMult = skill.buffAtk + (sLv - 1) * (skill.buffAtkPerLv || 0);
+        c.activeBuffs.atk = { mult: atkMult, timer: buffDur };
+        spawnFloatingText(stageIdx, c.x, c.y - 30, `공격 +${Math.round((atkMult - 1) * 100)}%!`, '#e74c3c', 13);
+      }
+      if (skill.buffCritDmg) {
+        const critBonus = skill.buffCritDmg + (sLv - 1) * (skill.buffCritDmgPerLv || 0);
+        c.activeBuffs.critDmg = { bonus: critBonus, timer: buffDur };
+        spawnFloatingText(stageIdx, c.x, c.y - 44, `크리 +${Math.round(critBonus * 100)}%!`, '#f1c40f', 13);
       }
     }
     return true;
@@ -494,12 +756,15 @@ function executeSkill(char, skillId, skill, stats, stage, field) {
 
   // ── 광역 빙결 (썬콜) ────────────────────────────────────
   if (skill.targeting === 'aoe_freeze') {
-    const maxR2   = (skill.freezeRange || 270) ** 2;
+    const maxR2 = (skill.freezeRange || 270) ** 2;
+    const maxT  = skill.maxTargetsBase !== undefined
+      ? Math.round(skill.maxTargetsBase + (sLv - 1) * ((skill.maxTargets - skill.maxTargetsBase) / 9))
+      : (skill.maxTargets || 8);
     const targets = field.monsters.filter(m => {
       if (!m.alive) return false;
       const dx = m.x - char.x, dy = m.y - char.y;
       return dx * dx + dy * dy <= maxR2;
-    }).slice(0, skill.maxTargets || 8);
+    }).slice(0, maxT);
     if (!targets.length) return false;
     const freezeDur = (skill.freezeDuration || 5.0) + (sLv - 1) * 0.4;
     for (const t of targets) {
@@ -520,6 +785,51 @@ function executeSkill(char, skillId, skill, stats, stage, field) {
     const t = findNearestMonster(char, field);
     if (!t) return false;
     for (let h = 0; h < (skill.hits || 2); h++) dealSkillDamage(char, t, dmg, stage, field, stats);
+    return true;
+  }
+
+  // ── 포이즌 장판 (불독): 발밑에 독 필드 생성 ──────────────
+  if (skill.targeting === 'poison_area') {
+    const radius      = skill.poisonFieldRadius || skill.poisonRange || 200;
+    const pDur        = (skill.poisonDuration || 8.0) + (sLv - 1) * 0.5;
+    const tickInterval = skill.poisonTickInterval || 1.0;
+    const dmgPerTick  = Math.max(1, Math.floor(stats.atk * (skill.dmgMultiplier || 0.5) * sMult * tickInterval));
+    gameState.poisonFields.push({
+      stageIdx:     char.assignedStage,
+      x: char.x,   y: char.y,
+      radius,
+      duration:     pDur,
+      tickInterval,
+      tickTimer:    tickInterval,
+      dmgPerTick,
+      charId:       char.id,
+    });
+    spawnFloatingText(char.assignedStage, char.x, char.y - 36, '포이즌!', '#9b59b6', 14);
+    return true;
+  }
+
+  // ── 세비지 블로우 (시프): 10연타 ─────────────────────────
+  if (skill.targeting === 'savage_blow') {
+    const t = findNearestMonster(char, field);
+    if (!t) return false;
+    const hitDmg = Math.floor(stats.atk * (skill.dmgMultiplier || 0.8) * sMult);
+    dealSkillDamage(char, t, hitDmg, stage, field, stats);
+    char.savageHitDmg   = hitDmg;
+    char.savageHitsLeft = (skill.hits || 10) - 1;
+    char.savageHitDelay = skill.hitDelay || 0.2;
+    char.savageHitTimer = skill.hitDelay || 0.2;
+    return true;
+  }
+
+  // ── 피어싱 충전 시작 (사수): 3초 후 1500% 데미지 ─────────
+  if (skill.targeting === 'piercing') {
+    if (char.charging) return false;
+    const t = findNearestMonster(char, field);
+    if (!t) return false;
+    char.charging      = true;
+    char.chargeTimer   = skill.chargeTime || 3.0;
+    char.chargeDmgMult = (skill.dmgMultiplier || 15.0) * sMult;
+    spawnFloatingText(char.assignedStage, char.x, char.y - 36, '충전 중...', '#e2b96f', 13);
     return true;
   }
 

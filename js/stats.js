@@ -1,7 +1,12 @@
 // 장비 슬롯 합산 헬퍼 (강화 보너스 포함: +15% per enhance level)
 function sumEquipStat(char, stat) {
   let total = 0;
-  for (const slot of ['weapon', 'armor', 'accessory', 'throwable']) {
+  for (const slot of ['weapon', 'weapon2', 'armor', 'accessory', 'throwable']) {
+    // 무기 슬롯에 아대(isAedae) 미착용 시 표창 공격력 기여 없음
+    if (slot === 'throwable' && stat === 'atk') {
+      const wItem = char.equipment?.weapon;
+      if (!wItem || !EQUIPMENT[wItem.id]?.isAedae) continue;
+    }
     const item = char.equipment?.[slot];
     if (!item) continue;
     const id      = typeof item === 'string' ? item : item.id;
@@ -45,7 +50,9 @@ function calcFinalStats(char) {
 
   const atkUpgPct  = (gameState.upgrades?.atk_boost || 0) * 0.05;
   const defUpgFlat = (gameState.upgrades?.def_boost || 0) * 3;
-  const critRate   = Math.min(effLUK * 0.5, 50); // LUK당 0.5%, 최대 50%
+  const critRate   = effLUK <= 100
+    ? effLUK * 0.3
+    : 30 + (effLUK - 100) * 0.2; // LUK 100이하 0.3%/pt, 초과 0.2%/pt
   const maxHp      = Math.floor(100 + char.level * 20 + effSTR * 5);
 
   const hpBuffMult  = (char.activeBuffs?.hp?.timer > 0) ? (char.activeBuffs.hp.mult || 1) : 1;
@@ -58,8 +65,9 @@ function calcFinalStats(char) {
     accuracy: Math.max(10, Math.min(accuracy - accPenalty, 99)),
     evade:    Math.min(evade, 60),
     critRate,
-    critDmg:  2.0,
+    critDmg:  3.0 + ((char.activeBuffs?.critDmg?.timer > 0) ? (char.activeBuffs.critDmg.bonus || 0) : 0),
     maxHp:    Math.floor(maxHp * hpBuffMult),
+    maxMp:    Math.floor(200 + effINT * 4 + char.level * 5),
   };
 }
 

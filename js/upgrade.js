@@ -27,6 +27,18 @@ function tryResetStats(charId) {
   char.unspentPoints = totalEarned;
 }
 
+function tryResetSkills(charId) {
+  const char = gameState.characters.find(c => c.id === charId);
+  if (!char) return;
+  const cost = 100 * char.level;
+  if (gameState.gold < cost) return;
+  gameState.gold -= cost;
+  const totalEarned = Math.floor((char.level - 1) / SKILL_SP_PER_LEVEL);
+  char.skillLevels = {};
+  char.skills = [];
+  char.skillPoints = totalEarned;
+}
+
 function tryAdvanceJob(charId, classId) {
   const char = gameState.characters.find(c => c.id === charId);
   if (!char) return;
@@ -53,6 +65,17 @@ function tryAdvanceJob2(charId, classId) {
   if (char.level < JOB_ADVANCE_LEVEL_2) return;
 
   char.classId = classId;
+
+  // 시프 전직: 표창·아대 해제(인벤토리 반납), weapon2 슬롯 확보
+  if (classId === 'thief') {
+    if (char.equipment.throwable) { gameState.equipmentInventory.push(char.equipment.throwable); char.equipment.throwable = null; }
+    // 아대(isAedae) 무기를 weapon 슬롯에 착용 중이면 해제
+    if (char.equipment.weapon && EQUIPMENT[char.equipment.weapon.id]?.isAedae) {
+      gameState.equipmentInventory.push(char.equipment.weapon);
+      char.equipment.weapon = null;
+    }
+    if (char.equipment.weapon2 === undefined) char.equipment.weapon2 = null;
+  }
 }
 
 // 장비 장착 요건 체크 (itemOrId = string id 또는 { id, uid, enhance } 객체)
@@ -65,6 +88,8 @@ function canEquipItem(char, itemOrId) {
     const parentClass = CLASSES[char.classId]?.parent || char.classId;
     if (char.classId !== e.req.classId && parentClass !== e.req.classId) return false;
   }
+  // 아대(isAedae 무기)는 시프 착용 불가
+  if (e.isAedae && char.classId === 'thief') return false;
   return true;
 }
 
@@ -77,7 +102,8 @@ function tryBuyEquipment(equipId) {
 }
 
 // 인벤토리 → 캐릭터 슬롯 (uid로 식별, 기존 슬롯 아이템은 인벤토리로)
-function tryEquipItem(charId, uid) {
+// slotOverride: 시프의 weapon2 슬롯에 직접 장착할 때 'weapon2' 전달
+function tryEquipItem(charId, uid, slotOverride) {
   const char = gameState.characters.find(c => c.id === charId);
   if (!char) return;
   const idx  = gameState.equipmentInventory.findIndex(i => i.uid === uid);
@@ -85,12 +111,64 @@ function tryEquipItem(charId, uid) {
   const item = gameState.equipmentInventory[idx];
   if (!canEquipItem(char, item)) return;
 
-  const slot = EQUIPMENT[item.id].type;
+  const itemType = EQUIPMENT[item.id].type;
+  // weapon2 오버라이드: 시프가 두 번째 무기 슬롯에 장착
+  const slot = (slotOverride === 'weapon2' && char.classId === 'thief' && itemType === 'weapon')
+    ? 'weapon2'
+    : itemType;
+
   const prev = char.equipment[slot];
   if (prev && prev.uid !== 0) gameState.equipmentInventory.push(prev); // uid 0 = 초보자 검 (버림)
 
   gameState.equipmentInventory.splice(idx, 1);
   char.equipment[slot] = item;
+}
+
+// 아이템 효율 점수 (강화 보너스 포함 총 스탯 합산)
+function itemScore(item) {
+  const e = EQUIPMENT[item.id];
+  if (!e) return 0;
+  const mult = 1 + (item.enhance || 0) * 0.15;
+  return (
+    (e.atk      || 0) * mult +
+    (e.physDef  || 0) * mult +
+    (e.magicDef || 0) * mult +
+    (e.bonusSTR || 0) * 2 +
+    (e.bonusDEX || 0) * 2 +
+    (e.bonusINT || 0) * 2 +
+    (e.bonusLUK || 0) * 2
+  );
+}
+
+// 빈 슬롯에 인벤토리에서 가장 효율 좋은 아이템 자동 장착
+function tryAutoEquip(charId) {
+  const char = gameState.characters.find(c => c.id === charId);
+  if (!char) return;
+
+  const slots = getCharSlotList(char);
+
+  for (const slot of slots) {
+    const cur = char.equipment[slot];
+    if (cur && cur.uid !== 0) continue; // 이미 장착됨
+
+    // weapon2 슬롯은 type='weapon' 아이템을 수용
+    const targetType = slot === 'weapon2' ? 'weapon' : slot;
+    const candidates = gameState.equipmentInventory
+      .filter(item => {
+        const e = EQUIPMENT[item.id];
+        return e && e.type === targetType && canEquipItem(char, item);
+      })
+      .sort((a, b) => itemScore(b) - itemScore(a));
+
+    if (!candidates.length) continue;
+
+    const best = candidates[0];
+    const idx  = gameState.equipmentInventory.indexOf(best);
+    if (idx === -1) continue;
+    gameState.equipmentInventory.splice(idx, 1);
+    char.equipment[slot] = best;
+    // uid=0 슬롯(초보자 검)은 인벤토리에 돌려보내지 않음
+  }
 }
 
 // 장착 해제 → 인벤토리로
@@ -99,8 +177,15 @@ function tryUnequipItem(charId, slot) {
   if (!char) return;
   const item = char.equipment[slot];
   if (!item || item.uid === 0) return; // 초보자 검은 해제 불가
+
   gameState.equipmentInventory.push(item);
   char.equipment[slot] = null;
+}
+
+// 아이템별 최대 강화치 (data.js에 maxEnhance 명시 없으면 전역 ENHANCE_MAX, uid=0은 강화 불가)
+function itemMaxEnhance(item) {
+  if (!item || item.uid === 0) return 0;
+  return EQUIPMENT[item.id]?.maxEnhance ?? ENHANCE_MAX;
 }
 
 // 강화 비용 계산 (내부 및 UI에서 공용)
@@ -114,7 +199,7 @@ function findItemByUid(uid) {
   const inv = gameState.equipmentInventory.find(i => i.uid === uid);
   if (inv) return inv;
   for (const char of gameState.characters) {
-    for (const slot of ['weapon', 'armor', 'accessory']) {
+    for (const slot of ['weapon', 'weapon2', 'armor', 'accessory', 'throwable']) {
       if (char.equipment[slot]?.uid === uid) return char.equipment[slot];
     }
   }
@@ -123,18 +208,18 @@ function findItemByUid(uid) {
 
 function tryEnhanceEquipment(uid) {
   const item = findItemByUid(uid);
-  if (!item || item.uid === 0) return;           // 초보자 검 강화 불가
-  if (item.enhance >= ENHANCE_MAX) return;
+  if (!item) return;
+  const max = itemMaxEnhance(item);
+  if (max === 0 || item.enhance >= max) return;
 
   const cost = enhanceCost(item);
   if (gameState.gold < cost) return;
   gameState.gold -= cost;
 
   const successRate = ENHANCE_SUCCESS[item.enhance];
-  if (Math.random() * 100 < successRate) {
-    item.enhance++;
-  }
-  // 실패 시 골드만 소모, 아이템 파괴 없음
+  const success     = Math.random() * 100 < successRate;
+  if (success) item.enhance++;
+  return { success, newLevel: item.enhance, name: EQUIPMENT[item.id]?.name || '' };
 }
 
 // skillId에 대한 SP 비용 계산 (현재 레벨 → 다음 레벨)
@@ -234,14 +319,52 @@ function tryBuyUpgrade(id) {
   gameState.upgrades[id] = lv + 1;
 }
 
+// 전역 물약 재고에 구매
+function tryBuyPotion(potionId, qty) {
+  const p = POTIONS[potionId];
+  if (!p) return;
+  const cost = p.cost * qty;
+  if (gameState.gold < cost) return;
+  gameState.gold -= cost;
+  gameState.potionStock[potionId] = (gameState.potionStock[potionId] || 0) + qty;
+  markTabDirty();
+}
+
+// 캐릭터별 물약 타입 지정 (HP or MP 슬롯)
+function selectCharPotion(charId, slotType, potionId) {
+  const char = gameState.characters.find(c => c.id === charId);
+  if (!char) return;
+  const selectedKey = slotType === 'hp' ? 'selectedHpPotion' : 'selectedMpPotion';
+  const equippedKey = slotType === 'hp' ? 'equippedHpPotion' : 'equippedMpPotion';
+  const timerKey    = slotType === 'hp' ? 'hpRefillTimer'   : 'mpRefillTimer';
+  // 현재 장착된 물약 남은 수량은 전역 재고로 반납
+  const cur = char[equippedKey];
+  if (cur && cur.id && (cur.count || 0) > 0) {
+    gameState.potionStock[cur.id] = (gameState.potionStock[cur.id] || 0) + cur.count;
+  }
+  char[timerKey]    = 0;
+  char[selectedKey] = potionId;
+  char[equippedKey] = { id: potionId, count: 0 };
+  markCharModalDirty();
+  markTabDirty();
+}
+
 function tryAddCharacter() {
   const cur = gameState.characters.length;
   const cost = charAddCost(cur);
   if (gameState.gold < cost) return;
   gameState.gold -= cost;
-  const newChar = createCharacter(0);
+
+  // 자리 있는 첫 스테이지에 배치 (스테이지당 최대 6명)
+  let targetStage = 0;
+  for (let s = 0; s <= gameState.maxStageReached; s++) {
+    const inStage = gameState.characters.filter(c => c.assignedStage === s).length;
+    if (inStage < 6) { targetStage = s; break; }
+  }
+
+  const newChar = createCharacter(targetStage);
   gameState.characters.push(newChar);
-  if (!gameState.stageFields[0]) initStageField(0);
+  if (!gameState.stageFields[targetStage]) initStageField(targetStage);
   resetCharPos(newChar);
   markTabDirty();
 }

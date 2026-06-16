@@ -70,7 +70,7 @@ function enterRaid(charId) {
   if (!gameState.raidField) initRaidField();
   if (gameState.raidField.cleared) return;
   const char = gameState.characters.find(c => c.id === charId);
-  if (!char || char.inRaid) return;
+  if (!char || char.inRaid || char.raidKilled) return;
   char.inRaid = true;
   resetRaidCharPos(char);
   markTabDirty();
@@ -80,8 +80,14 @@ function leaveRaid(charId) {
   const char = gameState.characters.find(c => c.id === charId);
   if (!char || !char.inRaid) return;
   char.inRaid        = false;
+  char.isDead        = false;
   char.raidAccDown   = 0;
   char.raidSkillSeal = 0;
+  char.shadowActive  = false;
+  char.shadowTimer   = 0;
+  const s = calcFinalStats(char);
+  char.currentHp  = s.maxHp;
+  char.maxHpCache = s.maxHp;
   if (!gameState.stageFields[char.assignedStage]) initStageField(char.assignedStage);
   resetCharPos(char);
   markTabDirty();
@@ -91,6 +97,7 @@ function resetRaid() {
   initRaidField();
   for (const c of gameState.characters) {
     c.raidAccDown = 0; c.raidSkillSeal = 0;
+    c.raidKilled  = false;
     if (c.inRaid) resetRaidCharPos(c);
   }
   markTabDirty();
@@ -127,18 +134,13 @@ function updateRaid(dt) {
     if ((c.raidSkillSeal || 0) > 0) c.raidSkillSeal = Math.max(0, c.raidSkillSeal - dt);
   }
 
-  // 캐릭터 hitAnim / attackAnim / 부활
+  // 캐릭터 hitAnim / attackAnim / 사망 후 복귀
   for (const c of raidChars) {
     c.attackAnim = Math.max(0, c.attackAnim - dt);
     c.hitAnim    = Math.max(0, (c.hitAnim || 0) - dt);
     if (c.isDead) {
-      c.respawnTimer = (c.respawnTimer || 0) - dt;
-      if (c.respawnTimer <= 0) {
-        c.isDead = false; c.respawnTimer = 0;
-        const s  = calcFinalStats(c);
-        c.currentHp = s.maxHp; c.maxHpCache = s.maxHp;
-        resetRaidCharPos(c);
-      }
+      c.raidDeathTimer = Math.max(0, (c.raidDeathTimer || 0) - dt);
+      if (c.raidDeathTimer <= 0) leaveRaid(c.id);
       continue;
     }
     updateShadow(c, dt);
@@ -253,6 +255,23 @@ function updateRaidMinions(rf, dt, alive) {
     }
     if (!m.alive) continue;
 
+    // 독 틱 처리
+    if (m.poisoned) {
+      m.poisonTimer -= dt;
+      m.poisonTickTimer = (m.poisonTickTimer ?? 1.0) - dt;
+      if (m.poisonTickTimer <= 0) {
+        m.poisonTickTimer = 1.0;
+        const pd = m.poisonDmg || 0;
+        m.hp -= pd;
+        logRaidDamage(rf, m.poisonCharId ?? 0, pd);
+        spawnRaidFT(m.x, m.y - 32, `${pd}`, '#9b59b6', 12);
+        if (m.hp <= 0) m.alive = false;
+      }
+      if (m.poisonTimer <= 0) { m.poisoned = false; m.poisonDmg = 0; m.poisonCharId = undefined; }
+    }
+
+    if (!m.alive) continue;
+
     // 빙결
     if (m.frozen && !m.exploding) {
       m.frozenTimer = (m.frozenTimer || 0) - dt;
@@ -327,6 +346,97 @@ function updateRaidCharacter(char, dt, rf) {
   // HP 자연 회복
   char.currentHp = Math.min(stats.maxHp, char.currentHp + stats.maxHp * 0.01 * dt);
 
+  // MP 초기화 및 자연 회복 (초당 0.5%)
+  const maxMp = stats.maxMp ?? 200;
+  char.maxMpCache = maxMp;
+  if (char.currentMp === undefined) char.currentMp = maxMp;
+  char.currentMp = Math.min(maxMp, (char.currentMp || 0) + maxMp * 0.005 * dt);
+
+  // 포션 쿨타임 감소
+  if ((char.potionHpCd || 0) > 0) char.potionHpCd = Math.max(0, char.potionHpCd - dt);
+  if ((char.potionMpCd || 0) > 0) char.potionMpCd = Math.max(0, char.potionMpCd - dt);
+
+  // 장착 물약 초기화 (undefined 방어)
+  if (!char.equippedHpPotion) char.equippedHpPotion = { id: char.selectedHpPotion || 'hp_s', count: 0 };
+  if (!char.equippedMpPotion) char.equippedMpPotion = { id: char.selectedMpPotion || 'mp_s', count: 0 };
+
+  // HP 물약 재충전 타이머
+  if ((char.hpRefillTimer || 0) > 0) {
+    char.hpRefillTimer = Math.max(0, char.hpRefillTimer - dt);
+    if (char.hpRefillTimer <= 0) {
+      const selId = char.selectedHpPotion;
+      const avail = selId ? (gameState.potionStock[selId] || 0) : 0;
+      const take  = Math.min(100, avail);
+      if (take > 0) {
+        gameState.potionStock[selId] -= take;
+        char.equippedHpPotion = { id: selId, count: take };
+        spawnRaidFT(char.x, char.y - 50, `HP 물약 ${take}개 충전`, '#2ecc71', 11);
+      } else {
+        spawnRaidFT(char.x, char.y - 50, 'HP 물약 부족!', '#e74c3c', 11);
+      }
+    }
+  } else if ((char.equippedHpPotion.count || 0) === 0 && char.selectedHpPotion) {
+    const selId = char.selectedHpPotion;
+    if ((gameState.potionStock[selId] || 0) > 0) {
+      char.hpRefillTimer = 5.0;
+      spawnRaidFT(char.x, char.y - 50, 'HP 물약 충전 중...', '#95a5a6', 10);
+    }
+  }
+
+  // MP 물약 재충전 타이머
+  if ((char.mpRefillTimer || 0) > 0) {
+    char.mpRefillTimer = Math.max(0, char.mpRefillTimer - dt);
+    if (char.mpRefillTimer <= 0) {
+      const selId = char.selectedMpPotion;
+      const avail = selId ? (gameState.potionStock[selId] || 0) : 0;
+      const take  = Math.min(100, avail);
+      if (take > 0) {
+        gameState.potionStock[selId] -= take;
+        char.equippedMpPotion = { id: selId, count: take };
+        spawnRaidFT(char.x, char.y - 62, `MP 물약 ${take}개 충전`, '#3498db', 11);
+      } else {
+        spawnRaidFT(char.x, char.y - 62, 'MP 물약 부족!', '#e74c3c', 11);
+      }
+    }
+  } else if ((char.equippedMpPotion.count || 0) === 0 && char.selectedMpPotion) {
+    const selId = char.selectedMpPotion;
+    if ((gameState.potionStock[selId] || 0) > 0) {
+      char.mpRefillTimer = 5.0;
+      spawnRaidFT(char.x, char.y - 62, 'MP 물약 충전 중...', '#95a5a6', 10);
+    }
+  }
+
+  // 충전 중에는 행동 불가
+  if ((char.hpRefillTimer || 0) > 0 || (char.mpRefillTimer || 0) > 0) return;
+
+  // HP 포션 자동 사용 (HP 50% 이하)
+  if ((char.potionHpCd || 0) <= 0 && char.currentHp < stats.maxHp * 0.5) {
+    const pot = char.equippedHpPotion;
+    if (pot && pot.id && (pot.count || 0) > 0) {
+      const p = POTIONS[pot.id];
+      if (p) {
+        char.currentHp = Math.min(stats.maxHp, char.currentHp + p.restoreAmt);
+        pot.count--;
+        char.potionHpCd = 3.0;
+        spawnRaidFT(char.x, char.y - 50, `HP +${p.restoreAmt}`, '#2ecc71', 12);
+      }
+    }
+  }
+
+  // MP 포션 자동 사용 (MP 30% 이하)
+  if ((char.potionMpCd || 0) <= 0 && (char.currentMp || 0) < maxMp * 0.3) {
+    const pot = char.equippedMpPotion;
+    if (pot && pot.id && (pot.count || 0) > 0) {
+      const p = POTIONS[pot.id];
+      if (p) {
+        char.currentMp = Math.min(maxMp, (char.currentMp || 0) + p.restoreAmt);
+        pot.count--;
+        char.potionMpCd = 3.0;
+        spawnRaidFT(char.x, char.y - 62, `MP +${p.restoreAmt}`, '#3498db', 12);
+      }
+    }
+  }
+
   // 버프 타이머
   if (char.activeBuffs) {
     for (const key of Object.keys(char.activeBuffs)) {
@@ -358,7 +468,55 @@ function updateRaidCharacter(char, dt, rf) {
     }
   }
 
+  // 세비지 블로우 연속 타격
+  if ((char.savageHitsLeft || 0) > 0) {
+    char.savageHitTimer = (char.savageHitTimer || 0) - dt;
+    if (char.savageHitTimer <= 0) {
+      char.savageHitTimer = char.savageHitDelay || 0.2;
+      const sv = findRaidTarget(char, rf);
+      if (sv) {
+        const dmgType = CLASSES[char.classId]?.damageType || 'physical';
+        const svDef   = sv.isBoss ? (dmgType === 'magical' ? ZAKUM.magicDef : ZAKUM.physDef) : 0;
+        const svDmg   = Math.max(1, (char.savageHitDmg || 0) - svDef);
+        sv.target.hp -= svDmg; sv.target.hitAnim = 0.2;
+        logRaidDamage(rf, char.id, svDmg);
+        spawnRaidFT(sv.target.x, sv.target.y - 24, `${svDmg}`, '#5b9bd5', 13);
+        if (sv.target.hp <= 0) {
+          if (sv.isBoss) { rf.boss.alive = false; finishRaid(rf); }
+          else sv.target.alive = false;
+        }
+      }
+      char.savageHitsLeft = Math.max(0, (char.savageHitsLeft || 1) - 1);
+    }
+  }
+
+  // 피어싱 충전 중: 충전 완료 후 타겟 등장 시 발사, 그 사이 행동 금지
+  if (char.charging) {
+    char.chargeTimer = Math.max(0, (char.chargeTimer || 0) - dt);
+    if (char.chargeTimer <= 0) {
+      const pt = findRaidTarget(char, rf);
+      if (pt) {
+        const dmgType = CLASSES[char.classId]?.damageType || 'physical';
+        const mDef    = pt.isBoss ? (dmgType === 'magical' ? ZAKUM.magicDef : ZAKUM.physDef) : 0;
+        const cDmg    = Math.max(1, Math.floor(stats.atk * (char.chargeDmgMult || 15)) - mDef);
+        pt.target.hp -= cDmg; pt.target.hitAnim = 0.4;
+        logRaidDamage(rf, char.id, cDmg);
+        spawnRaidFT(pt.target.x, pt.target.y - 40, `${cDmg}!`, '#e2b96f', 20);
+        spawnRaidFT(char.x, char.y - 44, '피어싱!', '#e2b96f', 14);
+        if (pt.target.hp <= 0) {
+          if (pt.isBoss) { rf.boss.alive = false; finishRaid(rf); }
+          else pt.target.alive = false;
+        }
+        char.charging = false;
+      }
+      // 타겟 없으면 충전 상태 유지 (chargeTimer = 0 고정, 타겟 등장 대기)
+    }
+    return;
+  }
+
+  // 스킬 쿨타임은 항상 감소, 공격 스킬은 쿨 차는 즉시 발동
   char.skillAnim = Math.max(0, (char.skillAnim || 0) - dt);
+  if ((char.raidSkillSeal || 0) <= 0) useRaidSkills(char, dt, stats, rf);
 
   const t = findRaidTarget(char, rf);
   if (!t) return;
@@ -379,7 +537,7 @@ function updateRaidCharacter(char, dt, rf) {
     if (char.attackTimer <= 0) {
       char.attackTimer = atkInterval;
       const base      = CLASSES[char.classId]?.parent || char.classId;
-      const rogueThrow = (char.classId === 'rogue' || base === 'rogue') && !!char.equipment?.throwable;
+      const rogueThrow = (char.classId === 'rogue' || (base === 'rogue' && char.classId !== 'thief')) && !!char.equipment?.throwable;
       const hasTriple  = rogueThrow && char.skills?.includes('triple_throw');
       if (hasTriple) {
         const tMult = (1/3) * (SKILL_LEVEL_MULTS[char.skillLevels?.['triple_throw'] || 1] ?? 1);
@@ -395,8 +553,6 @@ function updateRaidCharacter(char, dt, rf) {
       }
     }
   }
-
-  if ((char.raidSkillSeal || 0) <= 0) useRaidSkills(char, dt, stats, rf);
 }
 
 function dealRaidDamage(char, targetInfo, stats, dmgMult, rf) {
@@ -462,12 +618,21 @@ function raidTakeDamage(char, rawDmg) {
   char.hitAnim   = 0.2;
   spawnRaidFT(char.x, char.y - 30, `-${actual}`, '#e74c3c', 13);
   if (char.currentHp <= 0) {
-    char.isDead = true; char.respawnTimer = CHARACTER_RESPAWN_TIME;
+    char.isDead       = true;
+    char.raidKilled   = true;
+    char.raidDeathTimer = 1.5;
     if (char.shadowActive) {
       if (!char.skillTimers) char.skillTimers = {};
       char.skillTimers['shadow_partner'] = SKILLS['shadow_partner']?.cooldown ?? 1.5;
     }
     char.shadowActive = false; char.shadowTimer = 0;
+    // 사망 경험치 패널티 (-5%, 현재 레벨 0% 미만 불가)
+    const expLoss = Math.floor(expRequired(char.level) * 0.05);
+    if (expLoss > 0) {
+      char.exp = Math.max(0, char.exp - expLoss);
+      spawnRaidFT(char.x, char.y - 58, `EXP -${expLoss}`, '#f39c12', 12);
+    }
+    spawnRaidFT(char.x, char.y - 44, '전사!', '#e74c3c', 16);
   }
 }
 
@@ -483,6 +648,7 @@ function spawnRaidFT(x, y, text, color, size) {
 function useRaidSkills(char, dt, stats, rf) {
   if (!char.skills?.length) return;
   if ((char.raidSkillSeal || 0) > 0) return;
+  if (char.charging) return;
   if (!char.skillTimers) char.skillTimers = {};
   for (const skillId of char.skills) {
     const skill = SKILLS[skillId];
@@ -492,13 +658,20 @@ function useRaidSkills(char, dt, stats, rf) {
     const cdMult = (char.activeBuffs?.cd?.timer > 0) ? (char.activeBuffs.cd.mult || 1) : 1;
     char.skillTimers[skillId] -= dt * cdMult;
     if (char.skillTimers[skillId] > 0) continue;
+
+    // MP 부족 시 스킬 사용 불가
+    const mpCost = skill.mpCost || 0;
+    if (mpCost > 0 && (char.currentMp || 0) < mpCost) continue;
+
     if (executeRaidSkill(char, skillId, skill, stats, rf)) {
+      if (mpCost > 0) char.currentMp = Math.max(0, (char.currentMp || 0) - mpCost);
       if (skill.targeting === 'shadow') {
         char.skillTimers[skillId] = 9999;
       } else {
-        const sLv   = char.skillLevels?.[skillId] || 1;
+        const sLv     = char.skillLevels?.[skillId] || 1;
         const cdScale = 1 + (sLv - 1) * 0.06;
-        char.skillTimers[skillId] = skill.cooldown / cdScale;
+        const overshoot = Math.max(char.skillTimers[skillId], -dt);
+        char.skillTimers[skillId] = skill.cooldown / cdScale + overshoot;
       }
       char.skillAnim = 0.5;
     }
@@ -616,6 +789,58 @@ function executeRaidSkill(char, skillId, skill, stats, rf) {
       spawnRaidFT(t.target.x, t.target.y - 24, `${d}`, '#5b9bd5', 13);
       if (t.target.hp <= 0) { if (t.isBoss) { rf.boss.alive = false; finishRaid(rf); } else t.target.alive = false; }
     }
+    return true;
+  }
+
+  // 포이즌 (불독) → 소환수에 독 설치
+  if (skill.targeting === 'poison_area') {
+    const maxR2   = (skill.poisonRange || 200) ** 2;
+    const targets = rf.minions.filter(m => {
+      if (!m.alive) return false;
+      const dx = m.x - char.x, dy = m.y - char.y;
+      return dx * dx + dy * dy <= maxR2;
+    });
+    if (!targets.length) return false;
+    const pDmg = Math.floor(stats.atk * (skill.dmgMultiplier || 0.5) * sMult * atkBuf);
+    const pDur  = (skill.poisonDuration || 8.0) + (sLv - 1) * 0.5;
+    for (const m of targets) {
+      m.poisoned        = true;
+      m.poisonTimer     = pDur;
+      m.poisonTickTimer = 1.0;
+      m.poisonDmg       = Math.max(m.poisonDmg || 0, pDmg);
+      m.poisonCharId    = char.id;
+      spawnRaidFT(m.x, m.y - 28, '독!', '#9b59b6', 12);
+    }
+    return true;
+  }
+
+  // 세비지 블로우 (시프) → 10연타
+  if (skill.targeting === 'savage_blow') {
+    const t = findRaidTarget(char, rf);
+    if (!t) return false;
+    const hitDmg = Math.floor(stats.atk * (skill.dmgMultiplier || 0.8) * sMult * atkBuf);
+    const mDef   = t.isBoss ? (dmgType === 'magical' ? ZAKUM.magicDef : ZAKUM.physDef) : 0;
+    const d = Math.max(1, hitDmg - mDef);
+    t.target.hp -= d; t.target.hitAnim = 0.2;
+    logRaidDamage(rf, char.id, d);
+    spawnRaidFT(t.target.x, t.target.y - 24, `${d}`, '#5b9bd5', 13);
+    if (t.target.hp <= 0) { if (t.isBoss) { rf.boss.alive = false; finishRaid(rf); } else t.target.alive = false; }
+    char.savageHitDmg   = hitDmg;
+    char.savageHitsLeft = (skill.hits || 10) - 1;
+    char.savageHitDelay = skill.hitDelay || 0.2;
+    char.savageHitTimer = skill.hitDelay || 0.2;
+    return true;
+  }
+
+  // 피어싱 충전 시작 (사수)
+  if (skill.targeting === 'piercing') {
+    if (char.charging) return false;
+    const t = findRaidTarget(char, rf);
+    if (!t) return false;
+    char.charging      = true;
+    char.chargeTimer   = skill.chargeTime || 3.0;
+    char.chargeDmgMult = (skill.dmgMultiplier || 15.0) * sMult;
+    spawnRaidFT(char.x, char.y - 36, '충전 중...', '#e2b96f', 13);
     return true;
   }
 
@@ -774,6 +999,13 @@ function drawRaidMinion(m) {
     ctx.beginPath(); ctx.arc(m.x, m.y, R + 4, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
     ctx.strokeStyle = '#f39c12'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 2]);
     ctx.beginPath(); ctx.arc(m.x, m.y, R + 4, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+  }
+  if (m.poisoned) {
+    const pulse = 0.25 + Math.sin(Date.now() / 300) * 0.10;
+    ctx.globalAlpha = pulse; ctx.fillStyle = '#9b59b6';
+    ctx.beginPath(); ctx.arc(m.x, m.y, R + 5, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.strokeStyle = '#a569bd'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 2]);
+    ctx.beginPath(); ctx.arc(m.x, m.y, R + 5, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
   }
   const bW = 28, bH = 3, ratio = Math.max(0, m.hp / m.maxHp);
   ctx.fillStyle = '#200'; ctx.fillRect(m.x - bW/2, m.y - R - 8, bW, bH);

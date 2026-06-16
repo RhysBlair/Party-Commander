@@ -19,6 +19,7 @@
     <div id="main-area">
       <!-- 좌측: 전투 필드 Canvas + 캐릭터 리스트 패널 -->
       <div id="canvas-wrap">
+        <div id="stage-bar"></div>
         <canvas id="field-canvas" width="640" height="480"></canvas>
         <div id="char-list-panel"></div>
       </div>
@@ -27,12 +28,10 @@
       <div id="ui-panel">
         <div id="tab-bar">
           <button class="tab-btn active" data-tab="characters">캐릭터</button>
-          <button class="tab-btn" data-tab="stats">스탯</button>
           <button class="tab-btn" data-tab="equipment">장비</button>
           <button class="tab-btn" data-tab="shop">상점</button>
           <button class="tab-btn" data-tab="skills">스킬</button>
           <button class="tab-btn" data-tab="pets">펫</button>
-          <button class="tab-btn" data-tab="stage">스테이지</button>
           <button class="tab-btn" data-tab="upgrades">업그레이드</button>
           <button class="tab-btn" data-tab="raid">레이드</button>
         </div>
@@ -40,12 +39,10 @@
           <div id="tab-characters" class="tab-pane active">
             <p id="no-char-msg">캐릭터가 없습니다.</p>
           </div>
-          <div id="tab-stats" class="tab-pane"></div>
           <div id="tab-equipment" class="tab-pane"></div>
           <div id="tab-shop" class="tab-pane"></div>
           <div id="tab-skills" class="tab-pane"></div>
           <div id="tab-pets" class="tab-pane"></div>
-          <div id="tab-stage" class="tab-pane"></div>
           <div id="tab-upgrades" class="tab-pane"></div>
           <div id="tab-raid" class="tab-pane"></div>
         </div>
