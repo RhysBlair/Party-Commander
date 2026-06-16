@@ -119,6 +119,29 @@ function updateCombat(dt) {
           }
         }
       }
+
+      // 끌어당기기 (pullInterval 있는 몬스터)
+      if (md.pullInterval && m.alive && aliveChars.length > 0) {
+        if (m.pullTimer === undefined) m.pullTimer = md.pullInterval * Math.random();
+        m.pullTimer -= dt;
+        if (m.pullTimer <= 0) {
+          m.pullTimer = md.pullInterval;
+          const pullR2    = (md.pullRange || 400) ** 2;
+          const pullForce = md.pullForce || 90;
+          for (const c of aliveChars) {
+            const dx = m.x - c.x, dy = m.y - c.y;
+            const d2 = dx * dx + dy * dy;
+            if (d2 > 0 && d2 <= pullR2) {
+              const dist = Math.sqrt(d2);
+              c.x += (dx / dist) * Math.min(pullForce, dist * 0.8);
+              c.y += (dy / dist) * Math.min(pullForce, dist * 0.8);
+              c.x  = Math.max(24, Math.min(656, c.x));
+              c.y  = Math.max(24, Math.min(456, c.y));
+            }
+          }
+          spawnFloatingText(i, m.x, m.y - 44, '▼ 중력 당김', '#8e44ad', 13);
+        }
+      }
     }
   }
 
@@ -362,6 +385,16 @@ function executeMonsterAttack(m, target, stageData, stageIdx) {
   } else {
     takeDamage(target, dmg, stageIdx);
   }
+
+  // 화상 적용
+  if (md.burnDmg) {
+    target.burned          = true;
+    target.burnDmg         = md.burnDmg;
+    target.burnTimer       = md.burnDuration || 5.0;
+    target.burnTickInterval = md.burnTickInterval || 1.0;
+    target.burnTickTimer   = target.burnTickInterval;
+    spawnFloatingText(stageIdx, target.x, target.y - 46, '화상!', '#e67e22', 12);
+  }
 }
 
 function updateCharacter(char, dt, stage, field) {
@@ -397,6 +430,20 @@ function updateCharacter(char, dt, stage, field) {
 
   // 자연 HP 회복 (초당 1%)
   char.currentHp = Math.min(stats.maxHp, char.currentHp + stats.maxHp * 0.01 * dt);
+
+  // 화상 틱 데미지
+  if (char.burned) {
+    char.burnTimer = (char.burnTimer || 0) - dt;
+    if (char.burnTimer <= 0) {
+      char.burned = false;
+    } else {
+      char.burnTickTimer = (char.burnTickTimer ?? char.burnTickInterval ?? 1.0) - dt;
+      if (char.burnTickTimer <= 0) {
+        char.burnTickTimer = char.burnTickInterval || 1.0;
+        takeDamage(char, char.burnDmg || 0, char.assignedStage);
+      }
+    }
+  }
 
   // 포션 쿨타임 감소
   if ((char.potionHpCd || 0) > 0) char.potionHpCd = Math.max(0, char.potionHpCd - dt);
