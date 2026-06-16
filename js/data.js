@@ -268,9 +268,9 @@ const STAGES = [
                summonInterval: 10.0, summonCount: 3 },
     zombieDef: { name: "좀비", type: "zombie",
                hp: 8000, atk: 0, physDef: 0, magicDef: 0, goldDrop: 200, expDrop: 300,
-               moveSpeed: 200, attackRange: 55, aggroRange: 9999,
+               moveSpeed: 170, attackRange: 55, aggroRange: 9999,
                attackType: "suicide", atkDamageType: "physical",
-               suicideDmg: 7500 },
+               suicideDmg: 3750 },
     spawnCount: 4, killsToAdvance: 60 },
 
   { name: "고대 유적",
