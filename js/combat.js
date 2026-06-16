@@ -170,6 +170,7 @@ function updateCombat(dt) {
               currentHp: stageData.zombieDef.hp, maxHp: stageData.zombieDef.hp,
               alive: true, respawnTimer: 0, hitAnim: 0,
               attackTimer: 0,
+              spawnDelay: 1.0,
               def: stageData.zombieDef,
               noRespawn: true,
             });
@@ -324,6 +325,12 @@ function takeDamage(char, dmg, stageIdx) {
 
 // ── 몬스터 이동 ───────────────────────────────────────────
 function updateMonsterMovement(m, dt, stageData, aliveChars) {
+  // 소환 딜레이 (제자리 대기)
+  if ((m.spawnDelay || 0) > 0) {
+    m.spawnDelay -= dt;
+    return;
+  }
+
   // 빙결 타이머 감소 + 이동 정지
   if (m.frozen) {
     m.frozenTimer = (m.frozenTimer || 0) - dt;
