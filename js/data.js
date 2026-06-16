@@ -233,7 +233,7 @@ const STAGES = [
     miniSlimeDef: { name: "미니슬라임", type: "miniSlime",
                hp: 250, atk: 90, physDef: 4, magicDef: 1, goldDrop: 30, expDrop: 20,
                moveSpeed: 55, attackRange: 45, aggroRange: 320, attackType: "melee", atkDamageType: "physical" },
-    spawnCount: 1, killsToAdvance: 5 },
+    spawnCount: 1, spawnLayout: [[0.75, 0.5]], killsToAdvance: 5 },
 
   { name: "사막",
     monster: { name: "모래 골렘",    hp: 3500,      atk: 72,   physDef: 22,  magicDef: 10,  goldDrop: 700,     expDrop: 560,

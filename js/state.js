@@ -70,7 +70,7 @@ const CHAR_START_POS = [
 function initStageField(stageIdx) {
   const stage = STAGES[stageIdx];
   if (!stage) return;
-  const layout = SPAWN_LAYOUTS[stage.spawnCount] || SPAWN_LAYOUTS[4];
+  const layout = stage.spawnLayout || SPAWN_LAYOUTS[stage.spawnCount] || SPAWN_LAYOUTS[4];
   const w = SPAWN_AREA.x2 - SPAWN_AREA.x1;
   const h = SPAWN_AREA.y2 - SPAWN_AREA.y1;
 
