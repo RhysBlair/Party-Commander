@@ -76,6 +76,8 @@ function updateCombat(dt) {
 
       updateMonsterMovement(m, dt, stageData, aliveChars);
 
+      const md = m.def || stageData.monster;
+
       // 자폭 몬스터: 범위 내 진입 즉시 폭발 (attackTimer 무시)
       if (md.attackType === 'suicide' && aliveChars.length > 0) {
         let nearestChar = null, nearD2 = Infinity;
@@ -108,7 +110,6 @@ function updateCombat(dt) {
       }
 
       // 범위 공격 (aoeAtk 있는 몬스터만)
-      const md = m.def || stageData.monster;
       if (md.aoeAtk && !m.frozen && aliveChars.length > 0) {
         if (m.aoeTimer === undefined) m.aoeTimer = md.aoeInterval * (0.3 + Math.random() * 0.7);
         m.aoeTimer -= dt;
