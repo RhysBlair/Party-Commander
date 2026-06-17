@@ -759,7 +759,8 @@ function skillEffectDesc(id, s, level) {
       if (s.buffCdMult)  effects.push(`스킬 쿨타임 ${Math.round(100 / s.buffCdMult)}%`);
       if (s.buffAtk) {
         const atkMult = s.buffAtk + (level - 1) * (s.buffAtkPerLv || 0);
-        effects.push(`마법공격력 +${Math.round((atkMult - 1) * 100)}%`);
+        const atkLabel = s.buffAtkLabel || '공격력';
+        effects.push(`${atkLabel} +${Math.round((atkMult - 1) * 100)}%`);
       }
       if (s.buffCritDmg) {
         const critBonus = s.buffCritDmg + (level - 1) * (s.buffCritDmgPerLv || 0);

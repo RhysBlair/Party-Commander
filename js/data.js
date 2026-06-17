@@ -139,7 +139,8 @@ const SKILLS = {
                     buffHp: 1.2, buffHpPerLv: 0.2, buffDuration: 60.0, cost: 500, mpCost: 50 },
   rage:           { name: "분노",            classId: "knight",   cooldown: 60.0,
                     targeting: "party_buff",
-                    buffAtk: 2.0, buffDuration: 30.0, cost: 500, mpCost: 50 },
+                    buffAtk: 2.0, buffAtkPerLv: 0.2222, buffAtkLabel: "물리공격력",
+                    buffDuration: 30.0, cost: 500, mpCost: 50 },
 
   // ── 마법사 ────────────────────────────────────────────────
   mage_blast:     { name: "마력 폭발",      classId: "mage",    cooldown: 4.0,
@@ -185,12 +186,12 @@ const SKILLS = {
 
   // ── 2차 마법사 (썬콜) ─────────────────────────────────────
   meditation_tl:  { name: "메디테이션",      classId: "wizard_tl", cooldown: 60.0,
-                    targeting: "party_buff", buffAtk: 2.0, buffAtkPerLv: 0.1111,
+                    targeting: "party_buff", buffAtk: 2.0, buffAtkPerLv: 0.1111, buffAtkLabel: "마법공격력",
                     buffDuration: 30.0, cost: 500, mpCost: 30 },
 
   // ── 2차 마법사 (불독) ─────────────────────────────────────
   meditation_fp:  { name: "메디테이션",      classId: "wizard_fp", cooldown: 60.0,
-                    targeting: "party_buff", buffAtk: 2.0, buffAtkPerLv: 0.1111,
+                    targeting: "party_buff", buffAtk: 2.0, buffAtkPerLv: 0.1111, buffAtkLabel: "마법공격력",
                     buffDuration: 30.0, cost: 500, mpCost: 30 },
   poison_field:   { name: "포이즌",          classId: "wizard_fp", cooldown: 10.0,
                     targeting: "poison_area", poisonRange: 220, dmgMultiplier: 25.0,
@@ -281,21 +282,21 @@ const STAGES = [
     spawnCount: 5, killsToAdvance: 50 },
 
   { name: "화산",
-    monster: { name: "불꽃 도마뱀",  hp: 12000,     atk: 160,  physDef: 42,  magicDef: 20,  goldDrop: 2500,    expDrop: 2000,
+    monster: { name: "불꽃 도마뱀",  hp: 12000,     atk: 160,  physDef: 42,  magicDef: 20,  goldDrop: 2500,    expDrop: 2300,
                moveSpeed: 50,  attackRange: 60,  aggroRange: 380, attackType: "melee",  atkDamageType: "physical",
                aoeAtk: 120,  aoeRange: 120, aoeInterval: 5.0, aoeDamageType: "physical",
                burnDmg: 20, burnDuration: 5.0, burnTickInterval: 0.2 },
     spawnCount: 6, killsToAdvance: 60 },
 
   { name: "죽은자의 숲",
-    monster: { name: "쿨리좀비",     hp: 50000,     atk: 280,  physDef: 234, magicDef: 32,  goldDrop: 9000,    expDrop: 7200,
+    monster: { name: "쿨리좀비",     hp: 50000,     atk: 280,  physDef: 234, magicDef: 32,  goldDrop: 9000,    expDrop: 8280,
                moveSpeed: 55,  attackRange: 65,  aggroRange: 420, attackType: "melee",  atkDamageType: "physical",
                aoeAtk: 200,  aoeRange: 110, aoeInterval: 4.5, aoeDamageType: "physical",
                undead: true },
     spawnCount: 5, killsToAdvance: 70 },
 
   { name: "지하묘지",
-    monster: { name: "네크로맨서",  hp: 160000,    atk: 380,  physDef: 8,   magicDef: 110, goldDrop: 32000,   expDrop: 26000,
+    monster: { name: "네크로맨서",  hp: 160000,    atk: 380,  physDef: 8,   magicDef: 110, goldDrop: 32000,   expDrop: 29900,
                moveSpeed: 40,  attackRange: 270, aggroRange: 460, attackType: "ranged", atkDamageType: "magical",
                projSpeed: 220, projColor: "#8e44ad",
                aoeAtk: 280,  aoeRange: 160, aoeInterval: 6.0, aoeDamageType: "magical",
@@ -315,11 +316,11 @@ const STAGES = [
     spawnCount: 3, killsToAdvance: 50 },
 
   { name: "설산",
-    monster: { name: "설녀",         hp: 1200000,   atk: 136,  physDef: 60,  magicDef: 180, goldDrop: 380000,  expDrop: 300000,
+    monster: { name: "설녀",         hp: 1200000,   atk: 272,  physDef: 60,  magicDef: 180, goldDrop: 380000,  expDrop: 300000,
                moveSpeed: 50,  attackRange: 320, aggroRange: 520, attackType: "ranged", atkDamageType: "magical",
                projSpeed: 260, projColor: "#a8d8f0",
                freezeOnHit: true, freezeDuration: 3.0,
-               aoeAtk: 100,  aoeRange: 160, aoeInterval: 5.0, aoeDamageType: "magical" },
+               aoeAtk: 200,  aoeRange: 160, aoeInterval: 5.0, aoeDamageType: "magical" },
     spawnCount: 4, killsToAdvance: 65 },
 
   { name: "신성 신전",

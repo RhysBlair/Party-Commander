@@ -212,8 +212,12 @@ x, y, attackTimer, skillTimers, shadowActive, shadowTimer, currentHp, currentMp,
 - 인벤토리 일괄분해 버튼 추가: 노멀/레어/에픽 각각 (`tryDecomposeByGrade`), 스테이지 4 이상 해금
 - 에픽 석궁 `epic_crossbow` 추가: ATK 30, 크리+20%, 크리피해+1.0배, Lv30 궁수계열, minDropStage 7
 - 장비 스탯 표기에 `bonusCritRate`(크리+N%), `bonusCritDmg`(크리피해+N배) 추가 (`equipStatText`)
-- canEquipItem 방어적 코딩: `e.req || {}` 처리, 시프(thief) throwable 착용 불가 조건 명시적 추가
+- canEquipItem 방어적 코딩: `e.req || {}` 처리, 시프(thief) throwable/아대 착용 불가 조건 명시적 추가
 - 불꽃 도마뱀 화상 중첩 최대 3개 제한: `burnStack` 카운터 도입, 표시 "화상!(N/3)", 만료·부활 시 초기화
+- 스테이지 4~6 경험치 15% 상향: 화산 2000→2300, 죽은자의숲 7200→8280, 지하묘지 26000→29900
+- 설녀 데미지 2배: atk 136→272, aoeAtk 100→200
+- 분노(rage) 스킬: 물리공격력 Lv1=+100%(2배)~Lv10=+300%(4배), buffAtkPerLv=0.2222 추가, buffAtkLabel 도입
+- 메디테이션/분노 스킬 표기 분리: buffAtkLabel='물리공격력'/'마법공격력', skillEffectDesc에서 라벨 사용
 - 제작탭 결정 업그레이드: 은은한결정 3개→빛나는결정 1개, 빛나는결정 5개→찬란한결정 1개 (`tryUpgradeCrystal`)
   - Lucky(10%,×2) / Big Lucky(1%,×10) 보너스, 결과 플로팅 텍스트 (`showCrystalFloat`)
   - 버그 수정: 업그레이드 버튼 onclick에서 `renderCraftTab()` → `setTimeout(renderCraftTab,0)` 로 변경, opacity:1 초기값 명시
