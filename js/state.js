@@ -303,6 +303,11 @@ function loadGame() {
     if (!gameState.upgrades) gameState.upgrades = {};
     if (!gameState.crystals) gameState.crystals = { dim: 0, bright: 0, radiant: 0 };
 
+    // 구형 펫 ID(pet_basic, pet_magnet 등) 제거
+    for (const char of gameState.characters) {
+      if (char.pet && !PETS[char.pet]) char.pet = null;
+    }
+
     gameState.viewStage = legacyStage;
 
     return true;

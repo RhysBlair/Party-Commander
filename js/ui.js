@@ -892,7 +892,7 @@ function renderPetTab() {
       <div class="char-card">
         <h3 style="color:${CLASS_COLORS[char.classId]||'#aaa'};margin-bottom:8px">
           ${char.nickname || '???'} <span style="color:#888;font-size:12px;font-weight:normal">(${charClassName(char.classId)})</span> Lv.${char.level}
-          ${char.pet ? `<span style="font-size:11px;font-weight:normal;color:#4caf50"> ─ ${PETS[char.pet].name} 장착 중</span>` : ''}
+          ${char.pet && PETS[char.pet] ? `<span style="font-size:11px;font-weight:normal;color:#4caf50"> ─ ${PETS[char.pet].name} 장착 중</span>` : ''}
         </h3>
         ${petOptions}
       </div>`;
@@ -1002,30 +1002,39 @@ function renderCraftTab() {
   const crystals = gameState.crystals || { dim: 0, bright: 0, radiant: 0 };
 
   const crystalRow = Object.entries(CRYSTAL_NAMES).map(([key, name]) =>
-    `<span style="color:${CRYSTAL_COLORS[key]};margin-right:12px">${name} <strong>${crystals[key] || 0}</strong>개</span>`
+    `<span style="color:${CRYSTAL_COLORS[key]};margin-right:16px">${name} <strong>${crystals[key] || 0}</strong>개</span>`
   ).join('');
+
+  // 무기/표창류는 5배 비용
+  function craftCost(e) {
+    const base = CRAFT_COSTS[e.grade] || 5;
+    return (e.type === 'weapon' || e.type === 'throwable') ? base * 5 : base;
+  }
 
   const grades = ['노멀', '레어', '에픽'];
   const craftHtml = grades.map(grade => {
     const key  = CRYSTAL_KEYS[grade];
-    const cost = CRAFT_COSTS[grade];
     const col  = GRADE_COLORS[grade] || '#aaa';
     const have = crystals[key] || 0;
 
+    // 유니크·무료 아이템 제외, 그 외 전부 포함
     const items = Object.entries(EQUIPMENT).filter(([id, e]) =>
-      e.grade === grade && e.cost > 0 && !e.isAedae && e.type !== 'throwable' && CRYSTAL_KEYS[e.grade]
+      e.grade === grade && e.cost > 0 && CRYSTAL_KEYS[e.grade]
     );
     if (!items.length) return '';
 
     const rows = items.map(([id, e]) => {
+      const cost = craftCost(e);
       const canCraft = have >= cost;
+      const typeTag = e.type === 'weapon' || e.type === 'throwable'
+        ? `<span style="font-size:10px;color:#c9a060;margin-left:4px">[무기]</span>` : '';
       return `
         <div class="craft-item">
-          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
-            <span style="color:${col}">${e.name}</span>
+          <div style="display:flex;align-items:center;gap:4px;flex:1;min-width:0">
+            <span style="color:${col}">${e.name}</span>${typeTag}
             <span class="equip-stat-text">${equipStatText(e, 0)}</span>
           </div>
-          <button class="small-btn ${canCraft ? '' : 'disabled'}" style="flex-shrink:0"
+          <button class="small-btn ${canCraft ? '' : 'disabled'}" style="flex-shrink:0;font-size:11px"
                   onclick="tryCraftItem('${id}');renderCraftTab();">
             ${CRYSTAL_NAMES[key]} ${cost}개
           </button>
@@ -1034,7 +1043,7 @@ function renderCraftTab() {
 
     return `
       <div class="eq-section-title" style="color:${col};margin-top:10px">
-        ${grade} — ${CRYSTAL_NAMES[key]} ${cost}개 필요
+        ${grade}
         <span style="font-size:10px;color:#666;font-weight:normal;margin-left:6px">보유 ${have}개</span>
       </div>
       ${rows}`;

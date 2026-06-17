@@ -305,8 +305,9 @@ function tryCraftItem(equipId) {
   const e = EQUIPMENT[equipId];
   if (!e) return;
   const crystalKey = CRYSTAL_KEYS[e.grade];
-  const cost = CRAFT_COSTS[e.grade];
-  if (!crystalKey || !cost) return;
+  const baseCost = CRAFT_COSTS[e.grade];
+  if (!crystalKey || !baseCost) return;
+  const cost = (e.type === 'weapon' || e.type === 'throwable') ? baseCost * 5 : baseCost;
   if ((gameState.crystals[crystalKey] || 0) < cost) return;
   gameState.crystals[crystalKey] -= cost;
   gameState.equipmentInventory.push({ id: equipId, uid: gameState.nextItemUid++, enhance: 0 });
