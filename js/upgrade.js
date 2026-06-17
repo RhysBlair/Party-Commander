@@ -66,6 +66,18 @@ function tryAdvanceJob2(charId, classId) {
 
   char.classId = classId;
 
+  // 어쌔신 전직: rogue용 단검 해제 (어쌔신은 표창 전문, 단검 착용 불가)
+  if (classId === 'assassin') {
+    const w = char.equipment.weapon;
+    if (w && w.uid !== 0) {
+      const eDef = EQUIPMENT[w.id];
+      if (eDef && eDef.weaponType === 'dagger' && eDef.req && eDef.req.classId === 'rogue') {
+        gameState.equipmentInventory.push(w);
+        char.equipment.weapon = null;
+      }
+    }
+  }
+
   // 시프 전직: 표창·아대 해제, 단검 아닌 무기 해제, weapon2 슬롯 확보
   if (classId === 'thief') {
     if (char.equipment.throwable) { gameState.equipmentInventory.push(char.equipment.throwable); char.equipment.throwable = null; }
@@ -97,6 +109,8 @@ function canEquipItem(char, itemOrId) {
   if (e.isAedae && char.classId === 'thief') return false;
   // 시프는 단검(weaponType:'dagger')만 착용 가능
   if (char.classId === 'thief' && e.type === 'weapon' && !e.isAedae && e.weaponType !== 'dagger') return false;
+  // 어쌔신은 rogue용 단검 착용 불가 (표창 전문 직업, 시프용 단검은 이미 req.classId='thief'로 막힘)
+  if (char.classId === 'assassin' && e.weaponType === 'dagger' && e.req.classId === 'rogue') return false;
   return true;
 }
 

@@ -205,6 +205,11 @@ x, y, attackTimer, skillTimers, shadowActive, shadowTimer, currentHp, currentMp,
 ## 개발 이력 (최신순)
 
 ### 세션 9 (현재)
+- 인벤토리 장비에 착용 가능 직업 표시: `getEquipClassLabel(e)` 함수 추가, 아이템 이름 옆에 [전사계열] 형태로 표시
+  - 전사계열/마법사계열/궁수계열/시프/도적,어쌔신/도적,시프/도적계열/전 직업 구분
+  - 아대(isAedae)/표창(throwable) → "도적, 어쌔신"; rogue용 단검 → "도적, 시프"; thief → "시프"
+- 어쌔신 전직 시 rogue용 단검 자동 해제 (tryAdvanceJob2)
+- 어쌔신은 rogue용 단검 착용 불가 조건 추가 (canEquipItem)
 - 정복완료 표시: maxStageReached > stageIdx 이면 HUD/스테이지탭에 "정복완료", 스테이지 바 점에 ✓ 표시
 - 펫 보유중 시스템: char.ownedPets[] 추가, 구매 후 다른 펫 장착 시 "보유중 (장착)" 무료 전환, 재구매 불가
 - 장비탭 판매/분해 버튼: 아이템 오른쪽에 나란히 배치 (justify-content:space-between)

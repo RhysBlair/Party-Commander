@@ -422,6 +422,22 @@ function enhanceBadge(enhance) {
   return `<span style="color:${color};font-weight:bold;font-size:11px"> +${enhance}</span>`;
 }
 
+function getEquipClassLabel(e) {
+  const cls = e.req && e.req.classId;
+  if (!cls) return '전 직업';
+  if (cls === 'warrior') return '전사계열';
+  if (cls === 'mage')    return '마법사계열';
+  if (cls === 'archer')  return '궁수계열';
+  if (cls === 'thief')   return '시프';
+  if (cls === 'rogue') {
+    if (e.isAedae)                 return '도적, 어쌔신';
+    if (e.type === 'throwable')    return '도적, 어쌔신';
+    if (e.weaponType === 'dagger') return '도적, 시프';
+    return '도적계열';
+  }
+  return cls;
+}
+
 function renderEquipmentTab() {
   const el = document.getElementById('tab-equipment');
   if (gameState.characters.length === 0) {
@@ -529,6 +545,7 @@ function renderEquipmentTab() {
             <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
               <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
                 <span style="color:${col}">${e.name}${enhanceBadge(item.enhance)}</span>
+                <span style="color:#666;font-size:10px">[${getEquipClassLabel(e)}]</span>
                 <span class="equip-stat-text">${equipStatText(e, item.enhance)}</span>
               </div>
               ${enhBtn ? `<div>${enhBtn}</div>` : ''}
