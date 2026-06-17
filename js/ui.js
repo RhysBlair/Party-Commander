@@ -1120,7 +1120,7 @@ function renderCraftTab() {
           <span style="color:${CRYSTAL_COLORS.bright}">${CRYSTAL_NAMES.bright} 1개</span>
         </span>
         <button class="small-btn ${canDimUp ? '' : 'disabled'}" style="flex-shrink:0"
-                onclick="showCrystalFloat(this,tryUpgradeCrystal('dim','bright',${dimToBright}));renderCraftTab();">
+                onclick="showCrystalFloat(this,tryUpgradeCrystal('dim','bright',${dimToBright}));setTimeout(renderCraftTab,0);">
           업그레이드
         </button>
       </div>
@@ -1131,7 +1131,7 @@ function renderCraftTab() {
           <span style="color:${CRYSTAL_COLORS.radiant}">${CRYSTAL_NAMES.radiant} 1개</span>
         </span>
         <button class="small-btn ${canBriUp ? '' : 'disabled'}" style="flex-shrink:0"
-                onclick="showCrystalFloat(this,tryUpgradeCrystal('bright','radiant',${brightToRad}));renderCraftTab();">
+                onclick="showCrystalFloat(this,tryUpgradeCrystal('bright','radiant',${brightToRad}));setTimeout(renderCraftTab,0);">
           업그레이드
         </button>
       </div>
@@ -1359,6 +1359,7 @@ function showCrystalFloat(btn, result) {
     `top:${Math.round(rect.top - 4)}px`,
     'transform:translateX(-50%)',
     `color:${color}`,
+    'opacity:1',
     'font-size:14px', 'font-weight:bold',
     'pointer-events:none', 'z-index:9999',
     'text-shadow:0 1px 8px #000',
