@@ -14,6 +14,7 @@ function init() {
   }
 
   initField(); // 몬스터 스폰 + 캐릭터 위치 초기화
+  checkTabUnlocks(); // 세이브 로드 후 현재 상태 기반 탭 재확인
   startLoop();
   console.log('[main] 게임 루프 시작');
 
