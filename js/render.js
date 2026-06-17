@@ -479,64 +479,108 @@ function drawPets(viewIdx) {
   for (const char of gameState.characters) {
     if (char.assignedStage !== viewIdx || !char.pet) continue;
 
+    const isSlime  = char.pet === 'mini_slime';
     const isMagnet = char.pet === 'pet_magnet';
-    const bodyCol  = isMagnet ? '#5b9bd5' : '#f39c12';
-    const earCol   = isMagnet ? '#3a78b5' : '#d4820f';
 
     let px, py;
-    if (isMagnet) {
-      px = char.x - char.facing * 25;
-      py = char.y + 10;
-    } else if (char.petX !== undefined) {
-      px = char.petX;
-      py = char.petY;
+    if (char.petX !== undefined) {
+      px = char.petX; py = char.petY;
     } else {
-      px = char.x - char.facing * 25;
-      py = char.y + 10;
+      px = char.x - (char.facing || 1) * 25; py = char.y + 10;
     }
 
-    // 귀
-    ctx.fillStyle = earCol;
-    ctx.beginPath();
-    ctx.ellipse(px - 5, py - 11, 3, 5, -0.3, 0, Math.PI * 2);
-    ctx.ellipse(px + 5, py - 11, 3, 5,  0.3, 0, Math.PI * 2);
-    ctx.fill();
+    if (isSlime) {
+      // ── 미니슬라임: 초록 물방울 ──
+      const now  = Date.now();
+      const bob  = Math.sin(now / 350) * 2; // 위아래 움직임
+      const sy   = py + bob;
+      const rW   = 11, rH = 10 + Math.abs(Math.sin(now / 350)) * 2;
 
-    // 몸통
-    ctx.fillStyle = bodyCol;
-    ctx.beginPath();
-    ctx.arc(px, py, 9, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // 눈
-    ctx.fillStyle = '#222';
-    ctx.beginPath();
-    ctx.arc(px - 3, py - 1, 1.8, 0, Math.PI * 2);
-    ctx.arc(px + 3, py - 1, 1.8, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(px - 2.3, py - 1.5, 0.7, 0, Math.PI * 2);
-    ctx.arc(px + 3.7, py - 1.5, 0.7, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 코
-    ctx.fillStyle = isMagnet ? '#a0c8f0' : '#e8a87c';
-    ctx.beginPath();
-    ctx.arc(px, py + 2, 1.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 자석 펫: 수집 범위 광채
-    if (isMagnet) {
-      ctx.globalAlpha = 0.18;
-      ctx.fillStyle = '#5b9bd5';
+      // 몸통 (타원형 초록 슬라임)
+      ctx.fillStyle   = '#3cb371';
+      ctx.strokeStyle = '#2a8a50';
+      ctx.lineWidth   = 1.5;
       ctx.beginPath();
-      ctx.arc(px, py, 22, 0, Math.PI * 2);
+      ctx.ellipse(px, sy, rW, rH, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.globalAlpha = 1;
+      ctx.stroke();
+
+      // 광택
+      ctx.fillStyle   = 'rgba(255,255,255,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(px - 3, sy - 4, 4, 3, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 눈
+      ctx.fillStyle = '#111';
+      ctx.beginPath();
+      ctx.arc(px - 3.5, sy - 2, 2.2, 0, Math.PI * 2);
+      ctx.arc(px + 3.5, sy - 2, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(px - 2.8, sy - 2.6, 0.8, 0, Math.PI * 2);
+      ctx.arc(px + 4.2, sy - 2.6, 0.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 아이템 목적지로 이동 중일 때 흔적 효과
+      const hasTarget = gameState.drops.some(d => d.stageIdx === char.assignedStage);
+      if (hasTarget) {
+        ctx.globalAlpha = 0.25 + Math.sin(now / 200) * 0.1;
+        ctx.fillStyle   = '#3cb371';
+        ctx.beginPath();
+        ctx.ellipse(px, sy + rH - 2, rW * 0.6, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+    } else {
+      // ── 일반 펫: 토끼/자석 ──
+      const bodyCol = isMagnet ? '#5b9bd5' : '#f39c12';
+      const earCol  = isMagnet ? '#3a78b5' : '#d4820f';
+
+      // 귀
+      ctx.fillStyle = earCol;
+      ctx.beginPath();
+      ctx.ellipse(px - 5, py - 11, 3, 5, -0.3, 0, Math.PI * 2);
+      ctx.ellipse(px + 5, py - 11, 3, 5,  0.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 몸통
+      ctx.fillStyle = bodyCol;
+      ctx.beginPath();
+      ctx.arc(px, py, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // 눈
+      ctx.fillStyle = '#222';
+      ctx.beginPath();
+      ctx.arc(px - 3, py - 1, 1.8, 0, Math.PI * 2);
+      ctx.arc(px + 3, py - 1, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(px - 2.3, py - 1.5, 0.7, 0, Math.PI * 2);
+      ctx.arc(px + 3.7, py - 1.5, 0.7, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 코
+      ctx.fillStyle = isMagnet ? '#a0c8f0' : '#e8a87c';
+      ctx.beginPath();
+      ctx.arc(px, py + 2, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (isMagnet) {
+        ctx.globalAlpha = 0.18;
+        ctx.fillStyle = '#5b9bd5';
+        ctx.beginPath();
+        ctx.arc(px, py, 22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
     }
   }
 }
@@ -604,26 +648,39 @@ function drawPoisonFields(viewIdx) {
 }
 
 function drawDrops(viewIdx) {
+  const now = Date.now();
   for (const d of gameState.drops) {
     if (d.stageIdx !== viewIdx) continue;
     const e    = EQUIPMENT[d.equipId];
     const col  = e ? (GRADE_COLORS[e.grade] || '#aaa') : '#aaa';
     const fade = Math.min(1, d.timer / 5);
+    // 위아래 둥실 효과
+    const bob  = Math.sin(now / 400 + d.uid) * 3;
 
     ctx.globalAlpha = fade;
+
+    // 외곽 발광
     ctx.shadowColor = col;
-    ctx.shadowBlur  = 10;
+    ctx.shadowBlur  = 16;
     ctx.fillStyle   = col;
     ctx.beginPath();
-    ctx.arc(d.x, d.y, 7, 0, Math.PI * 2);
+    ctx.arc(d.x, d.y + bob, 9, 0, Math.PI * 2);
     ctx.fill();
-    ctx.shadowBlur = 0;
+    ctx.shadowBlur  = 0;
 
-    ctx.fillStyle = '#111';
-    ctx.font = 'bold 8px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(e ? e.name[0] : '?', d.x, d.y + 3);
-    ctx.textAlign = 'left';
+    // 흰 테두리
+    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+    ctx.lineWidth   = 1.5;
+    ctx.beginPath();
+    ctx.arc(d.x, d.y + bob, 9, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 이름 첫 글자
+    ctx.fillStyle   = '#fff';
+    ctx.font        = 'bold 9px sans-serif';
+    ctx.textAlign   = 'center';
+    ctx.fillText(e ? e.name[0] : '?', d.x, d.y + bob + 3);
+    ctx.textAlign   = 'left';
     ctx.globalAlpha = 1;
   }
 }

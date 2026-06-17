@@ -81,7 +81,7 @@ const EQUIPMENT = {
   // ── 단검 (시프 전용) ────────────────────────────────────
   iron_dagger:     { name: "철제단검",    type: "weapon", grade: "노멀", atk: 18, bonusLUK: 5,               weaponType: "dagger", req: { level: 10, classId: "thief" }, cost: 500,  minDropStage: 2 },
   dark_dagger:     { name: "어둠단검",    type: "weapon", grade: "에픽", atk: 55, bonusLUK: 18, bonusSTR: 5,  weaponType: "dagger", req: { level: 20, classId: "thief" }, cost: 6000, minDropStage: 4 },
-  reaper_dagger:   { name: "사신단검",    type: "weapon", grade: "유니크", atk: 95, bonusLUK: 35, bonusSTR: 12, weaponType: "dagger", req: { level: 30, classId: "thief" }, cost: 18000, minDropStage: 7 },
+  reaper_dagger:   { name: "사신단검",    type: "weapon", grade: "에픽",   atk: 95, bonusLUK: 35, bonusSTR: 12, weaponType: "dagger", req: { level: 30, classId: "thief" }, cost: 18000, minDropStage: 7 },
 
   // ── 방어구 ──────────────────────────────────────────────
   leather_armor:   { name: "가죽 갑옷",      type: "armor",     grade: "노멀", physDef: 5,                   req: { level: 5 },                     cost: 200,  minDropStage: 0 },
@@ -109,7 +109,7 @@ const EQUIPMENT = {
   moon_subweapon:    { name: "월식아대",    type: "weapon", isAedae: true, grade: "에픽", atk: 32, bonusLUK: 12, bonusDEX: 8, req: { level: 30, classId: "rogue" }, cost: 6000, minDropStage: 5 },
 };
 
-const GRADE_COLORS = { "노멀": "#aaa", "레어": "#5b9bd5", "에픽": "#9b59b6", "유니크": "#e2b96f" };
+const GRADE_COLORS = { "노멀": "#aaa", "레어": "#5b9bd5", "에픽": "#9b59b6" };
 
 // 결정 시스템
 const CRYSTAL_KEYS  = { "노멀": "dim",  "레어": "bright",  "에픽": "radiant" };

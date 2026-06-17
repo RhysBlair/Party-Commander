@@ -25,6 +25,7 @@ function loop(now) {
   updateRaid(dt);
   updateCombat(dt);
   updateLoot(dt);
+  updateSlimePets(dt);
   updateFloatingTexts(dt);
   updateProjectiles(dt);
   updateMeteors(dt);
