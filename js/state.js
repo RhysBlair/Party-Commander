@@ -16,6 +16,7 @@ const gameState = {
   maxStageReached: 0,
   drops: [],
   upgrades: {},            // { upgradeId: level }
+  crystals: { dim: 0, bright: 0, radiant: 0 },  // 분해 결정
   floatingTexts: [],       // 런타임 전용 — 저장 제외
   projectiles:   [],       // 런타임 전용 — 저장 제외
   poisonFields:  [],       // 런타임 전용 — 저장 제외
@@ -300,6 +301,7 @@ function loadGame() {
 
     // 구형 세이브: upgrades 필드 없으면 초기화
     if (!gameState.upgrades) gameState.upgrades = {};
+    if (!gameState.crystals) gameState.crystals = { dim: 0, bright: 0, radiant: 0 };
 
     gameState.viewStage = legacyStage;
 

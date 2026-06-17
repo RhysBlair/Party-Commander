@@ -67,8 +67,13 @@ const EQUIPMENT = {
   compound_bow:    { name: "복합궁",         type: "weapon",    grade: "레어", atk: 22,                      req: { level: 10, classId: "archer"  }, cost: 750,  minDropStage: 1 },
   magic_staff:     { name: "마법 지팡이",    type: "weapon",    grade: "노멀", atk: 5,  bonusINT: 5,         req: { level: 5,  classId: "mage"    }, cost: 280,  minDropStage: 0 },
   great_staff:     { name: "대마법 지팡이",  type: "weapon",    grade: "레어", atk: 8,  bonusINT: 10,        req: { level: 10, classId: "mage"    }, cost: 750,  minDropStage: 1 },
-  dagger:          { name: "단검",           type: "weapon",    grade: "노멀", atk: 11,                      req: { level: 5,  classId: "rogue"   }, cost: 260,  minDropStage: 0 },
-  shadow_blade:    { name: "그림자 단검",    type: "weapon",    grade: "레어", atk: 20,                      req: { level: 10, classId: "rogue"   }, cost: 720,  minDropStage: 1 },
+  dagger:          { name: "단검",           type: "weapon",    grade: "노멀", atk: 11, weaponType: "dagger",                      req: { level: 5,  classId: "rogue"   }, cost: 260,  minDropStage: 0 },
+  shadow_blade:    { name: "그림자 단검",    type: "weapon",    grade: "레어", atk: 20, weaponType: "dagger",                      req: { level: 10, classId: "rogue"   }, cost: 720,  minDropStage: 1 },
+
+  // ── 단검 (시프 전용) ────────────────────────────────────
+  iron_dagger:     { name: "철제단검",    type: "weapon", grade: "노멀", atk: 18, bonusLUK: 5,               weaponType: "dagger", req: { level: 10, classId: "thief" }, cost: 500,  minDropStage: 2 },
+  dark_dagger:     { name: "어둠단검",    type: "weapon", grade: "에픽", atk: 55, bonusLUK: 18, bonusSTR: 5,  weaponType: "dagger", req: { level: 20, classId: "thief" }, cost: 6000, minDropStage: 4 },
+  reaper_dagger:   { name: "사신단검",    type: "weapon", grade: "유니크", atk: 95, bonusLUK: 35, bonusSTR: 12, weaponType: "dagger", req: { level: 30, classId: "thief" }, cost: 18000, minDropStage: 7 },
 
   // ── 방어구 ──────────────────────────────────────────────
   leather_armor:   { name: "가죽 갑옷",      type: "armor",     grade: "노멀", physDef: 5,                   req: { level: 5 },                     cost: 200,  minDropStage: 0 },
@@ -97,6 +102,12 @@ const EQUIPMENT = {
 };
 
 const GRADE_COLORS = { "노멀": "#aaa", "레어": "#5b9bd5", "에픽": "#9b59b6", "유니크": "#e2b96f" };
+
+// 결정 시스템
+const CRYSTAL_KEYS  = { "노멀": "dim",  "레어": "bright",  "에픽": "radiant" };
+const CRYSTAL_NAMES = { dim: "은은한결정", bright: "빛나는결정", radiant: "찬란한결정" };
+const CRYSTAL_COLORS = { dim: "#aaa", bright: "#5b9bd5", radiant: "#9b59b6" };
+const CRAFT_COSTS   = { "노멀": 5, "레어": 8, "에픽": 12 };  // 분해(1~3) 대비 높은 비용
 
 // 장비 강화 설정
 const ENHANCE_MAX = 10;

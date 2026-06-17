@@ -862,6 +862,29 @@ body {
   background: #144030;
 }
 
+.decomp-btn {
+  border-color: #4a3010;
+  background: #1a1005;
+  color: #c9a060;
+}
+
+.decomp-btn:hover {
+  background: #2a1a08;
+}
+
+/* 제작 탭 */
+.craft-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border: 1px solid #1a2a3a;
+  border-radius: 4px;
+  background: #0a1525;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
 .inv-list {
   display: flex;
   flex-direction: column;

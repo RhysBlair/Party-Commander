@@ -17,15 +17,20 @@ function markTabDirty() {
 function checkTabUnlocks() {
   const hasChar    = gameState.characters.length >= 1;
   const stage3Done = gameState.maxStageReached >= 3;
+  const stage4Done = gameState.maxStageReached >= 4;
+  const stage5Done = gameState.maxStageReached >= 5;
+  const stage10Done = gameState.maxStageReached >= 10;
 
-  // 상점·업그레이드: 첫 캐릭터 영입 시 해금
-  document.querySelectorAll('[data-tab="shop"],[data-tab="upgrades"]').forEach(el => {
-    el.classList.toggle('tab-hidden', !hasChar);
-  });
-  // 펫·레이드: 스테이지 3 클리어 시 해금
-  document.querySelectorAll('[data-tab="pets"],[data-tab="raid"]').forEach(el => {
-    el.classList.toggle('tab-hidden', !stage3Done);
-  });
+  // 상점: 첫 캐릭터 영입 시
+  document.querySelectorAll('[data-tab="shop"]').forEach(el => el.classList.toggle('tab-hidden', !hasChar));
+  // 펫: 스테이지 3 클리어
+  document.querySelectorAll('[data-tab="pets"]').forEach(el => el.classList.toggle('tab-hidden', !stage3Done));
+  // 제작: 스테이지 4 클리어
+  document.querySelectorAll('[data-tab="craft"]').forEach(el => el.classList.toggle('tab-hidden', !stage4Done));
+  // 업그레이드: 스테이지 5 클리어
+  document.querySelectorAll('[data-tab="upgrades"]').forEach(el => el.classList.toggle('tab-hidden', !stage5Done));
+  // 레이드: 스테이지 10 클리어
+  document.querySelectorAll('[data-tab="raid"]').forEach(el => el.classList.toggle('tab-hidden', !stage10Done));
 }
 
 let charModalDirty = false;
@@ -168,6 +173,7 @@ function renderActiveTab() {
   else if (tab === 'shop')       renderShopTab();
   else if (tab === 'skills')     renderSkillTab();
   else if (tab === 'pets')       renderPetTab();
+  else if (tab === 'craft')      renderCraftTab();
   else if (tab === 'upgrades')   renderUpgradeTab();
   else if (tab === 'raid')       renderRaidTab();
 }
@@ -504,6 +510,14 @@ function renderEquipmentTab() {
              </button>`
           : '';
 
+        const canDecomp = gameState.maxStageReached >= 4 && CRYSTAL_KEYS[e.grade];
+        const decompBtn = canDecomp
+          ? `<button class="equip-remove decomp-btn"
+                     onclick="tryDecomposeItem(${item.uid});renderEquipmentTab();">
+               분해
+             </button>`
+          : '';
+
         return `
           <div class="inv-item" draggable="true" data-uid="${item.uid}"
                ondragstart="equipDragStart(event)">
@@ -514,6 +528,7 @@ function renderEquipmentTab() {
             <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;align-items:center">
               ${enhBtn}
               ${sellBtn}
+              ${decompBtn}
             </div>
           </div>`;
       }).join('');
@@ -979,6 +994,58 @@ function upgradeEffectText(id, level) {
     case 'atk_spd':   return `공격속도 +${level * 5}%`;
     default: return '';
   }
+}
+
+// ── 제작 탭 ────────────────────────────────────────────────
+function renderCraftTab() {
+  const el = document.getElementById('tab-craft');
+  const crystals = gameState.crystals || { dim: 0, bright: 0, radiant: 0 };
+
+  const crystalRow = Object.entries(CRYSTAL_NAMES).map(([key, name]) =>
+    `<span style="color:${CRYSTAL_COLORS[key]};margin-right:12px">${name} <strong>${crystals[key] || 0}</strong>개</span>`
+  ).join('');
+
+  const grades = ['노멀', '레어', '에픽'];
+  const craftHtml = grades.map(grade => {
+    const key  = CRYSTAL_KEYS[grade];
+    const cost = CRAFT_COSTS[grade];
+    const col  = GRADE_COLORS[grade] || '#aaa';
+    const have = crystals[key] || 0;
+
+    const items = Object.entries(EQUIPMENT).filter(([id, e]) =>
+      e.grade === grade && e.cost > 0 && !e.isAedae && e.type !== 'throwable' && CRYSTAL_KEYS[e.grade]
+    );
+    if (!items.length) return '';
+
+    const rows = items.map(([id, e]) => {
+      const canCraft = have >= cost;
+      return `
+        <div class="craft-item">
+          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
+            <span style="color:${col}">${e.name}</span>
+            <span class="equip-stat-text">${equipStatText(e, 0)}</span>
+          </div>
+          <button class="small-btn ${canCraft ? '' : 'disabled'}" style="flex-shrink:0"
+                  onclick="tryCraftItem('${id}');renderCraftTab();">
+            ${CRYSTAL_NAMES[key]} ${cost}개
+          </button>
+        </div>`;
+    }).join('');
+
+    return `
+      <div class="eq-section-title" style="color:${col};margin-top:10px">
+        ${grade} — ${CRYSTAL_NAMES[key]} ${cost}개 필요
+        <span style="font-size:10px;color:#666;font-weight:normal;margin-left:6px">보유 ${have}개</span>
+      </div>
+      ${rows}`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="eq-section-title">결정 보유량</div>
+    <div style="margin-bottom:12px;padding:8px;background:#0d1b2a;border-radius:4px;border:1px solid #1a2a3a">
+      ${crystalRow}
+    </div>
+    ${craftHtml}`;
 }
 
 function renderUpgradeTab() {

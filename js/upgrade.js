@@ -66,13 +66,18 @@ function tryAdvanceJob2(charId, classId) {
 
   char.classId = classId;
 
-  // 시프 전직: 표창·아대 해제(인벤토리 반납), weapon2 슬롯 확보
+  // 시프 전직: 표창·아대 해제, 단검 아닌 무기 해제, weapon2 슬롯 확보
   if (classId === 'thief') {
     if (char.equipment.throwable) { gameState.equipmentInventory.push(char.equipment.throwable); char.equipment.throwable = null; }
-    // 아대(isAedae) 무기를 weapon 슬롯에 착용 중이면 해제
-    if (char.equipment.weapon && EQUIPMENT[char.equipment.weapon.id]?.isAedae) {
-      gameState.equipmentInventory.push(char.equipment.weapon);
-      char.equipment.weapon = null;
+    for (const slot of ['weapon', 'weapon2']) {
+      const w = char.equipment[slot];
+      if (!w || w.uid === 0) continue;
+      const eDef = EQUIPMENT[w.id];
+      if (!eDef) continue;
+      if (eDef.isAedae || eDef.weaponType !== 'dagger') {
+        gameState.equipmentInventory.push(w);
+        char.equipment[slot] = null;
+      }
     }
     if (char.equipment.weapon2 === undefined) char.equipment.weapon2 = null;
   }
@@ -90,6 +95,8 @@ function canEquipItem(char, itemOrId) {
   }
   // 아대(isAedae 무기)는 시프 착용 불가
   if (e.isAedae && char.classId === 'thief') return false;
+  // 시프는 단검(weaponType:'dagger')만 착용 가능
+  if (char.classId === 'thief' && e.type === 'weapon' && !e.isAedae && e.weaponType !== 'dagger') return false;
   return true;
 }
 
@@ -278,6 +285,31 @@ function trySellItem(uid) {
   if (!e || !e.cost) return;
   gameState.gold += Math.floor(e.cost * 0.6);
   gameState.equipmentInventory.splice(idx, 1);
+}
+
+function tryDecomposeItem(uid) {
+  const idx = gameState.equipmentInventory.findIndex(i => i.uid === uid);
+  if (idx === -1) return;
+  const item = gameState.equipmentInventory[idx];
+  if (item.uid === 0) return;
+  const e = EQUIPMENT[item.id];
+  if (!e) return;
+  const crystalKey = CRYSTAL_KEYS[e.grade];
+  if (!crystalKey) return; // 유니크 등 결정 없음
+  const amount = Math.floor(Math.random() * 3) + 1;
+  gameState.crystals[crystalKey] = (gameState.crystals[crystalKey] || 0) + amount;
+  gameState.equipmentInventory.splice(idx, 1);
+}
+
+function tryCraftItem(equipId) {
+  const e = EQUIPMENT[equipId];
+  if (!e) return;
+  const crystalKey = CRYSTAL_KEYS[e.grade];
+  const cost = CRAFT_COSTS[e.grade];
+  if (!crystalKey || !cost) return;
+  if ((gameState.crystals[crystalKey] || 0) < cost) return;
+  gameState.crystals[crystalKey] -= cost;
+  gameState.equipmentInventory.push({ id: equipId, uid: gameState.nextItemUid++, enhance: 0 });
 }
 
 function trySetNickname(charId, name) {
