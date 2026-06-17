@@ -271,8 +271,9 @@ function getAttackInterval(char) {
       if (s && s.attackInterval) { interval = s.attackInterval; break; }
     }
   }
-  const spdPct = (gameState.upgrades?.atk_spd || 0) * 0.05;
-  return Math.max(0.1, interval * (1 - spdPct));
+  const spdPct    = (gameState.upgrades?.atk_spd || 0) * 0.05;
+  const petSpdPct = char.pet === 'mini_rabbit' ? (PETS['mini_rabbit']?.atkSpeed || 0) : 0;
+  return Math.max(0.1, interval * (1 - spdPct - petSpdPct));
 }
 
 // 패시브 스킬 중 공격 배율 반환 (없으면 1) — 스킬 레벨 배율 적용
@@ -292,6 +293,12 @@ function getSkillAtkMult(char) {
 
 function takeDamage(char, dmg, stageIdx) {
   if (char.isDead) return;
+  // 아기거북이 방어막: 공격 1회 완전 흡수
+  if (char.petShieldActive) {
+    char.petShieldActive = false;
+    spawnFloatingText(stageIdx, char.x, char.y - 30, '방어막!', '#4fc3f7', 14);
+    return;
+  }
   // 매직가드: 피해의 80%를 HP 대신 MP로 흡수
   if (char.skills?.includes('magic_guard') && (char.skillLevels?.magic_guard || 0) > 0) {
     const absorb  = Math.floor(dmg * (SKILLS['magic_guard']?.mgAbsorb || 0.8));
@@ -494,6 +501,26 @@ function updateCharacter(char, dt, stage, field) {
   // 자연 HP 회복 (초당 1%)
   char.currentHp = Math.min(stats.maxHp, char.currentHp + stats.maxHp * 0.01 * dt);
 
+  // 아기뱀: 5초마다 HP 100% 회복
+  if (char.pet === 'baby_snake') {
+    char.petHealTimer = (char.petHealTimer ?? 5.0) - dt;
+    if (char.petHealTimer <= 0) {
+      char.petHealTimer = 5.0;
+      char.currentHp = stats.maxHp;
+      spawnFloatingText(char.assignedStage, char.x, char.y - 44, 'HP 전체 회복!', '#2ecc71', 13);
+    }
+  }
+
+  // 아기거북이: 5초마다 방어막 1회 생성
+  if (char.pet === 'baby_turtle' && !char.petShieldActive) {
+    char.petShieldTimer = (char.petShieldTimer ?? 5.0) - dt;
+    if (char.petShieldTimer <= 0) {
+      char.petShieldTimer = 5.0;
+      char.petShieldActive = true;
+      spawnFloatingText(char.assignedStage, char.x, char.y - 44, '방어막 준비!', '#4fc3f7', 12);
+    }
+  }
+
   // 화상 틱 데미지
   if (char.burned) {
     char.burnTimer = (char.burnTimer || 0) - dt;
@@ -653,12 +680,17 @@ function updateCharacter(char, dt, stage, field) {
   }
 
   const range  = RANGE_PIXELS[CLASSES[char.classId].range];
-  const target = findNearestMonster(char, field);
-  if (!target) {
-    // 펫 없으면 몬스터가 없을 때 드랍 아이템을 주우러 이동
-    if (!char.pet) moveCharTowardDrop(char, dt);
-    return;
+  // 펫 없으면 드랍 아이템 우선 수집 (전투 중에도 중단하고 이동)
+  if (!char.pet) {
+    const hasDrop = gameState.drops.some(d => d.stageIdx === char.assignedStage);
+    if (hasDrop) {
+      moveCharTowardDrop(char, dt);
+      return;
+    }
   }
+
+  const target = findNearestMonster(char, field);
+  if (!target) return;
 
   const dx = target.x - char.x;
   const dy = target.y - char.y;

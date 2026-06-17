@@ -50,67 +50,27 @@ function updateLoot(dt) {
     if (gameState.drops[i].timer <= 0) gameState.drops.splice(i, 1);
   }
 
-  // 2. 캐릭터별 드랍 수집 (각자 자신의 펫으로 독립 처리)
+  // 2. 캐릭터별 드랍 수집
   for (const char of gameState.characters) {
+    if (char.isDead || char.assignedStage < 0) continue;
+
     if (!char.pet) {
-      // 펫 없음: 캐릭터가 직접 이동해서 수집 (이동은 combat.js의 moveCharTowardDrop이 담당)
-      // 여기서는 밀착(22px) 시에만 수집
+      // 펫 없음: 22px 밀착 시 수집 (combat.js가 이동 담당)
       for (let i = gameState.drops.length - 1; i >= 0; i--) {
         const d = gameState.drops[i];
         if (d.stageIdx !== char.assignedStage) continue;
         const dx = d.x - char.x, dy = d.y - char.y;
         if (dx * dx + dy * dy < 22 * 22) pickupDrop(i);
       }
-    } else if (char.pet === 'pet_magnet') {
-      // 자석 펫: 주기마다 이 캐릭터 스테이지의 드랍 즉시 흡수
-      if (!char.magnetTimer) char.magnetTimer = 0;
-      char.magnetTimer -= dt;
-      if (char.magnetTimer <= 0) {
-        char.magnetTimer = MAGNET_INTERVAL;
-        for (let i = gameState.drops.length - 1; i >= 0; i--) {
-          if (gameState.drops[i].stageIdx === char.assignedStage) pickupDrop(i);
-        }
-      }
-    } else {
-      // 기본 펫: 드랍을 향해 직접 이동하여 수집
-      if (char.petX === undefined) {
-        char.petX = char.x - char.facing * 25;
-        char.petY = char.y + 10;
-      }
-
-      let targetDrop = null, minDist2 = Infinity;
-      for (const d of gameState.drops) {
+    } else if (char.pet === 'mini_slime') {
+      // 미니슬라임: 캐릭터 80px 내 아이템 자동 흡수
+      for (let i = gameState.drops.length - 1; i >= 0; i--) {
+        const d = gameState.drops[i];
         if (d.stageIdx !== char.assignedStage) continue;
-        const dx = d.x - char.petX, dy = d.y - char.petY;
-        const d2 = dx * dx + dy * dy;
-        if (d2 < minDist2) { minDist2 = d2; targetDrop = d; }
-      }
-
-      if (targetDrop) {
-        const dx   = targetDrop.x - char.petX;
-        const dy   = targetDrop.y - char.petY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < PET_PICKUP_RADIUS) {
-          const idx = gameState.drops.findIndex(d => d.uid === targetDrop.uid);
-          if (idx !== -1) pickupDrop(idx);
-        } else {
-          const step = PET_SPEED * dt;
-          char.petX += (dx / dist) * step;
-          char.petY += (dy / dist) * step;
-        }
-      } else {
-        // 드랍 없으면 이 캐릭터 뒤를 따라다님
-        const tx   = char.x - char.facing * 25;
-        const ty   = char.y + 10;
-        const dx   = tx - char.petX;
-        const dy   = ty - char.petY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist > 8) {
-          const step = PET_SPEED * dt;
-          char.petX += (dx / dist) * Math.min(step, dist);
-          char.petY += (dy / dist) * Math.min(step, dist);
-        }
+        const dx = d.x - char.x, dy = d.y - char.y;
+        if (dx * dx + dy * dy < 80 * 80) pickupDrop(i);
       }
     }
+    // 그 외 펫: 픽업 기능 없음 (전투 특화)
   }
 }

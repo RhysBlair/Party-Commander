@@ -58,15 +58,19 @@ function calcFinalStats(char) {
   const hpBuffMult  = (char.activeBuffs?.hp?.timer > 0) ? (char.activeBuffs.hp.mult || 1) : 1;
   const accPenalty  = (char.raidAccDown || 0) > 0 ? ZAKUM?.accDebuffAmt ?? 70 : 0;
 
+  // 펫 보너스
+  const petCritBonus = char.pet === 'mini_bat'   ? (PETS['mini_bat']?.critBonus  || 0) : 0;
+  const petHpMult    = char.pet === 'baby_bear'  ? (1 + (PETS['baby_bear']?.hpMult || 0)) : 1;
+
   return {
     atk:      Math.floor(baseAtk * atkMultiplier * (1 + atkUpgPct)),
     physDef:  Math.floor(physDef + defUpgFlat),
     magicDef: Math.floor(magicDef),
     accuracy: Math.max(10, Math.min(accuracy - accPenalty, 99)),
     evade:    Math.min(evade, 60),
-    critRate,
+    critRate: critRate + petCritBonus,
     critDmg:  3.0 + ((char.activeBuffs?.critDmg?.timer > 0) ? (char.activeBuffs.critDmg.bonus || 0) : 0),
-    maxHp:    Math.floor(maxHp * hpBuffMult),
+    maxHp:    Math.floor(maxHp * hpBuffMult * petHpMult),
     maxMp:    Math.floor(200 + effINT * 4 + char.level * 5),
   };
 }

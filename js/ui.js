@@ -9,7 +9,22 @@ function markTabDirty() {
   tabDirty = true;
   requestAnimationFrame(() => {
     tabDirty = false;
+    checkTabUnlocks();
     renderActiveTab();
+  });
+}
+
+function checkTabUnlocks() {
+  const hasChar    = gameState.characters.length >= 1;
+  const stage3Done = gameState.maxStageReached >= 3;
+
+  // 상점·업그레이드: 첫 캐릭터 영입 시 해금
+  document.querySelectorAll('[data-tab="shop"],[data-tab="upgrades"]').forEach(el => {
+    el.classList.toggle('tab-hidden', !hasChar);
+  });
+  // 펫·레이드: 스테이지 3 클리어 시 해금
+  document.querySelectorAll('[data-tab="pets"],[data-tab="raid"]').forEach(el => {
+    el.classList.toggle('tab-hidden', !stage3Done);
   });
 }
 
@@ -47,6 +62,7 @@ function initUI() {
 
   // 스테이지 바 — DOM 1회 생성, 이후 클래스만 갱신
   initStageBar();
+  checkTabUnlocks();
 }
 
 function updateUI(dt) {
@@ -528,13 +544,17 @@ function renderEquipmentTab() {
   el.innerHTML = `
     <div class="eq-layout">
       <div class="eq-left-panel">
-        <div class="eq-section-title">장착 중</div>
+        <div class="eq-sticky-head">
+          <div class="eq-section-title" style="margin-bottom:0">장착 중</div>
+        </div>
         ${charCards}
       </div>
       <div class="eq-right-panel">
-        <div class="eq-section-title">인벤토리</div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">${filterBtns}</div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">${sellBtns}</div>
+        <div class="eq-sticky-head">
+          <div class="eq-section-title" style="margin-bottom:6px">인벤토리</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">${filterBtns}</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">${sellBtns}</div>
+        </div>
         <div class="inv-list">${invHtml}</div>
       </div>
     </div>`;
@@ -836,14 +856,13 @@ function renderPetTab() {
   const charCards = gameState.characters.map(char => {
     const petOptions = Object.entries(PETS).map(([id, p]) => {
       const isEquipped = char.pet === id;
-      const rangeText  = p.pickupRange >= 9000 ? '전체 필드' : `${p.pickupRange}px`;
       const canAfford  = !isEquipped && gameState.gold >= p.cost;
 
       return `
         <div class="pet-option ${isEquipped ? 'pet-equipped' : ''}">
           <div class="pet-option-info">
             <span class="pet-option-name" style="color:${isEquipped ? '#4caf50' : '#e0e0e0'}">${p.name}</span>
-            <span class="pet-option-meta">범위 ${rangeText} · 주기 ${p.pickupInterval}s</span>
+            <span class="pet-option-meta">${p.desc}</span>
           </div>
           ${isEquipped
             ? `<span class="skill-learned">✓ 장착 중</span>`
