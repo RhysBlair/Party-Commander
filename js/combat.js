@@ -1147,10 +1147,9 @@ function executeSkill(char, skillId, skill, stats, stage, field) {
     const freezeDur = (skill.freezeDuration || 5.0) + (sLv - 1) * 0.4;
     for (const t of targets) {
       dealSkillDamage(char, t, dmg, stage, field, stats);
-      const md2 = t.def || STAGES[stage]?.monster;
-      // 빙결 면역 몬스터 (예: 설녀)
+      const md2 = t.def || stage?.monster;
       if (md2?.freezeImmune) {
-        spawnFloatingText(stage, t.x, t.y - 30, '빙결 내성!', '#a8d8f0', 12);
+        spawnFloatingText(char.assignedStage, t.x, t.y - 30, '빙결 내성!', '#a8d8f0', 12);
         continue;
       }
       // 빙결 내성 확인 (0~100%)
