@@ -579,6 +579,17 @@ function renderEquipmentTab() {
             </button>`;
   }).join('');
 
+  // 일괄분해 버튼 (스테이지 4 이상 해금)
+  const canBulkDecomp = gameState.maxStageReached >= 4;
+  const decompBtns = canBulkDecomp ? ['노멀', '레어', '에픽'].map(g => {
+    const cnt = gradeCount(g);
+    const col = GRADE_COLORS[g] || '#aaa';
+    return `<button class="small-btn ${cnt > 0 ? '' : 'disabled'}" style="color:${col}"
+                    onclick="tryDecomposeByGrade('${g}');renderEquipmentTab();">
+              ${g} 일괄분해 (${cnt})
+            </button>`;
+  }).join('') : '';
+
   el.innerHTML = `
     <div class="eq-layout">
       <div class="eq-left-panel">
@@ -591,7 +602,8 @@ function renderEquipmentTab() {
         <div class="eq-sticky-head">
           <div class="eq-section-title" style="margin-bottom:6px">인벤토리</div>
           <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">${filterBtns}</div>
-          <div style="display:flex;gap:4px;flex-wrap:wrap">${sellBtns}</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:${canBulkDecomp ? '4px' : '0'}">${sellBtns}</div>
+          ${canBulkDecomp ? `<div style="display:flex;gap:4px;flex-wrap:wrap">${decompBtns}</div>` : ''}
         </div>
         <div class="inv-list">${invHtml}</div>
       </div>
@@ -1060,12 +1072,8 @@ function renderCraftTab() {
     `<span style="color:${CRYSTAL_COLORS[key]};margin-right:16px">${name} <strong>${crystals[key] || 0}</strong>개</span>`
   ).join('');
 
-  // 무기/표창류는 5배 비용
   function craftCost(e) {
-    const base = CRAFT_COSTS[e.grade] || 5;
-    if (e.type === 'weapon' || e.type === 'throwable') return base * 5;
-    if (e.type === 'armor' || e.type === 'accessory') return base * 4;
-    return base;
+    return (e.type === 'weapon' || e.type === 'throwable') ? CRAFT_COST_WEAPON : CRAFT_COST_ARMOR;
   }
 
   const grades = ['노멀', '레어', '에픽'];

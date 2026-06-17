@@ -326,12 +326,28 @@ function tryCraftItem(equipId) {
   const e = EQUIPMENT[equipId];
   if (!e) return;
   const crystalKey = CRYSTAL_KEYS[e.grade];
-  const baseCost = CRAFT_COSTS[e.grade];
-  if (!crystalKey || !baseCost) return;
-  const cost = (e.type === 'weapon' || e.type === 'throwable') ? baseCost * 5 : baseCost;
+  if (!crystalKey) return;
+  const cost = (e.type === 'weapon' || e.type === 'throwable') ? CRAFT_COST_WEAPON : CRAFT_COST_ARMOR;
   if ((gameState.crystals[crystalKey] || 0) < cost) return;
   gameState.crystals[crystalKey] -= cost;
   gameState.equipmentInventory.push({ id: equipId, uid: gameState.nextItemUid++, enhance: 0 });
+}
+
+function tryDecomposeByGrade(grade) {
+  if (!gameState.crystals) gameState.crystals = { dim: 0, bright: 0, radiant: 0 };
+  const crystalKey = CRYSTAL_KEYS[grade];
+  if (!crystalKey) return;
+  const targets = gameState.equipmentInventory.filter(item => {
+    if (item.uid === 0) return false;
+    const e = EQUIPMENT[item.id];
+    return e && e.grade === grade && CRYSTAL_KEYS[e.grade];
+  });
+  for (const item of targets) {
+    const amount = Math.floor(Math.random() * 3) + 1;
+    gameState.crystals[crystalKey] += amount;
+  }
+  const removeUids = new Set(targets.map(i => i.uid));
+  gameState.equipmentInventory = gameState.equipmentInventory.filter(i => !removeUids.has(i.uid));
 }
 
 // 결정 업그레이드: dim 3개 → bright 1개, bright 5개 → radiant 1개

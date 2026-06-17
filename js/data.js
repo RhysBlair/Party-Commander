@@ -115,7 +115,8 @@ const GRADE_COLORS = { "노멀": "#aaa", "레어": "#5b9bd5", "에픽": "#9b59b6
 const CRYSTAL_KEYS  = { "노멀": "dim",  "레어": "bright",  "에픽": "radiant" };
 const CRYSTAL_NAMES = { dim: "은은한결정", bright: "빛나는결정", radiant: "찬란한결정" };
 const CRYSTAL_COLORS = { dim: "#aaa", bright: "#5b9bd5", radiant: "#9b59b6" };
-const CRAFT_COSTS   = { "노멀": 5, "레어": 8, "에픽": 12 };  // 분해(1~3) 대비 높은 비용
+const CRAFT_COST_WEAPON = 25;  // 무기/표창 제작 비용 (grade 공통)
+const CRAFT_COST_ARMOR  = 15;  // 방어구/장신구 제작 비용 (grade 공통)
 
 // 장비 강화 설정
 const ENHANCE_MAX = 10;

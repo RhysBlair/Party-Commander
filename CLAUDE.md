@@ -208,6 +208,8 @@ x, y, attackTimer, skillTimers, shadowActive, shadowTimer, currentHp, currentMp,
 - 부활 시 상태이상·버프 초기화: 일반 리스폰 및 리저렉션 스킬 부활 모두 frozen/burned/activeBuffs/petShieldActive 초기화
 - 쉐도우파트너 재사용 버그 수정: 발동 후 skillTimers=9999 고착 방식 제거 → 분신 활성 중 타이머 0 유지, 소멸 즉시 재발동하도록 변경
 - 주스탯 공격력 균등화: 기존 STR 전용 기본 공격력 보너스(effSTR×0.5)를 주스탯(primary)×0.5로 변경 (stats.js)
+- 결정 제작 비용 통일: 무기/표창 25개, 방어구/장신구 15개 (grade 무관, `CRAFT_COST_WEAPON`/`CRAFT_COST_ARMOR` 상수로 관리)
+- 인벤토리 일괄분해 버튼 추가: 노멀/레어/에픽 각각 (`tryDecomposeByGrade`), 스테이지 4 이상 해금
 - 제작탭 결정 업그레이드: 은은한결정 3개→빛나는결정 1개, 빛나는결정 5개→찬란한결정 1개 (`tryUpgradeCrystal`)
   - Lucky(10%,×2) / Big Lucky(1%,×10) 보너스, 결과 플로팅 텍스트 (`showCrystalFloat`)
   - 버그 수정: 업그레이드 버튼 onclick에서 `renderCraftTab()` → `setTimeout(renderCraftTab,0)` 로 변경, opacity:1 초기값 명시
