@@ -200,7 +200,14 @@ x, y, attackTimer, skillTimers, shadowActive, shadowTimer, currentHp, currentMp,
 
 ## 개발 이력 (최신순)
 
-### 세션 6 (현재)
+### 세션 7 (현재)
+- 장비탭 2단 레이아웃: 장착 중(왼쪽) / 인벤토리(오른쪽), 각 패널 독립 스크롤 (max-height:62vh)
+- 인벤토리 드래그앤드랍 장착: `equipDragStart/Over/Leave/Drop` 함수, drag-over 슬롯 하이라이트
+- 기존 X장착/무기1/무기2 버튼 제거 (드래그앤드랍으로 대체)
+- 인벤토리 등급 필터 버튼: 전체/노멀/레어/에픽 (`_equipGradeFilter` 상태, `setEquipFilter()`)
+- 일괄판매 버튼 인벤토리 패널 상단으로 이동
+
+### 세션 6
 - 매직가드 (mage 1차): passive ML=1, 피해의 80%를 HP 대신 MP로 흡수 (mgAbsorb:0.8)
 - 리저렉션 (cleric 2차): ML=3, 쿨타임 Lv1=180s → Lv3=60s (cooldownPerLv:-60), 동 스테이지 사망 아군 전원 부활 HP 30%
 
