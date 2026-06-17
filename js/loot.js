@@ -54,7 +54,25 @@ function updateLoot(dt) {
   for (const char of gameState.characters) {
     if (char.isDead || char.assignedStage < 0) continue;
 
-    if (!char.pet) {
+    const petData = char.pet ? PETS[char.pet] : null;
+    const pickupR = petData?.pickupRange ?? 0;
+
+    if (pickupR >= 9999) {
+      // 맵 전체 수집 (미니슬라임 등)
+      for (let i = gameState.drops.length - 1; i >= 0; i--) {
+        const d = gameState.drops[i];
+        if (d.stageIdx === char.assignedStage) pickupDrop(i);
+      }
+    } else if (pickupR > 0) {
+      // 지정 반경 수집
+      const r2 = pickupR * pickupR;
+      for (let i = gameState.drops.length - 1; i >= 0; i--) {
+        const d = gameState.drops[i];
+        if (d.stageIdx !== char.assignedStage) continue;
+        const dx = d.x - char.x, dy = d.y - char.y;
+        if (dx * dx + dy * dy < r2) pickupDrop(i);
+      }
+    } else if (!char.pet) {
       // 펫 없음: 22px 밀착 시 수집 (combat.js가 이동 담당)
       for (let i = gameState.drops.length - 1; i >= 0; i--) {
         const d = gameState.drops[i];
@@ -62,15 +80,6 @@ function updateLoot(dt) {
         const dx = d.x - char.x, dy = d.y - char.y;
         if (dx * dx + dy * dy < 22 * 22) pickupDrop(i);
       }
-    } else if (char.pet === 'mini_slime') {
-      // 미니슬라임: 캐릭터 80px 내 아이템 자동 흡수
-      for (let i = gameState.drops.length - 1; i >= 0; i--) {
-        const d = gameState.drops[i];
-        if (d.stageIdx !== char.assignedStage) continue;
-        const dx = d.x - char.x, dy = d.y - char.y;
-        if (dx * dx + dy * dy < 80 * 80) pickupDrop(i);
-      }
     }
-    // 그 외 펫: 픽업 기능 없음 (전투 특화)
   }
 }
