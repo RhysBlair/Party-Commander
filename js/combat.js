@@ -491,10 +491,15 @@ function updateProjectiles(dt) {
       if (dx * dx + dy * dy < 22 * 22) {
         takeDamage(char, p.dmg, p.stageIdx);
         if (p.freezeOnHit) {
-          char.frozen = true;
-          char.frozenTimer = p.freezeDuration || 3.0;
-          const si = p.stageIdx;
-          spawnFloatingText(si, char.x, char.y - 36, '빙결!', '#a8d8f0', 13);
+          const resist = char.iceResist || 0;
+          if (Math.random() * 100 < (100 - resist)) {
+            char.frozen      = true;
+            char.frozenTimer = p.freezeDuration || 3.0;
+            char.iceResistTimer = 3.0; // 새 빙결 시 내성 타이머 리셋
+            spawnFloatingText(p.stageIdx, char.x, char.y - 36, '빙결!', '#a8d8f0', 13);
+          } else {
+            spawnFloatingText(p.stageIdx, char.x, char.y - 36, `내성 ${resist}%`, '#7ecff5', 11);
+          }
         }
         gameState.projectiles.splice(i, 1);
         break;
@@ -726,7 +731,22 @@ function updateCharacter(char, dt, stage, field) {
   if (char.frozen) {
     char.frozenTimer = (char.frozenTimer || 0) - dt;
     if (char.frozenTimer <= 0) { char.frozen = false; char.frozenTimer = 0; }
-    else return;
+    else {
+      // 빙결 중: 3초마다 내성 +20% (최대 100)
+      char.iceResistTimer = (char.iceResistTimer ?? 3.0) - dt;
+      if (char.iceResistTimer <= 0) {
+        char.iceResistTimer = 3.0;
+        char.iceResist = Math.min(100, (char.iceResist || 0) + 20);
+      }
+      return;
+    }
+  }
+
+  // 비빙결: 3초마다 내성 -20% (최소 0)
+  char.iceResistTimer = (char.iceResistTimer ?? 3.0) - dt;
+  if (char.iceResistTimer <= 0) {
+    char.iceResistTimer = 3.0;
+    char.iceResist = Math.max(0, (char.iceResist || 0) - 20);
   }
 
   // 메테오 캐스팅 중: 이동/공격 불가, 완료 시 메테오 발사

@@ -214,7 +214,7 @@ function getCharSlotList(char) {
 const SAVE_KEY = 'party_commander_save';
 
 // 런타임 전용 캐릭터 필드 (저장 제외)
-const RUNTIME_CHAR_KEYS = ['x', 'y', 'attackTimer', 'attackAnim', 'facing', 'skillTimers', 'skillAnim', 'petX', 'petY', 'magnetTimer', 'shadowActive', 'shadowTimer', 'shadowX', 'shadowY', 'orbCount', 'orbReady', 'currentHp', 'maxHpCache', 'currentMp', 'maxMpCache', 'potionHpCd', 'potionMpCd', 'hpRefillTimer', 'mpRefillTimer', 'hitAnim', 'isDead', 'respawnTimer', 'quickHitTimer', 'quickHitCount', 'quickHitDmgMult', 'quickHitDelay', 'activeBuffs', 'inRaid', 'raidAccDown', 'raidSkillSeal', 'poisonMoveTarget', 'petHealTimer', 'petShieldTimer', 'petShieldActive', 'burned', 'burnTimer', 'burnDmg', 'burnTickTimer', 'frozen', 'frozenTimer', 'meteorCasting', 'meteorCastTimer', 'meteorTargetX', 'meteorTargetY', 'charging'];
+const RUNTIME_CHAR_KEYS = ['x', 'y', 'attackTimer', 'attackAnim', 'facing', 'skillTimers', 'skillAnim', 'petX', 'petY', 'magnetTimer', 'shadowActive', 'shadowTimer', 'shadowX', 'shadowY', 'orbCount', 'orbReady', 'currentHp', 'maxHpCache', 'currentMp', 'maxMpCache', 'potionHpCd', 'potionMpCd', 'hpRefillTimer', 'mpRefillTimer', 'hitAnim', 'isDead', 'respawnTimer', 'quickHitTimer', 'quickHitCount', 'quickHitDmgMult', 'quickHitDelay', 'activeBuffs', 'inRaid', 'raidAccDown', 'raidSkillSeal', 'poisonMoveTarget', 'petHealTimer', 'petShieldTimer', 'petShieldActive', 'burned', 'burnTimer', 'burnDmg', 'burnTickTimer', 'frozen', 'frozenTimer', 'iceResist', 'iceResistTimer', 'meteorCasting', 'meteorCastTimer', 'meteorTargetX', 'meteorTargetY', 'charging'];
 
 function saveGame() {
   const chars = gameState.characters.map(c => {
