@@ -250,12 +250,12 @@ const DROP_EXPIRE_SECONDS = 30;
 // aoeAtk / aoeRange / aoeInterval / aoeDamageType : 범위 공격 (해당 필드 있으면 활성화)
 const STAGES = [
   { name: "고블린 요새",
-    monster: { name: "고블린",       hp: 300,       atk: 14,   physDef: 4,   magicDef: 2,   goldDrop: 55,      expDrop: 44,
+    monster: { name: "고블린",       hp: 200,       atk: 5,    physDef: 1,   magicDef: 0,   goldDrop: 55,      expDrop: 44,
                moveSpeed: 60,  attackRange: 55,  aggroRange: 360, attackType: "melee",  atkDamageType: "physical" },
     spawnCount: 4, killsToAdvance: 20 },
 
   { name: "오크의 숲",
-    monster: { name: "오크",         hp: 1000,      atk: 32,   physDef: 10,  magicDef: 4,   goldDrop: 200,     expDrop: 160,
+    monster: { name: "오크",         hp: 900,       atk: 20,   physDef: 6,   magicDef: 3,   goldDrop: 200,     expDrop: 160,
                moveSpeed: 35,  attackRange: 60,  aggroRange: 320, attackType: "melee",  atkDamageType: "physical" },
     spawnCount: 5, killsToAdvance: 30 },
 
