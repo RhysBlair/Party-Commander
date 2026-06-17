@@ -167,6 +167,11 @@ const SKILLS = {
   shadow_partner: { name: "쉐도우파트너",    classId: "rogue",   cooldown: 1.5,
                     targeting: "shadow", duration: 60.0, cost: 500, mpCost: 3 },
 
+  // ── 도적 (1차) ──────────────────────────────────────────
+  log_decoy:      { name: "통나무분신술",    classId: "rogue",    cooldown: 30.0,
+                    targeting: "log_decoy", decoyHp: 1000, decoyHpPerLv: 5444,
+                    cost: 500, mpCost: 20 },
+
   // ── 2차 도적 (어쌔신) ────────────────────────────────────
   triple_throw:   { name: "트리플 스로우",   classId: "assassin",
                     targeting: "passive", hits: 3, cost: 500, mpCost: 0 },
@@ -189,6 +194,10 @@ const SKILLS = {
                     targeting: "poison_area", poisonRange: 220, dmgMultiplier: 25.0,
                     poisonDuration: 8.0, poisonFieldRadius: 220, poisonTickInterval: 0.1,
                     cost: 500, mpCost: 20 },
+  meteor:         { name: "메테오",           classId: "wizard_fp", cooldown: 20.0,
+                    targeting: "meteor_cast", castTime: 5.0, fallTime: 3.0,
+                    meteorRange: 800, dmgMultiplier: 30.0, dmgPerLv: 107.78,
+                    cost: 500, mpCost: 120 },
 
   // ── 2차 궁수 (사수) ──────────────────────────────────────
   piercing:       { name: "피어싱",          classId: "marksman",  cooldown: 10.0,

@@ -27,6 +27,7 @@ function loop(now) {
   updateLoot(dt);
   updateFloatingTexts(dt);
   updateProjectiles(dt);
+  updateMeteors(dt);
 
   // 자동 저장
   saveAccum += dt;

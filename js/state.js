@@ -20,6 +20,7 @@ const gameState = {
   floatingTexts: [],       // 런타임 전용 — 저장 제외
   projectiles:   [],       // 런타임 전용 — 저장 제외
   poisonFields:  [],       // 런타임 전용 — 저장 제외
+  meteors:       [],       // 런타임 전용 — 저장 제외
 
   // 런타임 전용 (저장 제외)
   viewStage: 0,
@@ -212,7 +213,7 @@ function getCharSlotList(char) {
 const SAVE_KEY = 'party_commander_save';
 
 // 런타임 전용 캐릭터 필드 (저장 제외)
-const RUNTIME_CHAR_KEYS = ['x', 'y', 'attackTimer', 'attackAnim', 'facing', 'skillTimers', 'skillAnim', 'petX', 'petY', 'magnetTimer', 'shadowActive', 'shadowTimer', 'shadowX', 'shadowY', 'orbCount', 'orbReady', 'currentHp', 'maxHpCache', 'currentMp', 'maxMpCache', 'potionHpCd', 'potionMpCd', 'hpRefillTimer', 'mpRefillTimer', 'hitAnim', 'isDead', 'respawnTimer', 'quickHitTimer', 'quickHitCount', 'quickHitDmgMult', 'quickHitDelay', 'activeBuffs', 'inRaid', 'raidAccDown', 'raidSkillSeal', 'poisonMoveTarget', 'petHealTimer', 'petShieldTimer', 'petShieldActive', 'burned', 'burnTimer', 'burnDmg', 'burnTickTimer', 'frozen', 'frozenTimer'];
+const RUNTIME_CHAR_KEYS = ['x', 'y', 'attackTimer', 'attackAnim', 'facing', 'skillTimers', 'skillAnim', 'petX', 'petY', 'magnetTimer', 'shadowActive', 'shadowTimer', 'shadowX', 'shadowY', 'orbCount', 'orbReady', 'currentHp', 'maxHpCache', 'currentMp', 'maxMpCache', 'potionHpCd', 'potionMpCd', 'hpRefillTimer', 'mpRefillTimer', 'hitAnim', 'isDead', 'respawnTimer', 'quickHitTimer', 'quickHitCount', 'quickHitDmgMult', 'quickHitDelay', 'activeBuffs', 'inRaid', 'raidAccDown', 'raidSkillSeal', 'poisonMoveTarget', 'petHealTimer', 'petShieldTimer', 'petShieldActive', 'burned', 'burnTimer', 'burnDmg', 'burnTickTimer', 'frozen', 'frozenTimer', 'meteorCasting', 'meteorCastTimer', 'meteorTargetX', 'meteorTargetY', 'charging'];
 
 function saveGame() {
   const chars = gameState.characters.map(c => {
@@ -220,7 +221,7 @@ function saveGame() {
     RUNTIME_CHAR_KEYS.forEach(k => delete s[k]);
     return s;
   });
-  const { stageFields, viewStage, raidField, viewRaid, drops, floatingTexts, projectiles, poisonFields, ...rest } = gameState;
+  const { stageFields, viewStage, raidField, viewRaid, drops, floatingTexts, projectiles, poisonFields, meteors, ...rest } = gameState;
   localStorage.setItem(SAVE_KEY, JSON.stringify({ ...rest, characters: chars, lastTick: Date.now() }));
 }
 

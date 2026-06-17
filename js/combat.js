@@ -74,7 +74,7 @@ function updateCombat(dt) {
 
       if (!m.alive) continue;
 
-      updateMonsterMovement(m, dt, stageData, aliveChars);
+      updateMonsterMovement(m, dt, stageData, aliveChars, field);
 
       const md = m.def || stageData.monster;
 
@@ -92,20 +92,50 @@ function updateCombat(dt) {
         continue;
       }
 
+      // 디코이 히트 애님 감소
+      if (field.decoys) {
+        for (const d of field.decoys) d.hitAnim = Math.max(0, (d.hitAnim || 0) - dt);
+      }
+
       // 몬스터 공격 타이머
       m.attackTimer -= dt;
-      if (m.attackTimer <= 0 && aliveChars.length > 0) {
-        // 가장 가까운 캐릭터
-        let target = null, minD2 = Infinity;
-        for (const c of aliveChars) {
-          const dx = c.x - m.x, dy = c.y - m.y;
+      if (m.attackTimer <= 0) {
+        const aliveDecoys = field.decoys ? field.decoys.filter(d => d.currentHp > 0) : [];
+        const md2 = m.def || stageData.monster;
+        const aggR2 = (md2.aggroRange || 400) ** 2;
+
+        // 디코이가 있으면 가장 가까운 디코이 우선 공격
+        let decoyTarget = null, decoyD2 = Infinity;
+        for (const d of aliveDecoys) {
+          const dx = d.x - m.x, dy = d.y - m.y;
           const d2 = dx * dx + dy * dy;
-          if (d2 < minD2) { minD2 = d2; target = c; }
+          if (d2 < decoyD2) { decoyD2 = d2; decoyTarget = d; }
         }
-        // aggroRange 체크, 빙결 중 공격 불가
-        if (target && minD2 <= ((m.def || stageData.monster).aggroRange || 400) ** 2 && !m.frozen) {
-          m.attackTimer = (m.def || stageData.monster).monsterAtkInterval || MONSTER_ATTACK_INTERVAL;
-          executeMonsterAttack(m, target, stageData, i);
+
+        if (decoyTarget && decoyD2 <= aggR2 && !m.frozen) {
+          m.attackTimer = md2.monsterAtkInterval || MONSTER_ATTACK_INTERVAL;
+          const dmg = Math.max(1, Math.floor(md2.atk * 0.8)); // 디코이는 방어 없이 80% 데미지
+          decoyTarget.currentHp = Math.max(0, decoyTarget.currentHp - dmg);
+          decoyTarget.hitAnim = 0.2;
+          spawnFloatingText(i, decoyTarget.x, decoyTarget.y - 24, `-${dmg}`, '#e74c3c', 12);
+          if (decoyTarget.currentHp <= 0) {
+            spawnFloatingText(i, decoyTarget.x, decoyTarget.y - 36, '분신 파괴!', '#9b59b6', 14);
+            field.decoys = field.decoys.filter(d => d !== decoyTarget);
+          }
+          m.hitAnim = 0.15;
+        } else if (aliveChars.length > 0) {
+          // 가장 가까운 캐릭터
+          let target = null, minD2 = Infinity;
+          for (const c of aliveChars) {
+            const dx = c.x - m.x, dy = c.y - m.y;
+            const d2 = dx * dx + dy * dy;
+            if (d2 < minD2) { minD2 = d2; target = c; }
+          }
+          // aggroRange 체크, 빙결 중 공격 불가
+          if (target && minD2 <= aggR2 && !m.frozen) {
+            m.attackTimer = md2.monsterAtkInterval || MONSTER_ATTACK_INTERVAL;
+            executeMonsterAttack(m, target, stageData, i);
+          }
         }
       }
 
@@ -293,6 +323,12 @@ function getSkillAtkMult(char) {
 
 function takeDamage(char, dmg, stageIdx) {
   if (char.isDead) return;
+  // 메테오 캐스팅 중 피격 → 취소
+  if (char.meteorCasting) {
+    char.meteorCasting = false;
+    char.meteorCastTimer = 0;
+    spawnFloatingText(stageIdx, char.x, char.y - 46, '캐스팅 취소!', '#e74c3c', 13);
+  }
   // 아기거북이 방어막: 공격 1회 완전 흡수
   if (char.petShieldActive) {
     char.petShieldActive = false;
@@ -331,7 +367,7 @@ function takeDamage(char, dmg, stageIdx) {
 }
 
 // ── 몬스터 이동 ───────────────────────────────────────────
-function updateMonsterMovement(m, dt, stageData, aliveChars) {
+function updateMonsterMovement(m, dt, stageData, aliveChars, field) {
   // 소환 딜레이 (제자리 대기)
   if ((m.spawnDelay || 0) > 0) {
     m.spawnDelay -= dt;
@@ -364,6 +400,32 @@ function updateMonsterMovement(m, dt, stageData, aliveChars) {
   const spd = md.moveSpeed || 0;
   if (!spd) return;
 
+  const aggroRange = md.aggroRange || 400;
+  const aggR2      = aggroRange * aggroRange;
+
+  // 디코이가 있으면 가장 가까운 디코이 쪽으로 이동
+  const aliveDecoys = (field && field.decoys) ? field.decoys.filter(d => d.currentHp > 0) : [];
+  if (aliveDecoys.length > 0) {
+    let nearDecoy = null, nearDecoyD2 = Infinity;
+    for (const d of aliveDecoys) {
+      const dx = d.x - m.x, dy = d.y - m.y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < nearDecoyD2) { nearDecoyD2 = d2; nearDecoy = d; }
+    }
+    if (nearDecoy && nearDecoyD2 <= aggR2) {
+      const dist = Math.sqrt(nearDecoyD2);
+      const stopDist = md.attackRange || 60;
+      if (dist > stopDist) {
+        const dx = nearDecoy.x - m.x, dy = nearDecoy.y - m.y;
+        m.x += (dx / dist) * spd * dt;
+        m.y += (dy / dist) * spd * dt;
+        m.x = Math.max(48, Math.min(628, m.x));
+        m.y = Math.max(48, Math.min(448, m.y));
+      }
+      return;
+    }
+  }
+
   // 생존 캐릭터 없으면 그자리 대기
   if (aliveChars.length === 0) return;
 
@@ -374,8 +436,7 @@ function updateMonsterMovement(m, dt, stageData, aliveChars) {
     if (d2 < minD2) { minD2 = d2; nearest = c; }
   }
 
-  const dist       = Math.sqrt(minD2);
-  const aggroRange = md.aggroRange || 400;
+  const dist = Math.sqrt(minD2);
 
   if (dist > aggroRange) {
     returnToSpawn(m, dt, spd);
@@ -438,6 +499,35 @@ function updateProjectiles(dt) {
         gameState.projectiles.splice(i, 1);
         break;
       }
+    }
+  }
+}
+
+// ── 메테오 업데이트 ───────────────────────────────────────
+function updateMeteors(dt) {
+  for (let i = gameState.meteors.length - 1; i >= 0; i--) {
+    const mt = gameState.meteors[i];
+    mt.fallTimer -= dt;
+    // 낙하 진행도 (0→1)
+    const progress = Math.max(0, 1 - mt.fallTimer / mt.totalFall);
+    mt.y = -60 + progress * (mt.targetY + 60);
+
+    if (mt.fallTimer <= 0) {
+      // 충돌: AoE 데미지
+      const field = gameState.stageFields[mt.stageIdx];
+      const stage = STAGES[mt.stageIdx];
+      if (field && stage) {
+        const r2 = (mt.range || 800) ** 2;
+        for (const m of field.monsters) {
+          if (!m.alive) continue;
+          const dx = m.x - mt.targetX, dy = m.y - mt.targetY;
+          if (dx * dx + dy * dy <= r2) {
+            dealSkillDamage(mt.charRef, m, mt.dmg, stage, field, calcFinalStats(mt.charRef));
+          }
+        }
+        spawnFloatingText(mt.stageIdx, mt.targetX, mt.targetY - 20, '★메테오★', '#e74c3c', 20);
+      }
+      gameState.meteors.splice(i, 1);
     }
   }
 }
@@ -621,6 +711,28 @@ function updateCharacter(char, dt, stage, field) {
     char.frozenTimer = (char.frozenTimer || 0) - dt;
     if (char.frozenTimer <= 0) { char.frozen = false; char.frozenTimer = 0; }
     else return;
+  }
+
+  // 메테오 캐스팅 중: 이동/공격 불가, 완료 시 메테오 발사
+  if (char.meteorCasting) {
+    char.meteorCastTimer -= dt;
+    if (char.meteorCastTimer <= 0) {
+      char.meteorCasting = false;
+      // 화면 상단에서 목표 지점으로 낙하하는 메테오 생성
+      gameState.meteors.push({
+        stageIdx:  char.assignedStage,
+        x: char.meteorTargetX, y: -60,
+        targetX: char.meteorTargetX,
+        targetY: char.meteorTargetY,
+        fallTimer: char.meteorFallTime,
+        totalFall: char.meteorFallTime,
+        dmg:  char.meteorDmgCache,
+        range: char.meteorRange,
+        charRef: char,
+      });
+      spawnFloatingText(char.assignedStage, char.x, char.y - 36, '메테오 발사!', '#e74c3c', 15);
+    }
+    return;
   }
 
   // HP 포션 자동 사용 (HP 50% 이하)
@@ -839,8 +951,10 @@ function useSkills(char, dt, stats, stage, field) {
 }
 
 function executeSkill(char, skillId, skill, stats, stage, field) {
-  const sLv   = char.skillLevels?.[skillId] || 1;
-  const sMult = SKILL_LEVEL_MULTS[sLv] ?? 1.0;
+  const sLv        = char.skillLevels?.[skillId] || 1;
+  const sMult      = SKILL_LEVEL_MULTS[sLv] ?? 1.0;
+  // 메디테이션/분노 등 공격 버프 반영 (스킬 데미지에도 적용)
+  const atkBufMult = (char.activeBuffs?.atk?.timer > 0) ? (char.activeBuffs.atk.mult || 1) : 1;
 
   // ── 몬스터 디버프 — 받는 피해 증가 (페이지 위협) ───────────
   if (skill.targeting === 'debuff_area') {
@@ -907,12 +1021,12 @@ function executeSkill(char, skillId, skill, stats, stage, field) {
     return true;
   }
 
-  const dmg = Math.floor(stats.atk * (skill.dmgMultiplier || 1) * sMult);
+  const dmg = Math.floor(stats.atk * (skill.dmgMultiplier || 1) * sMult * atkBufMult);
 
   // ── 범위 회복 (클레릭) — 언데드에게는 데미지 ────────────
   if (skill.targeting === 'heal') {
     const stageIdx = char.assignedStage;
-    const healAmt  = Math.floor(stats.atk * (skill.healMult || 2) * sMult);
+    const healAmt  = Math.floor(stats.atk * (skill.healMult || 2) * sMult * atkBufMult);
     const healR2   = (skill.healRange || 300) ** 2;
 
     const allies = gameState.characters.filter(c => {
@@ -1012,7 +1126,7 @@ function executeSkill(char, skillId, skill, stats, stage, field) {
     const radius      = skill.poisonFieldRadius || skill.poisonRange || 200;
     const pDur        = (skill.poisonDuration || 8.0) + (sLv - 1) * 0.5;
     const tickInterval = skill.poisonTickInterval || 1.0;
-    const dmgPerTick  = Math.max(1, Math.floor(stats.atk * (skill.dmgMultiplier || 0.5) * sMult * tickInterval));
+    const dmgPerTick  = Math.max(1, Math.floor(stats.atk * (skill.dmgMultiplier || 0.5) * sMult * atkBufMult * tickInterval));
     gameState.poisonFields.push({
       stageIdx:     char.assignedStage,
       x: char.x,   y: char.y,
@@ -1031,7 +1145,7 @@ function executeSkill(char, skillId, skill, stats, stage, field) {
   if (skill.targeting === 'savage_blow') {
     const t = findNearestMonster(char, field);
     if (!t) return false;
-    const hitDmg = Math.floor(stats.atk * (skill.dmgMultiplier || 0.8) * sMult);
+    const hitDmg = Math.floor(stats.atk * (skill.dmgMultiplier || 0.8) * sMult * atkBufMult);
     dealSkillDamage(char, t, hitDmg, stage, field, stats);
     char.savageHitDmg   = hitDmg;
     char.savageHitsLeft = (skill.hits || 10) - 1;
@@ -1047,8 +1161,44 @@ function executeSkill(char, skillId, skill, stats, stage, field) {
     if (!t) return false;
     char.charging      = true;
     char.chargeTimer   = skill.chargeTime || 3.0;
-    char.chargeDmgMult = (skill.dmgMultiplier || 15.0) * sMult;
+    char.chargeDmgMult = (skill.dmgMultiplier || 15.0) * sMult * atkBufMult;
     spawnFloatingText(char.assignedStage, char.x, char.y - 36, '충전 중...', '#e2b96f', 13);
+    return true;
+  }
+
+  // ── 메테오 캐스팅 (불독) ────────────────────────────────────
+  if (skill.targeting === 'meteor_cast') {
+    if (char.meteorCasting) return false;
+    const nearest = findNearestMonster(char, field);
+    char.meteorCasting   = true;
+    char.meteorCastTimer = skill.castTime || 5.0;
+    char.meteorTargetX   = nearest ? nearest.x : 440;
+    char.meteorTargetY   = nearest ? nearest.y : 240;
+    // 발사 시 데미지 미리 계산: dmgMultiplier + 레벨별 dmgPerLv
+    const meteorDmgMult = (skill.dmgMultiplier || 30) + (sLv - 1) * (skill.dmgPerLv || 107.78);
+    char.meteorDmgCache = Math.floor(stats.atk * meteorDmgMult * atkBufMult);
+    char.meteorRange    = skill.meteorRange || 800;
+    char.meteorFallTime = skill.fallTime || 3.0;
+    spawnFloatingText(char.assignedStage, char.x, char.y - 36, '메테오 캐스팅...', '#e67e22', 13);
+    return true;
+  }
+
+  // ── 통나무분신술 (도적) ─────────────────────────────────────
+  if (skill.targeting === 'log_decoy') {
+    const stageIdx = char.assignedStage;
+    if (!field.decoys) field.decoys = [];
+    const decoyHp = Math.floor((skill.decoyHp || 1000) + (sLv - 1) * (skill.decoyHpPerLv || 5444));
+    const nearest = findNearestMonster(char, field);
+    // 적과 캐릭터 사이 중간 지점에 생성
+    const dx = nearest ? (nearest.x - char.x) * 0.4 : char.facing * 60;
+    const dy = nearest ? (nearest.y - char.y) * 0.4 : 0;
+    field.decoys.push({
+      x: Math.max(60, Math.min(620, char.x + dx)),
+      y: Math.max(60, Math.min(440, char.y + dy)),
+      currentHp: decoyHp, maxHp: decoyHp,
+      hitAnim: 0,
+    });
+    spawnFloatingText(stageIdx, char.x, char.y - 36, '분신 소환!', '#9b59b6', 14);
     return true;
   }
 

@@ -37,6 +37,8 @@ function render() {
 
   drawPets(viewIdx);
   drawProjectiles(viewIdx);
+  drawMeteors(viewIdx);
+  drawDecoys(viewIdx);
   drawFloatingTexts(viewIdx);
 
   drawStageLabel(W, viewIdx, field);
@@ -266,6 +268,38 @@ function drawCharacter(char) {
     ctx.fillStyle   = '#e74c3c';
     ctx.fillRect(char.x - 16, char.y - 26, 32, 40);
     ctx.globalAlpha = 1;
+  }
+
+  // 메테오 캐스팅 오버레이
+  if (char.meteorCasting) {
+    const skill = SKILLS['meteor'];
+    const totalCast = skill ? skill.castTime : 5.0;
+    const remain    = char.meteorCastTimer || 0;
+    const prog      = Math.max(0, Math.min(1, 1 - remain / totalCast));
+    const pulse     = 0.35 + Math.sin(Date.now() / 120) * 0.15;
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle   = '#e74c3c';
+    ctx.shadowColor = '#e74c3c';
+    ctx.shadowBlur  = 22;
+    ctx.beginPath();
+    ctx.arc(char.x, char.y - 8, 20, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur  = 0;
+    ctx.globalAlpha = 1;
+    // 캐스팅 진행바
+    const cbW = 36, cbH = 5, cbX = char.x - cbW / 2, cbY = char.y - 52;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(cbX, cbY, cbW, cbH);
+    ctx.fillStyle = '#e74c3c';
+    ctx.fillRect(cbX, cbY, cbW * prog, cbH);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth   = 0.5;
+    ctx.strokeRect(cbX, cbY, cbW, cbH);
+    ctx.fillStyle   = '#fff';
+    ctx.font        = 'bold 9px sans-serif';
+    ctx.textAlign   = 'center';
+    ctx.fillText(`메테오 ${remain.toFixed(1)}s`, char.x, cbY - 3);
+    ctx.textAlign   = 'left';
   }
 
   // 피어싱 충전 오버레이
@@ -580,4 +614,116 @@ function drawStageLabel(W, stageIdx, field) {
   ctx.textAlign = 'right';
   ctx.fillText(`[ ${stage.name} ]  처치: ${kills} / ${stage.killsToAdvance}`, W - 10, 20);
   ctx.textAlign = 'left';
+}
+
+function drawMeteors(viewIdx) {
+  const now = Date.now();
+  for (const mt of gameState.meteors) {
+    if (mt.stageIdx !== viewIdx) continue;
+
+    // 착지 예정 지점 표시 (바닥 링)
+    const progress = Math.max(0, 1 - mt.fallTimer / mt.totalFall);
+    const ringAlpha = 0.15 + progress * 0.45;
+    ctx.globalAlpha = ringAlpha;
+    ctx.strokeStyle = '#e74c3c';
+    ctx.lineWidth   = 3;
+    ctx.setLineDash([8, 6]);
+    ctx.beginPath();
+    ctx.arc(mt.targetX, mt.targetY, 36, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+
+    // 낙하 중인 불덩어리
+    const cx = mt.x, cy = mt.y;
+    const size = 22 + Math.sin(now / 80) * 4;
+
+    // 외곽 광염
+    ctx.shadowColor = '#e74c3c';
+    ctx.shadowBlur  = 40;
+    ctx.globalAlpha = 0.5 + Math.sin(now / 100) * 0.15;
+    ctx.fillStyle   = '#e74c3c';
+    ctx.beginPath();
+    ctx.arc(cx, cy, size + 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur  = 0;
+
+    // 중간 불꽃
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle   = '#f39c12';
+    ctx.beginPath();
+    ctx.arc(cx, cy, size, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 코어
+    ctx.globalAlpha = 1;
+    ctx.fillStyle   = '#fff5a0';
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * 0.45, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 캐스팅 잔여 시간 (낙하 중엔 표시 안함)
+    ctx.shadowBlur  = 0;
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawDecoys(viewIdx) {
+  const field = gameState.stageFields[viewIdx];
+  if (!field || !field.decoys) return;
+
+  for (const d of field.decoys) {
+    if (d.currentHp <= 0) continue;
+
+    // 피격 빛 효과
+    if ((d.hitAnim || 0) > 0) {
+      ctx.globalAlpha = (d.hitAnim / 0.2) * 0.6;
+      ctx.fillStyle   = '#ffe000';
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    // 통나무 몸체 (갈색 원)
+    ctx.fillStyle   = '#8B4513';
+    ctx.strokeStyle = '#6B3410';
+    ctx.lineWidth   = 2;
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, 16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // 나무 결 (가로 줄)
+    ctx.strokeStyle = '#6B3410';
+    ctx.lineWidth   = 1.5;
+    ctx.globalAlpha = 0.5;
+    for (let k = -1; k <= 1; k++) {
+      ctx.beginPath();
+      ctx.moveTo(d.x - 12, d.y + k * 5);
+      ctx.lineTo(d.x + 12, d.y + k * 5);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // "분신" 레이블
+    ctx.fillStyle   = '#f0e68c';
+    ctx.font        = 'bold 10px sans-serif';
+    ctx.textAlign   = 'center';
+    ctx.fillText('분신', d.x, d.y + 29);
+    ctx.textAlign   = 'left';
+
+    // HP 바
+    const barW = 40, barH = 5;
+    const barX = d.x - barW / 2;
+    const barY = d.y - 28;
+    const ratio = d.currentHp / d.maxHp;
+    ctx.fillStyle = '#222';
+    ctx.fillRect(barX, barY, barW, barH);
+    ctx.fillStyle = ratio > 0.5 ? '#2ecc71' : ratio > 0.25 ? '#f39c12' : '#e74c3c';
+    ctx.fillRect(barX, barY, barW * ratio, barH);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth   = 0.5;
+    ctx.strokeRect(barX, barY, barW, barH);
+  }
 }

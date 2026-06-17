@@ -756,6 +756,16 @@ function skillEffectDesc(id, s, level) {
     case 'piercing':
       return `${s.chargeTime}s 차지 후 전방 관통 · 위력 ${pct((s.dmgMultiplier || 1) * m)}${suffix}`;
 
+    case 'meteor_cast': {
+      const meteorDmg = (s.dmgMultiplier || 30) + (level - 1) * (s.dmgPerLv || 107.78);
+      return `5초 캐스팅 → 3초 낙하 → 반경 ${s.meteorRange || 800}px 전체 ${pct(meteorDmg)} 폭격 (피격 시 캐스팅 취소)${suffix}`;
+    }
+
+    case 'log_decoy': {
+      const dHp = Math.floor((s.decoyHp || 1000) + (level - 1) * (s.decoyHpPerLv || 5444));
+      return `분신 소환 (HP ${dHp.toLocaleString()}) · 분신이 몬스터 어그로를 끌어 아군 보호${suffix}`;
+    }
+
     default:
       return `위력 ${pct((s.dmgMultiplier || 1) * m)}${suffix}`;
   }
