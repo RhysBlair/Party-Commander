@@ -861,6 +861,60 @@ body {
   border-radius: 4px;
   background: #0a1525;
   font-size: 12px;
+  cursor: grab;
+  user-select: none;
+}
+
+.inv-item:active {
+  cursor: grabbing;
+}
+
+/* 장비탭 2단 레이아웃 */
+.eq-layout {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.eq-left-panel {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  max-height: 62vh;
+}
+
+.eq-right-panel {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  max-height: 62vh;
+}
+
+/* 드래그 오버 시 장비 슬롯 하이라이트 */
+.equip-slot-item.drag-over {
+  border-color: #e2b96f !important;
+  background: #1a1505;
+}
+
+/* 인벤토리 필터 버튼 */
+.inv-filter-btn {
+  padding: 3px 8px;
+  border: 1px solid #2a3a4a;
+  border-radius: 4px;
+  background: #0a1525;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.inv-filter-btn:hover {
+  border-color: #e2b96f88;
+  color: #e0e0e0;
+}
+
+.inv-filter-btn.active {
+  border-color: #e2b96f;
+  background: #1a150a;
 }
 
 .shop-list {

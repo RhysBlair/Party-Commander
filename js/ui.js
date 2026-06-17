@@ -1,4 +1,5 @@
 let uiTimer = 0;
+let _equipGradeFilter = null;
 const HUD_INTERVAL = 0.1;
 
 // 탭 재빌드: 레벨업 등 게임 이벤트 시 rAF로 1회 실행
@@ -402,7 +403,7 @@ function renderEquipmentTab() {
     return;
   }
 
-  // ── 장착 중 ─────────────────────────────────────────────
+  // ── 장착 중 (왼쪽 패널) ─────────────────────────────────────────────
   const charCards = gameState.characters.map(char => {
     const slotList = getCharSlotList(char);
     const slots = slotList.map(slot => {
@@ -425,7 +426,10 @@ function renderEquipmentTab() {
       return `
         <div class="equip-slot">
           <div class="equip-slot-label">${SLOT_NAMES[slot]}</div>
-          <div class="equip-slot-item" style="border-color:${col}">
+          <div class="equip-slot-item" style="border-color:${col}"
+               ondragover="equipDragOver(event)"
+               ondragleave="equipDragLeave(event)"
+               ondrop="equipDrop(event,${char.id},'${slot}')">
             ${e
               ? `<span style="color:${col}">${e.name}${enhanceBadge(item.enhance)}</span>
                  <span class="equip-stat-text">${equipStatText(e, item.enhance)}</span>`
@@ -446,23 +450,18 @@ function renderEquipmentTab() {
       </div>`;
   }).join('');
 
-  // ── 인벤토리 ─────────────────────────────────────────────
+  // ── 인벤토리 (오른쪽 패널) ─────────────────────────────────────────────
   const inv = gameState.equipmentInventory;
-  const invHtml = inv.length === 0
+  const filteredInv = _equipGradeFilter
+    ? inv.filter(i => { const e = EQUIPMENT[i.id]; return e && e.grade === _equipGradeFilter; })
+    : inv;
+
+  const invHtml = filteredInv.length === 0
     ? '<div style="color:#555;font-size:12px;padding:6px 0">보유 장비 없음</div>'
-    : inv.map(item => {
+    : filteredInv.map(item => {
         const e = EQUIPMENT[item.id];
         if (!e) return '';
         const col = GRADE_COLORS[e.grade] || '#aaa';
-        const equipBtns = gameState.characters.map(char => {
-          if (!canEquipItem(char, item)) return '';
-          const isThiefWeapon = char.classId === 'thief' && e.type === 'weapon';
-          if (isThiefWeapon) {
-            return `<button class="assign-btn" onclick="tryEquipItem(${char.id},${item.uid});renderEquipmentTab();">${charClassName(char.classId)[0]} 무기1</button>` +
-                   `<button class="assign-btn" onclick="tryEquipItem(${char.id},${item.uid},'weapon2');renderEquipmentTab();">${charClassName(char.classId)[0]} 무기2</button>`;
-          }
-          return `<button class="assign-btn" onclick="tryEquipItem(${char.id},${item.uid});renderEquipmentTab();">${charClassName(char.classId)[0]} 장착</button>`;
-        }).join('');
         const _iMax   = itemMaxEnhance(item);
         const canAff  = _iMax > 0 && item.enhance < _iMax && gameState.gold >= enhanceCost(item);
         const succPct = ENHANCE_SUCCESS[item.enhance] ?? 0;
@@ -484,13 +483,13 @@ function renderEquipmentTab() {
           : '';
 
         return `
-          <div class="inv-item">
+          <div class="inv-item" draggable="true" data-uid="${item.uid}"
+               ondragstart="equipDragStart(event)">
             <div style="display:flex;align-items:center;gap:6px">
               <span style="color:${col}">${e.name}${enhanceBadge(item.enhance)}</span>
               <span class="equip-stat-text">${equipStatText(e, item.enhance)}</span>
             </div>
             <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;align-items:center">
-              ${equipBtns}
               ${enhBtn}
               ${sellBtn}
             </div>
@@ -498,21 +497,72 @@ function renderEquipmentTab() {
       }).join('');
 
   const gradeCount = g => inv.filter(i => { const e = EQUIPMENT[i.id]; return e && e.grade === g; }).length;
+
+  // 필터 버튼 (전체 / 노멀 / 레어 / 에픽)
+  const filterBtns = [
+    { g: null, label: `전체 (${inv.length})`, col: '#aaa' },
+    ...['노멀', '레어', '에픽'].map(g => ({ g, label: `${g} (${gradeCount(g)})`, col: GRADE_COLORS[g] || '#aaa' }))
+  ].map(({ g, label, col }) =>
+    `<button class="inv-filter-btn ${_equipGradeFilter === g ? 'active' : ''}" style="color:${col}"
+             onclick="setEquipFilter(${g === null ? 'null' : `'${g}'`})">
+       ${label}
+     </button>`
+  ).join('');
+
+  // 일괄판매 버튼
   const sellBtns = ['노멀', '레어', '에픽'].map(g => {
     const cnt = gradeCount(g);
     const col = GRADE_COLORS[g] || '#aaa';
     return `<button class="small-btn ${cnt > 0 ? '' : 'disabled'}" style="color:${col}"
                     onclick="trySellByGrade('${g}');renderEquipmentTab();">
-              ${g} 일괄판매 (${cnt}개)
+              ${g} 일괄판매 (${cnt})
             </button>`;
   }).join('');
 
   el.innerHTML = `
-    <div class="eq-section-title">장착 중</div>
-    ${charCards}
-    <div class="eq-section-title" style="margin-top:10px">인벤토리</div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${sellBtns}</div>
-    <div class="inv-list">${invHtml}</div>`;
+    <div class="eq-layout">
+      <div class="eq-left-panel">
+        <div class="eq-section-title">장착 중</div>
+        ${charCards}
+      </div>
+      <div class="eq-right-panel">
+        <div class="eq-section-title">인벤토리</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">${filterBtns}</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">${sellBtns}</div>
+        <div class="inv-list">${invHtml}</div>
+      </div>
+    </div>`;
+}
+
+function setEquipFilter(grade) {
+  _equipGradeFilter = _equipGradeFilter === grade ? null : grade;
+  renderEquipmentTab();
+}
+
+function equipDragStart(event) {
+  event.dataTransfer.setData('text/plain', event.currentTarget.dataset.uid);
+  event.dataTransfer.effectAllowed = 'move';
+}
+
+function equipDragOver(event) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  event.currentTarget.classList.add('drag-over');
+}
+
+function equipDragLeave(event) {
+  if (!event.currentTarget.contains(event.relatedTarget)) {
+    event.currentTarget.classList.remove('drag-over');
+  }
+}
+
+function equipDrop(event, charId, slot) {
+  event.preventDefault();
+  event.currentTarget.classList.remove('drag-over');
+  const uid = parseInt(event.dataTransfer.getData('text/plain'));
+  if (isNaN(uid)) return;
+  tryEquipItem(charId, uid, slot);
+  renderEquipmentTab();
 }
 
 // ── 상점 탭 (물약 상점 — 전역 재고) ──────────────────────────
