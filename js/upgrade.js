@@ -334,6 +334,14 @@ function tryCraftItem(equipId) {
   gameState.equipmentInventory.push({ id: equipId, uid: gameState.nextItemUid++, enhance: 0 });
 }
 
+// 결정 업그레이드: dim 3개 → bright 1개, bright 5개 → radiant 1개
+function tryUpgradeCrystal(from, to, cost) {
+  if (!gameState.crystals) gameState.crystals = { dim: 0, bright: 0, radiant: 0 };
+  if ((gameState.crystals[from] || 0) < cost) return;
+  gameState.crystals[from] -= cost;
+  gameState.crystals[to] = (gameState.crystals[to] || 0) + 1;
+}
+
 function trySetNickname(charId, name) {
   const char = gameState.characters.find(c => c.id === charId);
   if (!char) return;

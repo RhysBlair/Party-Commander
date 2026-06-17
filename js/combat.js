@@ -14,9 +14,6 @@ function updateCombat(dt) {
       char.burnTickTimer  = 0;
       char.activeBuffs    = {};
       char.petShieldActive = false;
-      char.charging       = false;
-      char.meteorCasting  = false;
-      char.meteorCastTimer = 0;
       const stats = calcFinalStats(char);
       char.currentHp  = stats.maxHp;
       char.maxHpCache = stats.maxHp;
@@ -1129,9 +1126,6 @@ function executeSkill(char, skillId, skill, stats, stage, field) {
       c.burnTickTimer  = 0;
       c.activeBuffs    = {};
       c.petShieldActive = false;
-      c.charging       = false;
-      c.meteorCasting  = false;
-      c.meteorCastTimer = 0;
       c.currentHp = Math.floor(cStats.maxHp * 0.3);
       resetCharPos(c);
       spawnFloatingText(stageIdx, c.x, c.y - 36, '부활!', '#f1c40f', 16);

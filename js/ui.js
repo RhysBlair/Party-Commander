@@ -1106,11 +1106,43 @@ function renderCraftTab() {
       ${rows}`;
   }).join('');
 
+  const dimToBright  = 3;
+  const brightToRad  = 5;
+  const canDimUp  = (crystals.dim   || 0) >= dimToBright;
+  const canBriUp  = (crystals.bright || 0) >= brightToRad;
+  const upgradeHtml = `
+    <div class="eq-section-title" style="margin-top:10px">결정 업그레이드</div>
+    <div style="display:flex;flex-direction:column;gap:6px;padding:8px;background:#0d1b2a;border-radius:4px;border:1px solid #1a2a3a">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span style="font-size:12px">
+          <span style="color:${CRYSTAL_COLORS.dim}">${CRYSTAL_NAMES.dim} ${dimToBright}개</span>
+          <span style="color:#666"> → </span>
+          <span style="color:${CRYSTAL_COLORS.bright}">${CRYSTAL_NAMES.bright} 1개</span>
+        </span>
+        <button class="small-btn ${canDimUp ? '' : 'disabled'}" style="flex-shrink:0"
+                onclick="tryUpgradeCrystal('dim','bright',${dimToBright});renderCraftTab();">
+          업그레이드
+        </button>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span style="font-size:12px">
+          <span style="color:${CRYSTAL_COLORS.bright}">${CRYSTAL_NAMES.bright} ${brightToRad}개</span>
+          <span style="color:#666"> → </span>
+          <span style="color:${CRYSTAL_COLORS.radiant}">${CRYSTAL_NAMES.radiant} 1개</span>
+        </span>
+        <button class="small-btn ${canBriUp ? '' : 'disabled'}" style="flex-shrink:0"
+                onclick="tryUpgradeCrystal('bright','radiant',${brightToRad});renderCraftTab();">
+          업그레이드
+        </button>
+      </div>
+    </div>`;
+
   el.innerHTML = `
     <div class="eq-section-title">결정 보유량</div>
     <div style="margin-bottom:12px;padding:8px;background:#0d1b2a;border-radius:4px;border:1px solid #1a2a3a">
       ${crystalRow}
     </div>
+    ${upgradeHtml}
     ${craftHtml}`;
 }
 

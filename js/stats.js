@@ -36,10 +36,10 @@ function calcFinalStats(char) {
   const effLUK = (s.LUK ?? 0) + sumEquipStat(char, 'bonusLUK');
   const eff    = { STR: effSTR, DEX: effDEX, INT: effINT, LUK: effLUK };
 
-  // 공격력: 기본5 + 장비ATK + STR보너스 (직업 주스탯 배율 적용)
-  const strAtkBonus  = effSTR * 0.5;
-  const baseAtk      = 5 + eqAtk + strAtkBonus;
-  const primaryStat  = cls.primary ? eff[cls.primary] : 0;
+  // 공격력: 기본5 + 장비ATK + 주스탯보너스 (직업 주스탯 배율 적용)
+  const primaryStat   = cls.primary ? eff[cls.primary] : 0;
+  const primaryBonus  = primaryStat * 0.5;
+  const baseAtk       = 5 + eqAtk + primaryBonus;
   const atkMultiplier = 1 + PRIMARY_STAT_DMG_COEFF * primaryStat;
 
   // 방어 / 명중 / 회피
