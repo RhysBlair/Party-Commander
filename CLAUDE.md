@@ -200,7 +200,13 @@ x, y, attackTimer, skillTimers, shadowActive, shadowTimer, currentHp, currentMp,
 
 ## 개발 이력 (최신순)
 
-### 세션 8 (현재)
+### 세션 9 (현재)
+- 정복완료 표시: maxStageReached > stageIdx 이면 HUD/스테이지탭에 "정복완료", 스테이지 바 점에 ✓ 표시
+- 펫 보유중 시스템: char.ownedPets[] 추가, 구매 후 다른 펫 장착 시 "보유중 (장착)" 무료 전환, 재구매 불가
+- 장비탭 판매/분해 버튼: 아이템 오른쪽에 나란히 배치 (justify-content:space-between)
+- 빙결 내성 버그 수정: 빙결 중 내성 +20%/3s 로직이 frozen return에 막히던 문제 수정 (else 블록 내부로 이동)
+
+### 세션 8
 - 에픽 지팡이 `epic_staff` (INT+22, Lv30 마법사), 에픽 활 `epic_bow` (DEX+18, Lv30 궁수) 추가
 - 석궁 계열: `crossbow`(노멀 bonusCritRate+5%), `heavy_crossbow`(레어 +12%/+0.5배) — 궁수 계열 착용, 활보다 낮은 atk
 - stats.js: bonusCritRate/bonusCritDmg를 장비 합산에 반영 (sumEquipStat + calcFinalStats)

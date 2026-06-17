@@ -271,8 +271,15 @@ function tryBuyPet(charId, petId) {
   const p = PETS[petId];
   if (!char || !p) return;
   if (char.pet === petId) return;
+  if (!char.ownedPets) char.ownedPets = [];
+  // 이미 보유 중이면 무료 장착
+  if (char.ownedPets.includes(petId)) {
+    char.pet = petId;
+    return;
+  }
   if (gameState.gold < p.cost) return;
   gameState.gold -= p.cost;
+  char.ownedPets.push(petId);
   char.pet = petId;
 }
 

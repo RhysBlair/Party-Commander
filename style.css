@@ -88,8 +88,9 @@ body {
 }
 .sdot-wrap:not(.sdot-wrap-locked):hover .sdot { border-color: #4caf50; color: #4caf50; }
 .sdot-view   { background: #0d2a0d; border-color: #4caf50 !important; color: #4caf50 !important; box-shadow: 0 0 6px #4caf5055; }
-.sdot-chars  { border-color: #e2b96f !important; color: #e2b96f !important; }
-.sdot-locked { background: #0d1017; border-color: #1a2030; color: #2a3040; cursor: default; }
+.sdot-chars     { border-color: #e2b96f !important; color: #e2b96f !important; }
+.sdot-conquered { border-color: #4caf5066 !important; color: #4caf5088 !important; }
+.sdot-locked    { background: #0d1017; border-color: #1a2030; color: #2a3040; cursor: default; }
 .sdot-cnt {
   font-size: 9px;
   color: #e2b96f;

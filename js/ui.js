@@ -132,16 +132,17 @@ function updateStageBar() {
     const line = document.getElementById(`sdot-line-${i}`);
     if (!wrap || !dot || !cnt) continue;
 
-    const unlocked = i <= max;
-    const isView   = i === view;
-    const n        = gameState.characters.filter(c => c.assignedStage === i).length;
+    const unlocked   = i <= max;
+    const isView     = i === view;
+    const conquered  = i < max;
+    const n          = gameState.characters.filter(c => c.assignedStage === i).length;
 
     wrap.classList.toggle('sdot-wrap-locked', !unlocked);
 
     dot.className = 'sdot' +
-      (!unlocked ? ' sdot-locked' : isView ? ' sdot-view' : n > 0 ? ' sdot-chars' : '');
+      (!unlocked ? ' sdot-locked' : isView ? ' sdot-view' : n > 0 ? ' sdot-chars' : conquered ? ' sdot-conquered' : '');
 
-    cnt.textContent = n > 0 ? `${n}명` : '';
+    cnt.textContent = n > 0 ? `${n}명` : conquered ? '✓' : '';
 
     if (line) line.className = 'sdot-line' + (unlocked && i < max ? ' sdot-line-on' : '');
   }
@@ -159,8 +160,11 @@ function updateHUD() {
     const stage = STAGES[s.viewStage];
     const field = s.stageFields[s.viewStage];
     const kills = field ? field.kills : 0;
+    const isConquered = s.viewStage < s.maxStageReached;
     document.getElementById('hud-stage').textContent    = `스테이지: ${stage.name}`;
-    document.getElementById('hud-progress').textContent = `처치: ${kills} / ${stage.killsToAdvance}`;
+    document.getElementById('hud-progress').textContent = isConquered
+      ? `정복완료 (재파밍: ${kills} / ${stage.killsToAdvance})`
+      : `처치: ${kills} / ${stage.killsToAdvance}`;
   }
 }
 
@@ -520,15 +524,17 @@ function renderEquipmentTab() {
 
         return `
           <div class="inv-item" draggable="true" data-uid="${item.uid}"
-               ondragstart="equipDragStart(event)">
-            <div style="display:flex;align-items:center;gap:6px">
-              <span style="color:${col}">${e.name}${enhanceBadge(item.enhance)}</span>
-              <span class="equip-stat-text">${equipStatText(e, item.enhance)}</span>
+               ondragstart="equipDragStart(event)"
+               style="display:flex;align-items:center;gap:6px;justify-content:space-between">
+            <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+              <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+                <span style="color:${col}">${e.name}${enhanceBadge(item.enhance)}</span>
+                <span class="equip-stat-text">${equipStatText(e, item.enhance)}</span>
+              </div>
+              ${enhBtn ? `<div>${enhBtn}</div>` : ''}
             </div>
-            <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;align-items:center">
-              ${enhBtn}
-              ${sellBtn}
-              ${decompBtn}
+            <div style="display:flex;gap:3px;flex-shrink:0">
+              ${sellBtn}${decompBtn}
             </div>
           </div>`;
       }).join('');
@@ -872,21 +878,32 @@ function renderPetTab() {
     const highLevel = char.level >= 30;
     const visiblePets = Object.entries(PETS).filter(([id]) => id === 'mini_slime' || highLevel);
 
+    const owned = char.ownedPets || [];
     const petCards = visiblePets.map(([id, p]) => {
       const isEquipped = char.pet === id;
-      const canAfford  = !isEquipped && gameState.gold >= p.cost;
+      const isOwned    = owned.includes(id);
+      const canAfford  = !isOwned && gameState.gold >= p.cost;
+      let actionHtml;
+      if (isEquipped) {
+        actionHtml = `<span style="font-size:10px;color:#4caf50">✓ 장착 중</span>`;
+      } else if (isOwned) {
+        actionHtml = `<button class="small-btn" style="font-size:10px;padding:2px 6px;border-color:#2a6a4a;color:#4caf50"
+                               onclick="tryBuyPet(${char.id},'${id}');renderPetTab();">
+                        보유중 (장착)
+                      </button>`;
+      } else {
+        actionHtml = `<button class="small-btn ${canAfford ? '' : 'disabled'}" style="font-size:10px;padding:2px 6px"
+                               onclick="tryBuyPet(${char.id},'${id}');renderPetTab();">
+                        ${p.cost.toLocaleString()}G
+                      </button>`;
+      }
       return `
         <div style="display:flex;flex-direction:column;align-items:center;gap:4px;
-                    padding:8px;min-width:90px;border:1px solid ${isEquipped ? '#4caf50' : '#2a3a2a'};
-                    border-radius:6px;background:${isEquipped ? '#0a2010' : '#111'};flex-shrink:0">
-          <span style="font-size:12px;font-weight:bold;color:${isEquipped ? '#4caf50' : '#d0d0d0'}">${p.name}</span>
+                    padding:8px;min-width:90px;border:1px solid ${isEquipped ? '#4caf50' : isOwned ? '#1a4a2a' : '#2a3a2a'};
+                    border-radius:6px;background:${isEquipped ? '#0a2010' : isOwned ? '#0a1a10' : '#111'};flex-shrink:0">
+          <span style="font-size:12px;font-weight:bold;color:${isEquipped ? '#4caf50' : isOwned ? '#5cbc80' : '#d0d0d0'}">${p.name}</span>
           <span style="font-size:10px;color:#888;text-align:center;line-height:1.3">${p.desc}</span>
-          ${isEquipped
-            ? `<span style="font-size:10px;color:#4caf50">✓ 장착 중</span>`
-            : `<button class="small-btn ${canAfford ? '' : 'disabled'}" style="font-size:10px;padding:2px 6px"
-                       onclick="tryBuyPet(${char.id},'${id}');renderPetTab();">
-                 ${p.cost.toLocaleString()}G
-               </button>`}
+          ${actionHtml}
         </div>`;
     }).join('');
 
@@ -942,9 +959,12 @@ function renderStageTab() {
 
     const f = gameState.stageFields[i];
     const fKills = f ? f.kills : 0;
-    const killInfo = charsHere.length > 0
-      ? `<span class="stage-row-kills">${fKills} / ${s.killsToAdvance}</span>`
-      : `<span class="stage-row-kills" style="color:#444">${s.killsToAdvance}처치</span>`;
+    const conquered = i < gameState.maxStageReached;
+    const killInfo = conquered
+      ? `<span class="stage-row-kills" style="color:#4caf50">정복완료</span>`
+      : charsHere.length > 0
+        ? `<span class="stage-row-kills">${fKills} / ${s.killsToAdvance}</span>`
+        : `<span class="stage-row-kills" style="color:#444">${s.killsToAdvance}처치</span>`;
 
     let statusLabel = '', statusClass = '';
     if (isView)        { statusLabel = '👁 보는 중'; statusClass = 'status-current'; }

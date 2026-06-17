@@ -304,9 +304,12 @@ function loadGame() {
     if (!gameState.upgrades) gameState.upgrades = {};
     if (!gameState.crystals) gameState.crystals = { dim: 0, bright: 0, radiant: 0 };
 
-    // 구형 펫 ID(pet_basic, pet_magnet 등) 제거
+    // 구형 펫 ID(pet_basic, pet_magnet 등) 제거 + ownedPets 마이그레이션
     for (const char of gameState.characters) {
       if (char.pet && !PETS[char.pet]) char.pet = null;
+      if (!char.ownedPets) char.ownedPets = [];
+      // 현재 장착 중인 펫이 ownedPets에 없으면 추가 (구형 세이브 호환)
+      if (char.pet && !char.ownedPets.includes(char.pet)) char.ownedPets.push(char.pet);
     }
 
     gameState.viewStage = legacyStage;

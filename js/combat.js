@@ -342,10 +342,18 @@ function updateMonsterMovement(m, dt, stageData, aliveChars) {
   if (m.frozen) {
     m.frozenTimer = (m.frozenTimer || 0) - dt;
     if (m.frozenTimer <= 0) { m.frozen = false; m.frozenTimer = 0; }
+    else {
+      // 빙결 중: 3초마다 내성 +20% (최대 100)
+      m.iceResistTimer = (m.iceResistTimer ?? 3.0) - dt;
+      if (m.iceResistTimer <= 0) {
+        m.iceResistTimer = 3.0;
+        m.iceResist = Math.min(100, (m.iceResist || 0) + 20);
+      }
+    }
     return;
   }
 
-  // 빙결 내성 타이머 (3초마다: 빙결 중 +20%, 미빙결 -20%)
+  // 비빙결: 3초마다 내성 -20% (최소 0)
   m.iceResistTimer = (m.iceResistTimer ?? 3.0) - dt;
   if (m.iceResistTimer <= 0) {
     m.iceResistTimer = 3.0;
