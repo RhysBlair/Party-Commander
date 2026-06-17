@@ -87,7 +87,7 @@ function initStageField(stageIdx) {
       alive: true,
       respawnTimer: 0,
       hitAnim: 0,
-      attackTimer: Math.random() * MONSTER_ATTACK_INTERVAL,
+      attackTimer: Math.random() * (stage.monster.monsterAtkInterval || MONSTER_ATTACK_INTERVAL),
       def: stage.monster,
     })),
     kills: 0,
@@ -159,6 +159,7 @@ function advanceStageField(stageIdx) {
   const field = gameState.stageFields[stageIdx];
 
   if (next >= STAGES.length) {
+    if (next > gameState.maxStageReached) gameState.maxStageReached = next;
     if (field) field.kills = 0;
     return;
   }
@@ -211,7 +212,7 @@ function getCharSlotList(char) {
 const SAVE_KEY = 'party_commander_save';
 
 // 런타임 전용 캐릭터 필드 (저장 제외)
-const RUNTIME_CHAR_KEYS = ['x', 'y', 'attackTimer', 'attackAnim', 'facing', 'skillTimers', 'skillAnim', 'petX', 'petY', 'magnetTimer', 'shadowActive', 'shadowTimer', 'shadowX', 'shadowY', 'orbCount', 'orbReady', 'currentHp', 'maxHpCache', 'currentMp', 'maxMpCache', 'potionHpCd', 'potionMpCd', 'hpRefillTimer', 'mpRefillTimer', 'hitAnim', 'isDead', 'respawnTimer', 'quickHitTimer', 'quickHitCount', 'quickHitDmgMult', 'quickHitDelay', 'activeBuffs', 'inRaid', 'raidAccDown', 'raidSkillSeal', 'poisonMoveTarget', 'petHealTimer', 'petShieldTimer', 'petShieldActive', 'burned', 'burnTimer', 'burnDmg', 'burnTickTimer'];
+const RUNTIME_CHAR_KEYS = ['x', 'y', 'attackTimer', 'attackAnim', 'facing', 'skillTimers', 'skillAnim', 'petX', 'petY', 'magnetTimer', 'shadowActive', 'shadowTimer', 'shadowX', 'shadowY', 'orbCount', 'orbReady', 'currentHp', 'maxHpCache', 'currentMp', 'maxMpCache', 'potionHpCd', 'potionMpCd', 'hpRefillTimer', 'mpRefillTimer', 'hitAnim', 'isDead', 'respawnTimer', 'quickHitTimer', 'quickHitCount', 'quickHitDmgMult', 'quickHitDelay', 'activeBuffs', 'inRaid', 'raidAccDown', 'raidSkillSeal', 'poisonMoveTarget', 'petHealTimer', 'petShieldTimer', 'petShieldActive', 'burned', 'burnTimer', 'burnDmg', 'burnTickTimer', 'frozen', 'frozenTimer'];
 
 function saveGame() {
   const chars = gameState.characters.map(c => {

@@ -869,32 +869,40 @@ function renderPetTab() {
   }
 
   const charCards = gameState.characters.map(char => {
-    const petOptions = Object.entries(PETS).map(([id, p]) => {
+    const highLevel = char.level >= 30;
+    const visiblePets = Object.entries(PETS).filter(([id]) => id === 'mini_slime' || highLevel);
+
+    const petCards = visiblePets.map(([id, p]) => {
       const isEquipped = char.pet === id;
       const canAfford  = !isEquipped && gameState.gold >= p.cost;
-
       return `
-        <div class="pet-option ${isEquipped ? 'pet-equipped' : ''}">
-          <div class="pet-option-info">
-            <span class="pet-option-name" style="color:${isEquipped ? '#4caf50' : '#e0e0e0'}">${p.name}</span>
-            <span class="pet-option-meta">${p.desc}</span>
-          </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;
+                    padding:8px;min-width:90px;border:1px solid ${isEquipped ? '#4caf50' : '#2a3a2a'};
+                    border-radius:6px;background:${isEquipped ? '#0a2010' : '#111'};flex-shrink:0">
+          <span style="font-size:12px;font-weight:bold;color:${isEquipped ? '#4caf50' : '#d0d0d0'}">${p.name}</span>
+          <span style="font-size:10px;color:#888;text-align:center;line-height:1.3">${p.desc}</span>
           ${isEquipped
-            ? `<span class="skill-learned">✓ 장착 중</span>`
-            : `<button class="small-btn ${canAfford ? '' : 'disabled'}"
+            ? `<span style="font-size:10px;color:#4caf50">✓ 장착 중</span>`
+            : `<button class="small-btn ${canAfford ? '' : 'disabled'}" style="font-size:10px;padding:2px 6px"
                        onclick="tryBuyPet(${char.id},'${id}');renderPetTab();">
                  ${p.cost.toLocaleString()}G
                </button>`}
         </div>`;
     }).join('');
 
+    const lockNotice = !highLevel
+      ? `<div style="font-size:10px;color:#666;padding:4px 0">Lv.30 이상 시 더 많은 펫 해금</div>`
+      : '';
+
     return `
-      <div class="char-card">
-        <h3 style="color:${CLASS_COLORS[char.classId]||'#aaa'};margin-bottom:8px">
-          ${char.nickname || '???'} <span style="color:#888;font-size:12px;font-weight:normal">(${charClassName(char.classId)})</span> Lv.${char.level}
-          ${char.pet && PETS[char.pet] ? `<span style="font-size:11px;font-weight:normal;color:#4caf50"> ─ ${PETS[char.pet].name} 장착 중</span>` : ''}
-        </h3>
-        ${petOptions}
+      <div class="char-card" style="margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+          <span style="color:${CLASS_COLORS[char.classId]||'#aaa'};font-weight:bold">${char.nickname || '???'}</span>
+          <span style="color:#888;font-size:12px">(${charClassName(char.classId)}) Lv.${char.level}</span>
+          ${char.pet && PETS[char.pet] ? `<span style="font-size:11px;color:#4caf50">─ ${PETS[char.pet].name} 장착 중</span>` : ''}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${petCards}</div>
+        ${lockNotice}
       </div>`;
   }).join('');
 
@@ -908,8 +916,7 @@ function renderPetTab() {
   el.innerHTML = `
     <div class="eq-section-title">펫</div>
     <div style="font-size:11px;color:#666;margin-bottom:8px">
-      캐릭터마다 펫을 개별 장착합니다.<br>
-      펫이 없으면 캐릭터가 드랍에 직접 근접해야 수집됩니다.
+      캐릭터마다 펫을 개별 장착합니다. 펫이 없으면 캐릭터가 드랍을 직접 수집합니다.
     </div>
     ${charCards}
     ${dropNotice}`;
@@ -1008,7 +1015,9 @@ function renderCraftTab() {
   // 무기/표창류는 5배 비용
   function craftCost(e) {
     const base = CRAFT_COSTS[e.grade] || 5;
-    return (e.type === 'weapon' || e.type === 'throwable') ? base * 5 : base;
+    if (e.type === 'weapon' || e.type === 'throwable') return base * 5;
+    if (e.type === 'armor' || e.type === 'accessory') return base * 4;
+    return base;
   }
 
   const grades = ['노멀', '레어', '에픽'];

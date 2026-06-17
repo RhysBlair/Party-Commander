@@ -45,7 +45,7 @@ function updateCombat(dt) {
             m.alive        = true;
             m.currentHp    = m.maxHp;
             m.respawnTimer = 0;
-            m.attackTimer  = MONSTER_ATTACK_INTERVAL;
+            m.attackTimer  = (m.def || stageData.monster).monsterAtkInterval || MONSTER_ATTACK_INTERVAL;
             m.aoeTimer     = undefined;
             m.poisoned     = false;
             m.x = m.spawnX;
@@ -104,7 +104,7 @@ function updateCombat(dt) {
         }
         // aggroRange 체크, 빙결 중 공격 불가
         if (target && minD2 <= ((m.def || stageData.monster).aggroRange || 400) ** 2 && !m.frozen) {
-          m.attackTimer = MONSTER_ATTACK_INTERVAL;
+          m.attackTimer = (m.def || stageData.monster).monsterAtkInterval || MONSTER_ATTACK_INTERVAL;
           executeMonsterAttack(m, target, stageData, i);
         }
       }
@@ -345,6 +345,13 @@ function updateMonsterMovement(m, dt, stageData, aliveChars) {
     return;
   }
 
+  // 빙결 내성 타이머 (3초마다: 빙결 중 +20%, 미빙결 -20%)
+  m.iceResistTimer = (m.iceResistTimer ?? 3.0) - dt;
+  if (m.iceResistTimer <= 0) {
+    m.iceResistTimer = 3.0;
+    m.iceResist = Math.max(0, (m.iceResist || 0) - 20);
+  }
+
   const md  = m.def || stageData.monster;
   const spd = md.moveSpeed || 0;
   if (!spd) return;
@@ -387,7 +394,7 @@ function returnToSpawn(m, dt, spd) {
 }
 
 // ── 투사체 ───────────────────────────────────────────────
-function spawnProjectile(stageIdx, x, y, targetChar, dmg, speed, color) {
+function spawnProjectile(stageIdx, x, y, targetChar, dmg, speed, color, extraFlags) {
   const dx   = targetChar.x - x;
   const dy   = targetChar.y - y;
   const dist = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -397,6 +404,7 @@ function spawnProjectile(stageIdx, x, y, targetChar, dmg, speed, color) {
     vy: (dy / dist) * speed,
     dmg, color,
     timer: 3.5,
+    ...(extraFlags || {}),
   });
 }
 
@@ -413,6 +421,12 @@ function updateProjectiles(dt) {
       const dx = char.x - p.x, dy = char.y - p.y;
       if (dx * dx + dy * dy < 22 * 22) {
         takeDamage(char, p.dmg, p.stageIdx);
+        if (p.freezeOnHit) {
+          char.frozen = true;
+          char.frozenTimer = p.freezeDuration || 3.0;
+          const si = p.stageIdx;
+          spawnFloatingText(si, char.x, char.y - 36, '빙결!', '#a8d8f0', 13);
+        }
         gameState.projectiles.splice(i, 1);
         break;
       }
@@ -451,7 +465,8 @@ function executeMonsterAttack(m, target, stageData, stageIdx) {
   const dmg     = Math.max(minDmg, md.atk - charDef);
 
   if (md.attackType === 'ranged') {
-    spawnProjectile(stageIdx, m.x, m.y, target, dmg, md.projSpeed || 200, md.projColor || '#ff6622');
+    const extras = md.freezeOnHit ? { freezeOnHit: true, freezeDuration: md.freezeDuration || 3.0 } : undefined;
+    spawnProjectile(stageIdx, m.x, m.y, target, dmg, md.projSpeed || 200, md.projColor || '#ff6622', extras);
   } else {
     takeDamage(target, dmg, stageIdx);
   }
@@ -592,6 +607,13 @@ function updateCharacter(char, dt, stage, field) {
 
   // 충전 중에는 행동 불가
   if ((char.hpRefillTimer || 0) > 0 || (char.mpRefillTimer || 0) > 0) return;
+
+  // 빙결 중에는 이동/공격 불가
+  if (char.frozen) {
+    char.frozenTimer = (char.frozenTimer || 0) - dt;
+    if (char.frozenTimer <= 0) { char.frozen = false; char.frozenTimer = 0; }
+    else return;
+  }
 
   // HP 포션 자동 사용 (HP 50% 이하)
   if ((char.potionHpCd || 0) <= 0 && char.currentHp < stats.maxHp * 0.5) {
@@ -952,7 +974,13 @@ function executeSkill(char, skillId, skill, stats, stage, field) {
     const freezeDur = (skill.freezeDuration || 5.0) + (sLv - 1) * 0.4;
     for (const t of targets) {
       dealSkillDamage(char, t, dmg, stage, field, stats);
-      t.frozen = true; t.frozenTimer = freezeDur;
+      // 빙결 내성 확인 (0~100%)
+      const resist = t.iceResist || 0;
+      if (Math.random() * 100 >= resist) {
+        t.frozen = true; t.frozenTimer = freezeDur;
+        // 빙결 걸리면 내성 타이머 리셋 (3초 후 내성 +20% 시작)
+        t.iceResistTimer = 3.0;
+      }
     }
     return true;
   }
@@ -1179,7 +1207,7 @@ function spawnBossWaveMonsters(field, def, count, parentX, parentY) {
       spawnX: x, spawnY: y, x, y,
       currentHp: def.hp, maxHp: def.hp,
       alive: true, respawnTimer: 0, hitAnim: 0,
-      attackTimer: Math.random() * MONSTER_ATTACK_INTERVAL,
+      attackTimer: Math.random() * (def.monsterAtkInterval || MONSTER_ATTACK_INTERVAL),
       def,
       noRespawn: true,
     });

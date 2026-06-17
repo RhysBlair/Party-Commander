@@ -50,9 +50,11 @@ function calcFinalStats(char) {
 
   const atkUpgPct  = (gameState.upgrades?.atk_boost || 0) * 0.05;
   const defUpgFlat = (gameState.upgrades?.def_boost || 0) * 3;
-  const critRate   = effLUK <= 100
+  const eqCritRate = sumEquipStat(char, 'bonusCritRate');
+  const eqCritDmg  = sumEquipStat(char, 'bonusCritDmg');
+  const critRate   = (effLUK <= 100
     ? effLUK * 0.3
-    : 30 + (effLUK - 100) * 0.2; // LUK 100이하 0.3%/pt, 초과 0.2%/pt
+    : 30 + (effLUK - 100) * 0.2) + eqCritRate; // LUK 100이하 0.3%/pt, 초과 0.2%/pt
   const maxHp      = Math.floor(100 + char.level * 20 + effSTR * 5);
 
   const hpBuffMult  = (char.activeBuffs?.hp?.timer > 0) ? (char.activeBuffs.hp.mult || 1) : 1;
@@ -69,7 +71,7 @@ function calcFinalStats(char) {
     accuracy: Math.max(10, Math.min(accuracy - accPenalty, 99)),
     evade:    Math.min(evade, 60),
     critRate: critRate + petCritBonus,
-    critDmg:  3.0 + ((char.activeBuffs?.critDmg?.timer > 0) ? (char.activeBuffs.critDmg.bonus || 0) : 0),
+    critDmg:  3.0 + eqCritDmg + ((char.activeBuffs?.critDmg?.timer > 0) ? (char.activeBuffs.critDmg.bonus || 0) : 0),
     maxHp:    Math.floor(maxHp * hpBuffMult * petHpMult),
     maxMp:    Math.floor(200 + effINT * 4 + char.level * 5),
   };

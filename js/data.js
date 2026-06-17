@@ -70,6 +70,14 @@ const EQUIPMENT = {
   dagger:          { name: "단검",           type: "weapon",    grade: "노멀", atk: 11, weaponType: "dagger",                      req: { level: 5,  classId: "rogue"   }, cost: 260,  minDropStage: 0 },
   shadow_blade:    { name: "그림자 단검",    type: "weapon",    grade: "레어", atk: 20, weaponType: "dagger",                      req: { level: 10, classId: "rogue"   }, cost: 720,  minDropStage: 1 },
 
+  // ── 무기 (직업 전용, 에픽) ──────────────────────────────
+  epic_staff:      { name: "고대 마법 지팡이", type: "weapon", grade: "에픽", atk: 12, bonusINT: 22, req: { level: 30, classId: "mage"   }, cost: 9000, minDropStage: 7 },
+  epic_bow:        { name: "전설의 활",        type: "weapon", grade: "에픽", atk: 50, bonusDEX: 18, req: { level: 30, classId: "archer" }, cost: 9000, minDropStage: 7 },
+
+  // ── 석궁 (궁수 계열, 크리티컬 특화) ──────────────────────
+  crossbow:        { name: "석궁",     type: "weapon", grade: "노멀", atk:  8, bonusCritRate:  5,                    req: { level:  5, classId: "archer" }, cost: 320,  minDropStage: 0 },
+  heavy_crossbow:  { name: "중석궁",   type: "weapon", grade: "레어", atk: 14, bonusCritRate: 12, bonusCritDmg: 0.5, req: { level: 15, classId: "archer" }, cost: 1200, minDropStage: 3 },
+
   // ── 단검 (시프 전용) ────────────────────────────────────
   iron_dagger:     { name: "철제단검",    type: "weapon", grade: "노멀", atk: 18, bonusLUK: 5,               weaponType: "dagger", req: { level: 10, classId: "thief" }, cost: 500,  minDropStage: 2 },
   dark_dagger:     { name: "어둠단검",    type: "weapon", grade: "에픽", atk: 55, bonusLUK: 18, bonusSTR: 5,  weaponType: "dagger", req: { level: 20, classId: "thief" }, cost: 6000, minDropStage: 4 },
@@ -289,16 +297,18 @@ const STAGES = [
     spawnCount: 4, killsToAdvance: 60 },
 
   { name: "고대 유적",
-    monster: { name: "고대 골렘",    hp: 520000,    atk: 520,  physDef: 160, magicDef: 65,  goldDrop: 110000,  expDrop: 88000,
+    monster: { name: "고대 골렘",    hp: 520000,    atk: 2600, physDef: 160, magicDef: 65,  goldDrop: 110000,  expDrop: 88000,
                moveSpeed: 18,  attackRange: 70,  aggroRange: 340, attackType: "melee",  atkDamageType: "physical",
+               monsterAtkInterval: 8.0,
                aoeAtk: 400,  aoeRange: 130, aoeInterval: 5.0, aoeDamageType: "physical" },
     spawnCount: 3, killsToAdvance: 50 },
 
-  { name: "어비스",
-    monster: { name: "어비스 궁수",  hp: 1600000,   atk: 750,  physDef: 55,  magicDef: 200, goldDrop: 380000,  expDrop: 300000,
-               moveSpeed: 65,  attackRange: 320, aggroRange: 520, attackType: "ranged", atkDamageType: "magical",
-               projSpeed: 280, projColor: "#9b59b6",
-               aoeAtk: 580,  aoeRange: 180, aoeInterval: 5.0, aoeDamageType: "magical" },
+  { name: "설산",
+    monster: { name: "설녀",         hp: 1200000,   atk: 680,  physDef: 60,  magicDef: 180, goldDrop: 380000,  expDrop: 300000,
+               moveSpeed: 50,  attackRange: 320, aggroRange: 520, attackType: "ranged", atkDamageType: "magical",
+               projSpeed: 260, projColor: "#a8d8f0",
+               freezeOnHit: true, freezeDuration: 3.0,
+               aoeAtk: 500,  aoeRange: 160, aoeInterval: 5.0, aoeDamageType: "magical" },
     spawnCount: 4, killsToAdvance: 65 },
 
   { name: "신성 신전",
@@ -363,7 +373,7 @@ const STAGE_BG = [
   { bg: '#0c0818', ground: '#1a1028' },  // 심층 던전
   { bg: '#180606', ground: '#2c0e0e' },  // 마법사 탑
   { bg: '#061414', ground: '#0e2424' },  // 고대 유적
-  { bg: '#04040e', ground: '#08081c' },  // 어비스
+  { bg: '#0a1828', ground: '#102030' },  // 설산
   { bg: '#141208', ground: '#26220c' },  // 신성 신전
 ];
 

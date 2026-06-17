@@ -200,7 +200,21 @@ x, y, attackTimer, skillTimers, shadowActive, shadowTimer, currentHp, currentMp,
 
 ## 개발 이력 (최신순)
 
-### 세션 7 (현재)
+### 세션 8 (현재)
+- 에픽 지팡이 `epic_staff` (INT+22, Lv30 마법사), 에픽 활 `epic_bow` (DEX+18, Lv30 궁수) 추가
+- 석궁 계열: `crossbow`(노멀 bonusCritRate+5%), `heavy_crossbow`(레어 +12%/+0.5배) — 궁수 계열 착용, 활보다 낮은 atk
+- stats.js: bonusCritRate/bonusCritDmg를 장비 합산에 반영 (sumEquipStat + calcFinalStats)
+- 고대 골렘 (STAGES[7]): atk 520→2600 (5배), monsterAtkInterval 8.0s (4배 느림)
+- 스테이지 8 변경: 어비스 궁수→설산/설녀 (원거리, freezeOnHit:true, projColor '#a8d8f0')
+- 빙결 내성 (iceResist): 몬스터에 0~100%. 3초마다 빙결 중 +20%, 비빙결 -20%. ice_strike에서 확률 체크
+- 설녀 공격 맞은 캐릭터 빙결: 프로젝타일 freezeOnHit 플래그, 빙결 중 이동/공격 불가 3초
+- 레이드 탭 해금 버그 수정: advanceStageField 마지막 스테이지 클리어 시 maxStageReached 업데이트 후 return
+- 펫탭 가로 레이아웃: 각 캐릭터 카드 안에 펫 가로 나열 (flex-wrap row)
+- 펫 레벨 제한: Lv30 미만→미니슬라임만 표시, Lv30 이상→전체 표시
+- 제작탭 방어구/장신구 비용 4배 (armor·accessory: base×4)
+- 업그레이드 탭 해금: 스테이지 5 이후 (세션7에서 구현됨)
+
+### 세션 7
 - 탭 해금 시스템: 시작=캐릭터·장비·스킬만 / 1명 영입→상점·업그레이드 / 스테이지3 클리어→펫·레이드
 - 새 펫 6종: 미니슬라임(1000G,80px 픽업), 미니래빗(공속+30%), 꼬마박쥐(크리+20%), 아기곰(HP+50%), 아기뱀(5초 HP전회복), 아기거북이(5초 방어막)
 - 펫 없음: 아이템 드랍 발생 시 전투 중단하고 즉시 수집 우선
