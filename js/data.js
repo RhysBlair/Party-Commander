@@ -273,7 +273,7 @@ const STAGES = [
     spawnCount: 1, spawnLayout: [[0.75, 0.5]], killsToAdvance: 5 },
 
   { name: "사막",
-    monster: { name: "모래 골렘",    hp: 3500,      atk: 87,   physDef: 22,  magicDef: 10,  goldDrop: 700,     expDrop: 560,
+    monster: { name: "모래 골렘",    hp: 3500,      atk: 87,   physDef: 22,  magicDef: 10,  goldDrop: 700,     expDrop: 616,
                moveSpeed: 22,  attackRange: 65,  aggroRange: 300, attackType: "melee",  atkDamageType: "physical",
                pullForce: 35, pullRange: 400 },
     spawnCount: 5, killsToAdvance: 50 },

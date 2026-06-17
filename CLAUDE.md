@@ -212,7 +212,7 @@ x, y, attackTimer, skillTimers, shadowActive, shadowTimer, currentHp, currentMp,
   - Lucky(10%,×2) / Big Lucky(1%,×10) 보너스, 결과 플로팅 텍스트 (`showCrystalFloat`)
   - 버그 수정: 업그레이드 버튼 onclick에서 `renderCraftTab()` → `setTimeout(renderCraftTab,0)` 로 변경, opacity:1 초기값 명시
     (renderCraftTab() 즉시 호출 시 rAF 애니메이션 시작 전 DOM 재렌더링으로 플로팅 텍스트가 보이지 않던 타이밍 버그 수정)
-- 모래골렘 atk 72→87 (+20%), 불꽃 도마뱀 화상데미지 40→20 (1/2)
+- 모래골렘 atk 72→87 (+20%), expDrop 560→616 (+10%), 불꽃 도마뱀 화상데미지 40→20 (1/2)
 - 인벤토리 장비에 착용 가능 직업 표시: `getEquipClassLabel(e)` 함수 추가, 아이템 이름 옆에 [전사계열] 형태로 표시
   - 전사계열/마법사계열/궁수계열/시프/도적,어쌔신/도적,시프/도적계열/전 직업 구분
   - 아대(isAedae)/표창(throwable) → "도적, 어쌔신"; rogue용 단검 → "도적, 시프"; thief → "시프"
