@@ -795,10 +795,11 @@ function renderSkillTab() {
     const col = CLASS_COLORS[char.classId] || '#aaa';
 
     // 1차 / 2차 스킬 분리
-    const tier1Skills = Object.entries(SKILLS).filter(([, s]) => s.classId === (parentClassId || char.classId) && parentClassId);
-    const tier2Skills = Object.entries(SKILLS).filter(([, s]) => s.classId === char.classId);
-    // 1차 직업은 tier2에만 있음
-    const onlyTier = !parentClassId ? Object.entries(SKILLS).filter(([, s]) => s.classId === char.classId) : null;
+    // parentClassId 있음 = 2차 직업: 1차(parent) + 2차(현재) 분리 표시
+    // parentClassId 없음 = 1차 직업 or 노비스: 현재 직업 스킬만 단일 표시
+    const tier1Skills = parentClassId ? Object.entries(SKILLS).filter(([, s]) => s.classId === parentClassId) : [];
+    const tier2Skills = parentClassId ? Object.entries(SKILLS).filter(([, s]) => s.classId === char.classId) : [];
+    const onlyTier    = !parentClassId ? Object.entries(SKILLS).filter(([, s]) => s.classId === char.classId) : null;
 
     function makeSkillCard(id, s) {
       const curLv    = char.skillLevels?.[id] || 0;
