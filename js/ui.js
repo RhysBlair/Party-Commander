@@ -403,6 +403,12 @@ function renderEquipmentTab() {
     return;
   }
 
+  // 스크롤 위치 보존
+  const prevLeft  = el.querySelector('.eq-left-panel');
+  const prevRight = el.querySelector('.eq-right-panel');
+  const savedLeftScroll  = prevLeft  ? prevLeft.scrollTop  : 0;
+  const savedRightScroll = prevRight ? prevRight.scrollTop : 0;
+
   // ── 장착 중 (왼쪽 패널) ─────────────────────────────────────────────
   const charCards = gameState.characters.map(char => {
     const slotList = getCharSlotList(char);
@@ -532,6 +538,12 @@ function renderEquipmentTab() {
         <div class="inv-list">${invHtml}</div>
       </div>
     </div>`;
+
+  // 스크롤 위치 복원
+  const newLeft  = el.querySelector('.eq-left-panel');
+  const newRight = el.querySelector('.eq-right-panel');
+  if (newLeft)  newLeft.scrollTop  = savedLeftScroll;
+  if (newRight) newRight.scrollTop = savedRightScroll;
 }
 
 function setEquipFilter(grade) {

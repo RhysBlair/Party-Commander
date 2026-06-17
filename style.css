@@ -325,6 +325,8 @@ body {
   flex: 1;
   overflow-y: auto;
   padding: 12px;
+  display: flex;
+  flex-direction: column;
 }
 
 .tab-pane {
@@ -333,6 +335,14 @@ body {
 
 .tab-pane.active {
   display: block;
+  flex: none;
+}
+
+#tab-equipment.active {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 /* 공통 버튼 */
@@ -873,21 +883,21 @@ body {
 .eq-layout {
   display: flex;
   gap: 12px;
-  align-items: flex-start;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
 }
 
 .eq-left-panel {
   flex: 1;
   min-width: 0;
   overflow-y: auto;
-  max-height: 62vh;
 }
 
 .eq-right-panel {
   flex: 1;
   min-width: 0;
   overflow-y: auto;
-  max-height: 62vh;
 }
 
 /* 드래그 오버 시 장비 슬롯 하이라이트 */
