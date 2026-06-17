@@ -281,10 +281,6 @@ function updateShadow(char, dt) {
   if (char.shadowTimer <= 0) {
     char.shadowActive = false;
     char.shadowTimer  = 0;
-    // 분신 소멸 후 쿨다운 시작
-    if (!char.skillTimers) char.skillTimers = {};
-    const skill = SKILLS['shadow_partner'];
-    char.skillTimers['shadow_partner'] = skill ? skill.cooldown : 10;
     return;
   }
 
@@ -357,11 +353,6 @@ function takeDamage(char, dmg, stageIdx) {
     char.isDead       = true;
     char.respawnTimer = CHARACTER_RESPAWN_TIME;
     // 분신 활성 중 사망 → 강제 종료 + 쿨다운 정상 설정 (미설정 시 9999 고착 버그)
-    if (char.shadowActive) {
-      if (!char.skillTimers) char.skillTimers = {};
-      const sp = SKILLS['shadow_partner'];
-      char.skillTimers['shadow_partner'] = sp ? sp.cooldown : 1.5;
-    }
     char.shadowActive = false;
     char.shadowTimer  = 0;
     // 사망 경험치 패널티 (-5%, 현재 레벨 0% 미만 불가)
@@ -950,13 +941,17 @@ function useSkills(char, dt, stats, stage, field) {
 
     // 패시브 스킬은 useSkills에서 처리하지 않음 (dealDamage에서 처리)
     if (skill.targeting === 'passive') continue;
-    // 쉐도우파트너: 분신 활성 중에는 쿨다운 타이머를 진행하지 않음
-    if (skill.targeting === 'shadow' && char.shadowActive) continue;
 
     if (char.skillTimers[skillId] === undefined) char.skillTimers[skillId] = 0;
     const cdMult = (char.activeBuffs?.cd?.timer > 0) ? (char.activeBuffs.cd.mult || 1) : 1;
     char.skillTimers[skillId] -= dt * cdMult;
     if (char.skillTimers[skillId] > 0) continue;
+
+    // 쉐도우파트너: 분신 활성 중이면 발동 건너뜀 (타이머 0 고정, 소멸 즉시 재발동)
+    if (skill.targeting === 'shadow' && char.shadowActive) {
+      char.skillTimers[skillId] = 0;
+      continue;
+    }
 
     // MP 부족 시 스킬 사용 불가 (쿨타임은 계속 감소)
     const mpCost = skill.mpCost || 0;
@@ -976,8 +971,7 @@ function useSkills(char, dt, stats, stage, field) {
 
     if (executeSkill(char, skillId, skill, stats, stage, field)) {
       if (mpCost > 0) char.currentMp = Math.max(0, (char.currentMp || 0) - mpCost);
-      // shadow_partner는 소멸 시 쿨다운을 설정하므로 여기선 0으로만
-      if (skill.targeting !== 'shadow') {
+      {
         const sLv     = char.skillLevels?.[skillId] || 1;
         const baseCd  = skill.cooldownDecay
           ? Math.max(0.1, skill.cooldown * Math.pow(skill.cooldownDecay, sLv - 1))
@@ -986,8 +980,6 @@ function useSkills(char, dt, stats, stage, field) {
             : skill.cooldown / (1 + (sLv - 1) * 0.06);
         const overshoot = Math.max(char.skillTimers[skillId], -dt);
         char.skillTimers[skillId] = baseCd + overshoot;
-      } else {
-        char.skillTimers[skillId] = 9999;
       }
       char.skillAnim = 0.5;
     }
