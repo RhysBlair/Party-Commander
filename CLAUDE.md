@@ -210,6 +210,10 @@ x, y, attackTimer, skillTimers, shadowActive, shadowTimer, currentHp, currentMp,
 - 주스탯 공격력 균등화: 기존 STR 전용 기본 공격력 보너스(effSTR×0.5)를 주스탯(primary)×0.5로 변경 (stats.js)
 - 결정 제작 비용 통일: 무기/표창 25개, 방어구/장신구 15개 (grade 무관, `CRAFT_COST_WEAPON`/`CRAFT_COST_ARMOR` 상수로 관리)
 - 인벤토리 일괄분해 버튼 추가: 노멀/레어/에픽 각각 (`tryDecomposeByGrade`), 스테이지 4 이상 해금
+- 에픽 석궁 `epic_crossbow` 추가: ATK 30, 크리+20%, 크리피해+1.0배, Lv30 궁수계열, minDropStage 7
+- 장비 스탯 표기에 `bonusCritRate`(크리+N%), `bonusCritDmg`(크리피해+N배) 추가 (`equipStatText`)
+- canEquipItem 방어적 코딩: `e.req || {}` 처리, 시프(thief) throwable 착용 불가 조건 명시적 추가
+- 불꽃 도마뱀 화상 중첩 최대 3개 제한: `burnStack` 카운터 도입, 표시 "화상!(N/3)", 만료·부활 시 초기화
 - 제작탭 결정 업그레이드: 은은한결정 3개→빛나는결정 1개, 빛나는결정 5개→찬란한결정 1개 (`tryUpgradeCrystal`)
   - Lucky(10%,×2) / Big Lucky(1%,×10) 보너스, 결과 플로팅 텍스트 (`showCrystalFloat`)
   - 버그 수정: 업그레이드 버튼 onclick에서 `renderCraftTab()` → `setTimeout(renderCraftTab,0)` 로 변경, opacity:1 초기값 명시

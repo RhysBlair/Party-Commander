@@ -11,6 +11,7 @@ function updateCombat(dt) {
       char.burned         = false;
       char.burnTimer      = 0;
       char.burnDmg        = 0;
+      char.burnStack      = 0;
       char.burnTickTimer  = 0;
       char.activeBuffs    = {};
       char.petShieldActive = false;
@@ -589,14 +590,18 @@ function executeMonsterAttack(m, target, stageData, stageIdx) {
     takeDamage(target, dmg, stageIdx);
   }
 
-  // 화상 적용 (중첩: 피격마다 burnDmg 누적)
+  // 화상 적용 (중첩 최대 3: 피격마다 burnDmg 누적, burnStack으로 상한 관리)
   if (md.burnDmg) {
-    target.burnDmg          = (target.burnDmg || 0) + md.burnDmg;
+    const prevStack = target.burnStack || 0;
+    if (prevStack < 3) {
+      target.burnStack = prevStack + 1;
+      target.burnDmg   = (target.burnDmg || 0) + md.burnDmg;
+    }
     target.burned           = true;
     target.burnTimer        = md.burnDuration || 5.0;
     target.burnTickInterval = md.burnTickInterval || 0.2;
     if (!target.burnTickTimer || target.burnTickTimer <= 0) target.burnTickTimer = target.burnTickInterval;
-    spawnFloatingText(stageIdx, target.x, target.y - 46, '화상!', '#e67e22', 12);
+    spawnFloatingText(stageIdx, target.x, target.y - 46, `화상!(${target.burnStack || 1}/3)`, '#e67e22', 12);
   }
 }
 
@@ -658,8 +663,9 @@ function updateCharacter(char, dt, stage, field) {
   if (char.burned) {
     char.burnTimer = (char.burnTimer || 0) - dt;
     if (char.burnTimer <= 0) {
-      char.burned    = false;
-      char.burnDmg   = 0;
+      char.burned     = false;
+      char.burnDmg    = 0;
+      char.burnStack  = 0;
     } else {
       char.burnTickTimer = (char.burnTickTimer ?? char.burnTickInterval ?? 0.2) - dt;
       if (char.burnTickTimer <= 0) {
@@ -1115,6 +1121,7 @@ function executeSkill(char, skillId, skill, stats, stage, field) {
       c.burned         = false;
       c.burnTimer      = 0;
       c.burnDmg        = 0;
+      c.burnStack      = 0;
       c.burnTickTimer  = 0;
       c.activeBuffs    = {};
       c.petShieldActive = false;

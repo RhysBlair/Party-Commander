@@ -77,6 +77,7 @@ const EQUIPMENT = {
   // ── 석궁 (궁수 계열, 크리티컬 특화) ──────────────────────
   crossbow:        { name: "석궁",     type: "weapon", grade: "노멀", atk:  8, bonusCritRate:  5,                    req: { level:  5, classId: "archer" }, cost: 320,  minDropStage: 0 },
   heavy_crossbow:  { name: "중석궁",   type: "weapon", grade: "레어", atk: 14, bonusCritRate: 12, bonusCritDmg: 0.5, req: { level: 15, classId: "archer" }, cost: 1200, minDropStage: 3 },
+  epic_crossbow:   { name: "심연의 석궁", type: "weapon", grade: "에픽", atk: 30, bonusCritRate: 20, bonusCritDmg: 1.0, req: { level: 30, classId: "archer" }, cost: 10000, minDropStage: 7 },
 
   // ── 단검 (시프 전용) ────────────────────────────────────
   iron_dagger:     { name: "철제단검",    type: "weapon", grade: "노멀", atk: 18, bonusLUK: 5,               weaponType: "dagger", req: { level: 10, classId: "thief" }, cost: 500,  minDropStage: 2 },

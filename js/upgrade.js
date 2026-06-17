@@ -100,17 +100,26 @@ function canEquipItem(char, itemOrId) {
   const id = typeof itemOrId === 'object' ? itemOrId.id : itemOrId;
   const e  = EQUIPMENT[id];
   if (!e) return false;
-  if (e.req.level && char.level < e.req.level) return false;
-  if (e.req.classId) {
+  const req = e.req || {};
+
+  // 레벨 요건
+  if (req.level && char.level < req.level) return false;
+
+  // 직업 요건: 본인 classId 또는 부모 classId와 일치해야 착용 가능
+  if (req.classId) {
     const parentClass = CLASSES[char.classId]?.parent || char.classId;
-    if (char.classId !== e.req.classId && parentClass !== e.req.classId) return false;
+    if (char.classId !== req.classId && parentClass !== req.classId) return false;
   }
-  // 아대(isAedae 무기)는 시프 착용 불가
+
+  // 아대(isAedae)는 시프 착용 불가
   if (e.isAedae && char.classId === 'thief') return false;
-  // 시프는 단검(weaponType:'dagger')만 착용 가능
+  // 표창(throwable)은 시프 착용 불가
+  if (e.type === 'throwable' && char.classId === 'thief') return false;
+  // 시프는 단검(weaponType:'dagger')만 착용 가능 (아대 제외)
   if (char.classId === 'thief' && e.type === 'weapon' && !e.isAedae && e.weaponType !== 'dagger') return false;
-  // 어쌔신은 rogue용 단검 착용 불가 (표창 전문 직업, 시프용 단검은 이미 req.classId='thief'로 막힘)
-  if (char.classId === 'assassin' && e.weaponType === 'dagger' && e.req.classId === 'rogue') return false;
+  // 어쌔신은 rogue용 단검 착용 불가
+  if (char.classId === 'assassin' && e.weaponType === 'dagger' && req.classId === 'rogue') return false;
+
   return true;
 }
 

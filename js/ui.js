@@ -406,13 +406,15 @@ function equipStatText(e, enhance) {
   const mult  = enhance > 0 ? (1 + enhance * 0.15) : 1;
   const fl    = (v) => v > 0 ? Math.floor(v * mult) : 0;
   const parts = [];
-  if (e.atk)      parts.push(`ATK+${fl(e.atk)}`);
-  if (e.physDef)  parts.push(`물방+${fl(e.physDef)}`);
-  if (e.magicDef) parts.push(`마방+${fl(e.magicDef)}`);
-  if (e.bonusSTR) parts.push(`STR+${fl(e.bonusSTR)}`);
-  if (e.bonusDEX) parts.push(`DEX+${fl(e.bonusDEX)}`);
-  if (e.bonusINT) parts.push(`INT+${fl(e.bonusINT)}`);
-  if (e.bonusLUK) parts.push(`LUK+${fl(e.bonusLUK)}`);
+  if (e.atk)           parts.push(`ATK+${fl(e.atk)}`);
+  if (e.physDef)       parts.push(`물방+${fl(e.physDef)}`);
+  if (e.magicDef)      parts.push(`마방+${fl(e.magicDef)}`);
+  if (e.bonusSTR)      parts.push(`STR+${fl(e.bonusSTR)}`);
+  if (e.bonusDEX)      parts.push(`DEX+${fl(e.bonusDEX)}`);
+  if (e.bonusINT)      parts.push(`INT+${fl(e.bonusINT)}`);
+  if (e.bonusLUK)      parts.push(`LUK+${fl(e.bonusLUK)}`);
+  if (e.bonusCritRate) parts.push(`크리+${e.bonusCritRate}%`);
+  if (e.bonusCritDmg)  parts.push(`크리피해+${e.bonusCritDmg}배`);
   return parts.join(' · ') || '—';
 }
 
