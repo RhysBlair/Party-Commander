@@ -205,6 +205,7 @@ x, y, attackTimer, skillTimers, shadowActive, shadowTimer, currentHp, currentMp,
 ## 개발 이력 (최신순)
 
 ### 세션 9 (현재)
+- 부활 시 상태이상·버프 초기화: 일반 리스폰 및 리저렉션 스킬 부활 모두 frozen/burned/activeBuffs/petShieldActive/charging/meteorCasting 초기화
 - 인벤토리 장비에 착용 가능 직업 표시: `getEquipClassLabel(e)` 함수 추가, 아이템 이름 옆에 [전사계열] 형태로 표시
   - 전사계열/마법사계열/궁수계열/시프/도적,어쌔신/도적,시프/도적계열/전 직업 구분
   - 아대(isAedae)/표창(throwable) → "도적, 어쌔신"; rogue용 단검 → "도적, 시프"; thief → "시프"
