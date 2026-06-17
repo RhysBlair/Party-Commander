@@ -38,6 +38,7 @@ function render() {
   drawPets(viewIdx);
   drawProjectiles(viewIdx);
   drawMeteors(viewIdx);
+  drawMeteorImpacts(viewIdx);
   drawDecoys(viewIdx);
   drawFloatingTexts(viewIdx);
 
@@ -268,6 +269,27 @@ function drawCharacter(char) {
     ctx.fillStyle   = '#e74c3c';
     ctx.fillRect(char.x - 16, char.y - 26, 32, 40);
     ctx.globalAlpha = 1;
+  }
+
+  // 빙결 오버레이
+  if (char.frozen) {
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle   = '#7ecff5';
+    ctx.fillRect(char.x - 16, char.y - 26, 32, 40);
+    ctx.beginPath();
+    ctx.arc(char.x, char.y - 32, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = '#a8e6ff';
+    ctx.lineWidth   = 2;
+    ctx.setLineDash([4, 3]);
+    ctx.strokeRect(char.x - 16, char.y - 26, 32, 40);
+    ctx.setLineDash([]);
+    ctx.fillStyle   = '#a8e6ff';
+    ctx.font        = 'bold 10px sans-serif';
+    ctx.textAlign   = 'center';
+    ctx.fillText(`❄ ${(char.frozenTimer || 0).toFixed(1)}s`, char.x, char.y + 46);
+    ctx.textAlign   = 'left';
   }
 
   // 메테오 캐스팅 오버레이
@@ -664,6 +686,48 @@ function drawMeteors(viewIdx) {
 
     // 캐스팅 잔여 시간 (낙하 중엔 표시 안함)
     ctx.shadowBlur  = 0;
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawMeteorImpacts(viewIdx) {
+  if (!gameState.meteorImpacts) return;
+  for (const imp of gameState.meteorImpacts) {
+    if (imp.stageIdx !== viewIdx) continue;
+    const prog  = 1 - imp.timer / imp.maxTimer;  // 0→1
+    const alpha = imp.timer / imp.maxTimer;       // 1→0 (페이드 아웃)
+
+    // 3개의 링이 간격을 두고 바깥으로 퍼져나감
+    for (let k = 0; k < 3; k++) {
+      const kProg  = Math.max(0, prog - k * 0.12);
+      const radius = kProg * imp.maxRange;
+      const kAlpha = Math.max(0, alpha - k * 0.2) * (1 - kProg * 0.5);
+      if (radius <= 0) continue;
+
+      ctx.globalAlpha = kAlpha;
+      ctx.strokeStyle = k === 0 ? '#ff6b35' : k === 1 ? '#e74c3c' : '#f39c12';
+      ctx.lineWidth   = 4 - k;
+      ctx.shadowColor = '#e74c3c';
+      ctx.shadowBlur  = 20;
+      ctx.beginPath();
+      ctx.arc(imp.x, imp.y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.shadowBlur  = 0;
+    }
+
+    // 중심 섬광
+    if (prog < 0.25) {
+      const flashAlpha = (1 - prog / 0.25) * 0.8;
+      ctx.globalAlpha = flashAlpha;
+      ctx.fillStyle   = '#fff5a0';
+      ctx.shadowColor = '#ff6b35';
+      ctx.shadowBlur  = 40;
+      ctx.beginPath();
+      ctx.arc(imp.x, imp.y, 30 * (1 - prog / 0.25), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur  = 0;
+    }
+
     ctx.globalAlpha = 1;
   }
 }

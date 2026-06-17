@@ -196,7 +196,7 @@ const SKILLS = {
                     cost: 500, mpCost: 20 },
   meteor:         { name: "메테오",           classId: "wizard_fp", cooldown: 20.0,
                     targeting: "meteor_cast", castTime: 5.0, fallTime: 3.0,
-                    meteorRange: 800, dmgMultiplier: 30.0, dmgPerLv: 107.78,
+                    meteorRange: 800, dmgMultiplier: 45.0, dmgPerLv: 161.67,
                     cost: 500, mpCost: 120 },
 
   // ── 2차 궁수 (사수) ──────────────────────────────────────
@@ -313,11 +313,11 @@ const STAGES = [
     spawnCount: 3, killsToAdvance: 50 },
 
   { name: "설산",
-    monster: { name: "설녀",         hp: 1200000,   atk: 680,  physDef: 60,  magicDef: 180, goldDrop: 380000,  expDrop: 300000,
+    monster: { name: "설녀",         hp: 1200000,   atk: 136,  physDef: 60,  magicDef: 180, goldDrop: 380000,  expDrop: 300000,
                moveSpeed: 50,  attackRange: 320, aggroRange: 520, attackType: "ranged", atkDamageType: "magical",
                projSpeed: 260, projColor: "#a8d8f0",
                freezeOnHit: true, freezeDuration: 3.0,
-               aoeAtk: 500,  aoeRange: 160, aoeInterval: 5.0, aoeDamageType: "magical" },
+               aoeAtk: 100,  aoeRange: 160, aoeInterval: 5.0, aoeDamageType: "magical" },
     spawnCount: 4, killsToAdvance: 65 },
 
   { name: "신성 신전",

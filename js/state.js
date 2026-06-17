@@ -21,6 +21,7 @@ const gameState = {
   projectiles:   [],       // 런타임 전용 — 저장 제외
   poisonFields:  [],       // 런타임 전용 — 저장 제외
   meteors:       [],       // 런타임 전용 — 저장 제외
+  meteorImpacts: [],       // 런타임 전용 — 저장 제외
 
   // 런타임 전용 (저장 제외)
   viewStage: 0,
@@ -221,7 +222,7 @@ function saveGame() {
     RUNTIME_CHAR_KEYS.forEach(k => delete s[k]);
     return s;
   });
-  const { stageFields, viewStage, raidField, viewRaid, drops, floatingTexts, projectiles, poisonFields, meteors, ...rest } = gameState;
+  const { stageFields, viewStage, raidField, viewRaid, drops, floatingTexts, projectiles, poisonFields, meteors, meteorImpacts, ...rest } = gameState;
   localStorage.setItem(SAVE_KEY, JSON.stringify({ ...rest, characters: chars, lastTick: Date.now() }));
 }
 

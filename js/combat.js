@@ -526,8 +526,24 @@ function updateMeteors(dt) {
           }
         }
         spawnFloatingText(mt.stageIdx, mt.targetX, mt.targetY - 20, '★메테오★', '#e74c3c', 20);
+        // 착지 이펙트 (퍼져나가는 링)
+        if (!gameState.meteorImpacts) gameState.meteorImpacts = [];
+        gameState.meteorImpacts.push({
+          stageIdx: mt.stageIdx,
+          x: mt.targetX, y: mt.targetY,
+          maxRange: Math.min(mt.range || 800, 420),
+          timer: 0.85, maxTimer: 0.85,
+        });
       }
       gameState.meteors.splice(i, 1);
+    }
+  }
+
+  // 착지 이펙트 타이머 감소
+  if (gameState.meteorImpacts) {
+    for (let i = gameState.meteorImpacts.length - 1; i >= 0; i--) {
+      gameState.meteorImpacts[i].timer -= dt;
+      if (gameState.meteorImpacts[i].timer <= 0) gameState.meteorImpacts.splice(i, 1);
     }
   }
 }
