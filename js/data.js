@@ -169,7 +169,7 @@ const SKILLS = {
 
   // ── 도적 (1차) ──────────────────────────────────────────
   log_decoy:      { name: "통나무분신술",    classId: "rogue",    cooldown: 30.0,
-                    targeting: "log_decoy", decoyHp: 1000, decoyHpPerLv: 5444,
+                    targeting: "log_decoy", decoyHp: 667, decoyHpPerLv: 3629,
                     cost: 500, mpCost: 20 },
 
   // ── 2차 도적 (어쌔신) ────────────────────────────────────

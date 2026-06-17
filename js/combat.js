@@ -1203,16 +1203,17 @@ function executeSkill(char, skillId, skill, stats, stage, field) {
   if (skill.targeting === 'log_decoy') {
     const stageIdx = char.assignedStage;
     if (!field.decoys) field.decoys = [];
-    const decoyHp = Math.floor((skill.decoyHp || 1000) + (sLv - 1) * (skill.decoyHpPerLv || 5444));
+    // 이 캐릭터의 기존 분신 제거 (1캐릭터 = 최대 1분신)
+    field.decoys = field.decoys.filter(d => d.charId !== char.id);
+    const decoyHp = Math.floor((skill.decoyHp || 667) + (sLv - 1) * (skill.decoyHpPerLv || 3629));
     const nearest = findNearestMonster(char, field);
-    // 적과 캐릭터 사이 중간 지점에 생성
     const dx = nearest ? (nearest.x - char.x) * 0.4 : char.facing * 60;
     const dy = nearest ? (nearest.y - char.y) * 0.4 : 0;
     field.decoys.push({
       x: Math.max(60, Math.min(620, char.x + dx)),
       y: Math.max(60, Math.min(440, char.y + dy)),
       currentHp: decoyHp, maxHp: decoyHp,
-      hitAnim: 0,
+      hitAnim: 0, charId: char.id,
     });
     spawnFloatingText(stageIdx, char.x, char.y - 36, '분신 소환!', '#9b59b6', 14);
     return true;
