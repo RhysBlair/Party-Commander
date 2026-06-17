@@ -319,7 +319,7 @@ const STAGES = [
     monster: { name: "설녀",         hp: 1200000,   atk: 272,  physDef: 60,  magicDef: 180, goldDrop: 380000,  expDrop: 300000,
                moveSpeed: 50,  attackRange: 320, aggroRange: 520, attackType: "ranged", atkDamageType: "magical",
                projSpeed: 260, projColor: "#a8d8f0",
-               freezeOnHit: true, freezeDuration: 3.0,
+               freezeOnHit: true, freezeDuration: 3.0, freezeImmune: true,
                aoeAtk: 200,  aoeRange: 160, aoeInterval: 5.0, aoeDamageType: "magical" },
     spawnCount: 4, killsToAdvance: 65 },
 

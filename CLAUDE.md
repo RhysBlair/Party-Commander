@@ -216,6 +216,7 @@ x, y, attackTimer, skillTimers, shadowActive, shadowTimer, currentHp, currentMp,
 - 불꽃 도마뱀 화상 중첩 최대 3개 제한: `burnStack` 카운터 도입, 표시 "화상!(N/3)", 만료·부활 시 초기화
 - 스테이지 4~6 경험치 15% 상향: 화산 2000→2300, 죽은자의숲 7200→8280, 지하묘지 26000→29900
 - 설녀 데미지 2배: atk 136→272, aoeAtk 100→200
+- 설녀 빙결 면역: `freezeImmune: true` 속성, 아이스 스트라이크 명중 시 "빙결 내성!" 플로팅 텍스트 표시
 - 분노(rage) 스킬: 물리공격력 Lv1=+100%(2배)~Lv10=+300%(4배), buffAtkPerLv=0.2222 추가, buffAtkLabel 도입
 - 메디테이션/분노 스킬 표기 분리: buffAtkLabel='물리공격력'/'마법공격력', skillEffectDesc에서 라벨 사용
 - 제작탭 결정 업그레이드: 은은한결정 3개→빛나는결정 1개, 빛나는결정 5개→찬란한결정 1개 (`tryUpgradeCrystal`)
