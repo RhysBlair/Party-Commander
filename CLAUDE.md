@@ -65,6 +65,8 @@
 | savage_blow | 세비지 블로우 | thief | savage_blow |
 | meditation_fp | 메디테이션 | wizard_fp | party_buff |
 | poison_field | 포이즌 | wizard_fp | poison_area |
+| meteor | 메테오 | wizard_fp | meteor_cast |
+| log_decoy | 통나무분신술 | rogue | log_decoy |
 
 ### 스킬 레벨 관련 상수 (data.js)
 - `SKILL_LEVEL_MULTS[1..10]`: 레벨별 데미지 배율
@@ -84,6 +86,8 @@
 - `piercing`: 충전 후 단일 강타
 - `poison_area`: 독 장판 설치
 - `double_hit`: 2회 연속 타격
+- `meteor_cast`: 5초 캐스팅 → 3초 낙하 → AoE 폭격 (dmgMultiplier+dmgPerLv*lv, 피격 시 취소)
+- `log_decoy`: 분신 소환 (decoyHp+decoyHpPerLv*lv), 몬스터가 분신 우선 공격/이동
 
 ### party_buff 레벨 스케일 속성
 - `buffHp` + `buffHpPerLv`: HP 배율 (하이퍼바디: Lv1=+20%, Lv10=+200%)
@@ -205,6 +209,15 @@ x, y, attackTimer, skillTimers, shadowActive, shadowTimer, currentHp, currentMp,
 - 펫 보유중 시스템: char.ownedPets[] 추가, 구매 후 다른 펫 장착 시 "보유중 (장착)" 무료 전환, 재구매 불가
 - 장비탭 판매/분해 버튼: 아이템 오른쪽에 나란히 배치 (justify-content:space-between)
 - 빙결 내성 버그 수정: 빙결 중 내성 +20%/3s 로직이 frozen return에 막히던 문제 수정 (else 블록 내부로 이동)
+- 메디테이션/분노 버프 스킬 데미지 미적용 버그 수정: executeSkill 내 atkBufMult 도입, 모든 스킬 데미지에 적용
+- 메테오(wizard_fp 2차): 5초 캐스팅 → 3초 낙하 → 반경 800px AoE, Lv1=3000%~Lv10=100000%, 피격 시 취소
+  - dmgPerLv = (1000-30)/9 ≈ 107.78 (SKILL_LEVEL_MULTS 무시, 자체 선형 스케일)
+  - gameState.meteors[] 추적, updateMeteors(dt)로 낙하 및 AoE 처리
+  - render.js: 낙하 불덩어리 + 착지 예정 링 + 캐스팅 진행바 렌더링
+- 통나무분신술(rogue 1차): 분신 소환 (Lv1=1000HP, Lv10=50000HP), 30초 쿨
+  - field.decoys[] 에 디코이 엔티티 추가
+  - 몬스터 공격 + 이동 모두 aggro range 내 디코이 우선 타게팅
+  - render.js: 갈색 원 + 나무결 + HP바 + "분신" 레이블 렌더링
 
 ### 세션 8
 - 에픽 지팡이 `epic_staff` (INT+22, Lv30 마법사), 에픽 활 `epic_bow` (DEX+18, Lv30 궁수) 추가
