@@ -335,11 +335,16 @@ function tryCraftItem(equipId) {
 }
 
 // 결정 업그레이드: dim 3개 → bright 1개, bright 5개 → radiant 1개
+// 반환값: { mult, type, crystal } — Lucky(10%,×2) / Big Lucky(1%,×10)
 function tryUpgradeCrystal(from, to, cost) {
   if (!gameState.crystals) gameState.crystals = { dim: 0, bright: 0, radiant: 0 };
-  if ((gameState.crystals[from] || 0) < cost) return;
+  if ((gameState.crystals[from] || 0) < cost) return null;
   gameState.crystals[from] -= cost;
-  gameState.crystals[to] = (gameState.crystals[to] || 0) + 1;
+  const rand = Math.random();
+  const mult = rand < 0.01 ? 10 : rand < 0.11 ? 2 : 1;
+  const type = mult === 10 ? 'bigLucky' : mult === 2 ? 'lucky' : 'normal';
+  gameState.crystals[to] = (gameState.crystals[to] || 0) + mult;
+  return { mult, type, crystal: to };
 }
 
 function trySetNickname(charId, name) {

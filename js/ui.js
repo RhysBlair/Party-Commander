@@ -1120,7 +1120,7 @@ function renderCraftTab() {
           <span style="color:${CRYSTAL_COLORS.bright}">${CRYSTAL_NAMES.bright} 1개</span>
         </span>
         <button class="small-btn ${canDimUp ? '' : 'disabled'}" style="flex-shrink:0"
-                onclick="tryUpgradeCrystal('dim','bright',${dimToBright});renderCraftTab();">
+                onclick="showCrystalFloat(this,tryUpgradeCrystal('dim','bright',${dimToBright}));renderCraftTab();">
           업그레이드
         </button>
       </div>
@@ -1131,7 +1131,7 @@ function renderCraftTab() {
           <span style="color:${CRYSTAL_COLORS.radiant}">${CRYSTAL_NAMES.radiant} 1개</span>
         </span>
         <button class="small-btn ${canBriUp ? '' : 'disabled'}" style="flex-shrink:0"
-                onclick="tryUpgradeCrystal('bright','radiant',${brightToRad});renderCraftTab();">
+                onclick="showCrystalFloat(this,tryUpgradeCrystal('bright','radiant',${brightToRad}));renderCraftTab();">
           업그레이드
         </button>
       </div>
@@ -1336,6 +1336,44 @@ function closeOfflineModal() {
 }
 
 // ── 강화 결과 플로팅 텍스트 (버튼 위로 떠오름) ───────────────
+function showCrystalFloat(btn, result) {
+  if (!result || !btn) return;
+  const rect = btn.getBoundingClientRect();
+  const el   = document.createElement('div');
+  const name = CRYSTAL_NAMES[result.crystal] || result.crystal;
+  let text, color;
+  if (result.type === 'bigLucky') {
+    text = `Big Lucky!! ${name} +${result.mult}`;
+    color = '#f1c40f';
+  } else if (result.type === 'lucky') {
+    text = `Lucky! ${name} +${result.mult}`;
+    color = '#2ecc71';
+  } else {
+    text = `${name} +${result.mult}`;
+    color = CRYSTAL_COLORS[result.crystal] || '#aaa';
+  }
+  el.textContent = text;
+  el.style.cssText = [
+    'position:fixed',
+    `left:${Math.round(rect.left + rect.width / 2)}px`,
+    `top:${Math.round(rect.top - 4)}px`,
+    'transform:translateX(-50%)',
+    `color:${color}`,
+    'font-size:14px', 'font-weight:bold',
+    'pointer-events:none', 'z-index:9999',
+    'text-shadow:0 1px 8px #000',
+    'transition:top 0.8s ease-out, opacity 0.8s ease-out',
+  ].join(';');
+  document.body.appendChild(el);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      el.style.top     = `${Math.round(rect.top - 64)}px`;
+      el.style.opacity = '0';
+    });
+  });
+  setTimeout(() => el.remove(), 900);
+}
+
 function showEnhanceFloat(btn, result) {
   if (!result || !btn) return;
   const rect = btn.getBoundingClientRect();

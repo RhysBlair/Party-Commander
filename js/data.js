@@ -273,7 +273,7 @@ const STAGES = [
     spawnCount: 1, spawnLayout: [[0.75, 0.5]], killsToAdvance: 5 },
 
   { name: "사막",
-    monster: { name: "모래 골렘",    hp: 3500,      atk: 72,   physDef: 22,  magicDef: 10,  goldDrop: 700,     expDrop: 560,
+    monster: { name: "모래 골렘",    hp: 3500,      atk: 87,   physDef: 22,  magicDef: 10,  goldDrop: 700,     expDrop: 560,
                moveSpeed: 22,  attackRange: 65,  aggroRange: 300, attackType: "melee",  atkDamageType: "physical",
                pullForce: 35, pullRange: 400 },
     spawnCount: 5, killsToAdvance: 50 },
@@ -282,7 +282,7 @@ const STAGES = [
     monster: { name: "불꽃 도마뱀",  hp: 12000,     atk: 160,  physDef: 42,  magicDef: 20,  goldDrop: 2500,    expDrop: 2000,
                moveSpeed: 50,  attackRange: 60,  aggroRange: 380, attackType: "melee",  atkDamageType: "physical",
                aoeAtk: 120,  aoeRange: 120, aoeInterval: 5.0, aoeDamageType: "physical",
-               burnDmg: 40, burnDuration: 5.0, burnTickInterval: 0.2 },
+               burnDmg: 20, burnDuration: 5.0, burnTickInterval: 0.2 },
     spawnCount: 6, killsToAdvance: 60 },
 
   { name: "죽은자의 숲",
