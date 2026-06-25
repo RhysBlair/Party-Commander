@@ -164,7 +164,7 @@ function updateCombat(dt) {
               const cStats  = calcFinalStats(c);
               const cDef    = (md.aoeDamageType || md.atkDamageType) === 'magical' ? cStats.magicDef : cStats.physDef;
               const minDmg  = Math.max(1, Math.floor(md.aoeAtk * 0.2));
-              const aoeDmg  = Math.max(minDmg, md.aoeAtk - cDef);
+              const aoeDmg  = Math.max(minDmg, Math.floor(md.aoeAtk * (1 - cDef / (cDef + 200))));
               takeDamage(c, aoeDmg, i);
               hit = true;
             }
@@ -330,6 +330,7 @@ function getSkillAtkMult(char) {
 
 function takeDamage(char, dmg, stageIdx) {
   if (char.isDead) return;
+  dmg = Math.floor(dmg);
   // 아기거북이 쉴드: 공격 1회 완전 흡수 (메테오 캐스팅 취소보다 우선)
   if (char.petShieldActive) {
     char.petShieldActive = false;
@@ -647,8 +648,9 @@ function executeMonsterAttack(m, target, stageData, stageIdx) {
 
   const stats   = calcFinalStats(target);
   const charDef = md.atkDamageType === 'magical' ? stats.magicDef : stats.physDef;
-  const minDmg  = Math.max(1, Math.floor(md.atk * 0.2)); // 최소 20% 관통
-  const dmg     = Math.max(minDmg, md.atk - charDef);
+  // 퍼센트 감소: def/(def+200) 비율만큼 감소, 최소 20% 관통
+  const minDmg  = Math.max(1, Math.floor(md.atk * 0.2));
+  const dmg     = Math.max(minDmg, Math.floor(md.atk * (1 - charDef / (charDef + 200))));
 
   if (md.attackType === 'ranged') {
     const extras = md.freezeOnHit ? { freezeOnHit: true, freezeDuration: md.freezeDuration || 3.0 } : undefined;
