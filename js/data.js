@@ -131,6 +131,12 @@ const SKILLS = {
                     targeting: "passive", orbsRequired: 5, dmgMultiplier: 20.0, cost: 500, mpCost: 30 },
 
   // ── 2차 전사 ──────────────────────────────────────────────
+  power_burst:    { name: "파워 버스트",       classId: "fighter",
+                    targeting: "power_burst",
+                    statMultBase: 2.0, statMultPerLv: 2/9,
+                    durationBase: 2.0, durationPerLv: 3/9,
+                    cost: 500, mpCost: 0 },
+
   threat:         { name: "위협",            classId: "page",     cooldown: 15.0,
                     targeting: "debuff_area", debuffRange: 250, debuffDmgMult: 1.5,
                     debuffDuration: 8.0, cost: 500, mpCost: 15 },

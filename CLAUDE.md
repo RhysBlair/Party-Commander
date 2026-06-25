@@ -48,6 +48,7 @@
 | skillId | 이름 | classId | targeting |
 |---------|------|---------|-----------|
 | orb_strike | 오브 스트라이크 | warrior | passive (orbsRequired:5, dmgMult:20) |
+| power_burst | 파워 버스트 | fighter | power_burst |
 | threat | 위협 | page | debuff_area |
 | spear_aura | 하이퍼바디 | spearman | party_buff |
 | rage | 분노 | knight | party_buff |
@@ -205,6 +206,13 @@ x, y, attackTimer, skillTimers, shadowActive, shadowTimer, currentHp, currentMp,
 ## 개발 이력 (최신순)
 
 ### 세션 10 (현재)
+- 파이터(fighter) 2차 스킬 추가: 파워 버스트 (power_burst)
+  - 오브 스트라이크 발동 시 모든 능력치(STR/DEX/INT/LUK) 배율 버프
+  - Lv1=2.0배/2.0초 ~ Lv10=4.0배/5.0초, 최대 1중첩
+  - stats.js: effSTR/DEX/INT/LUK에 statMult 배율 적용 (파생 스탯 전체 연동)
+  - combat.js: 오브 발동 시 char.activeBuffs.statMult 설정, 기존 범용 버프 타이머 감소 로직으로 자동 처리
+  - ui.js: power_burst targeting 케이스 추가
+
 - 파티 탭 추가: 캐릭터들을 파티로 묶고 파티 단위로 스테이지에 배치 (state.js parties[], renderPartyTab)
   - 파티 생성/해산, 멤버 추가/제거, 스테이지 배치/해제 기능
   - 파티 미소속 캐릭터 섹션에서 파티에 합류 + 솔로 배치 해제 버튼 제공

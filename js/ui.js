@@ -867,6 +867,12 @@ function skillEffectDesc(id, s, level) {
       return `분신 소환 (HP ${dHp.toLocaleString()}) · 분신이 몬스터 어그로를 끌어 아군 보호${suffix}`;
     }
 
+    case 'power_burst': {
+      const pbMult = s.statMultBase + (level - 1) * s.statMultPerLv;
+      const pbDur  = (s.durationBase + (level - 1) * s.durationPerLv).toFixed(1);
+      return `오브 스트라이크 발동 시 모든 능력치 ${pbMult.toFixed(1)}배 · ${pbDur}초 지속 (최대 1중첩)`;
+    }
+
     default:
       return `위력 ${pct((s.dmgMultiplier || 1) * m)}${suffix}`;
   }

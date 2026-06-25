@@ -1346,6 +1346,17 @@ function dealDamage(char, monster, stats, stage, field, dmgMult = 1.0) {
     char.orbCount   = 0;
     char.attackAnim = 0.6;
     orbExplosion    = true;
+    // 파워 버스트: 오브 스트라이크 발동 시 모든 능력치 배율 버프
+    if (char.skills && char.skills.includes('power_burst')) {
+      const pb    = SKILLS['power_burst'];
+      const pbLv  = char.skillLevels?.['power_burst'] || 1;
+      const pbMult = pb.statMultBase + pb.statMultPerLv * (pbLv - 1);
+      const pbDur  = pb.durationBase + pb.durationPerLv * (pbLv - 1);
+      if (!char.activeBuffs) char.activeBuffs = {};
+      char.activeBuffs.statMult = { mult: pbMult, timer: pbDur };
+      spawnFloatingText(char.assignedStage, char.x, char.y - 44,
+        `파워 버스트! (x${pbMult.toFixed(1)})`, '#ff6622', 14);
+    }
   } else {
     const atkMult    = getSkillAtkMult(char);
     const atkBufMult = (char.activeBuffs?.atk?.timer > 0) ? (char.activeBuffs.atk.mult || 1) : 1;

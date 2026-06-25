@@ -30,10 +30,11 @@ function calcFinalStats(char) {
   const eqMagDef  = sumEquipStat(char, 'magicDef');
 
   // 장비 스탯 보너스 적용 후 유효 스탯
-  const effSTR = (s.STR ?? 0) + sumEquipStat(char, 'bonusSTR');
-  const effDEX = (s.DEX ?? 0) + sumEquipStat(char, 'bonusDEX');
-  const effINT = (s.INT ?? 0) + sumEquipStat(char, 'bonusINT');
-  const effLUK = (s.LUK ?? 0) + sumEquipStat(char, 'bonusLUK');
+  const statMult = (char.activeBuffs?.statMult?.timer > 0) ? (char.activeBuffs.statMult.mult || 1) : 1;
+  const effSTR = ((s.STR ?? 0) + sumEquipStat(char, 'bonusSTR')) * statMult;
+  const effDEX = ((s.DEX ?? 0) + sumEquipStat(char, 'bonusDEX')) * statMult;
+  const effINT = ((s.INT ?? 0) + sumEquipStat(char, 'bonusINT')) * statMult;
+  const effLUK = ((s.LUK ?? 0) + sumEquipStat(char, 'bonusLUK')) * statMult;
   const eff    = { STR: effSTR, DEX: effDEX, INT: effINT, LUK: effLUK };
 
   // 공격력: 기본5 + 장비ATK + 주스탯보너스 (직업 주스탯 배율 적용)
