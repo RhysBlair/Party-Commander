@@ -39,16 +39,45 @@ function buffIconsHtml(char) {
   ).join('');
 }
 
-function showBuffTip(el, name, effect) {
+function _openTip(el, html) {
   document.querySelectorAll('.buff-tip-pop').forEach(e => e.remove());
   const tip = document.createElement('div');
   tip.className = 'buff-tip-pop';
-  tip.innerHTML = `<strong style="color:#ddd">${name}</strong><br><span style="color:#aaa">${effect}</span>`;
+  tip.innerHTML = html;
   el.style.position = 'relative';
   el.appendChild(tip);
   const close = () => tip.remove();
-  setTimeout(close, 4000);
+  setTimeout(close, 5000);
   document.addEventListener('click', close, { once: true });
+}
+
+function showBuffTip(el, name, effect) {
+  _openTip(el, `<strong style="color:#ddd">${name}</strong><br><span style="color:#aaa">${effect}</span>`);
+}
+
+function showSkillTip(el, charId, skillId) {
+  const char = gameState.characters.find(c => c.id === charId);
+  if (!char) return;
+  const s = SKILLS[skillId];
+  if (!s) return;
+  const curLv  = char.skillLevels?.[skillId] || 0;
+  const showLv = curLv > 0 ? curLv : 1;
+  const desc   = skillEffectDesc(skillId, s, showLv);
+  const maxLv  = s.maxLevel || SKILL_MAX_LEVEL;
+  const nextLv = curLv + 1;
+  const nextDesc = (curLv > 0 && curLv < maxLv) ? skillEffectDesc(skillId, s, nextLv) : '';
+  _openTip(el, `
+    <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">
+      <span>${SKILL_ICONS[skillId] || '✦'}</span>
+      <strong style="color:#ddd">${s.name}</strong>
+      <span style="color:${curLv > 0 ? '#4caf50' : '#666'};font-size:10px">${curLv > 0 ? `Lv.${curLv}` : '미습득'}</span>
+    </div>
+    <div style="color:#aaa;font-size:10px;line-height:1.5">${curLv === 0 ? 'Lv.1: ' : ''}${desc}</div>
+    ${nextDesc ? `<div style="color:#3a7a3a;font-size:10px;margin-top:3px">▲ Lv.${nextLv}: ${nextDesc}</div>` : ''}`);
+}
+
+function showStatTip(el, stat, label) {
+  _openTip(el, `<strong style="color:#e2b96f">${stat}</strong><br><span style="color:#aaa;font-size:10px;line-height:1.4">${label}</span>`);
 }
 
 // 스킬 아이콘 클릭 — 설명 토글
@@ -337,7 +366,6 @@ function charSkillMiniSection(char) {
     const nextCost   = learned ? (SKILL_SP_COSTS[curLv + 1] ?? Infinity) : (SKILL_SP_COSTS[1] ?? 1);
     const canUp      = !isMax && sp >= nextCost;
     const icon       = SKILL_ICONS[id] || '✦';
-    const selected   = _charSkillSelected[char.id] === id;
     const lvLabel    = isMax ? 'MAX' : (learned ? `Lv.${curLv}` : '─');
     const lvColor    = isMax ? '#e2b96f' : (learned ? '#4caf50' : '#444');
     const btn = isMax
@@ -352,13 +380,15 @@ function charSkillMiniSection(char) {
              배우기
            </button>`;
     return `
-      <div class="skill-icon-item${selected ? ' skill-icon-sel' : ''}"
-           onclick="selectSkillInfo(${char.id},'${id}')" title="${s.name}">
+      <div class="skill-icon-item"
+           onclick="event.stopPropagation();showSkillTip(this,${char.id},'${id}')">
         <div class="skill-icon-box${learned ? ' learned' : ''}">
           <span style="font-size:18px;line-height:1">${icon}</span>
         </div>
-        <div class="skill-icon-name">${s.name}</div>
-        <div style="font-size:9px;color:${lvColor};text-align:center">${lvLabel}</div>
+        <div class="skill-icon-name-lv">
+          <span class="skill-icon-name">${s.name}</span>
+          <span style="color:${lvColor};font-size:9px">${lvLabel}</span>
+        </div>
         ${btn}
       </div>`;
   }
@@ -367,12 +397,16 @@ function charSkillMiniSection(char) {
   const canResetSkill = gameState.gold >= resetCost;
 
   const tier1Html = tier1Skills.length
-    ? `<div class="skill-tier-label">1차</div>
-       <div class="skill-icon-row">${tier1Skills.map(([id, s]) => makeIcon(id, s)).join('')}</div>`
+    ? `<div class="skill-tier-group">
+         <div class="skill-tier-label">1차</div>
+         <div class="skill-icon-row">${tier1Skills.map(([id, s]) => makeIcon(id, s)).join('')}</div>
+       </div>`
     : '';
   const tier2Html = tier2Skills.length
-    ? `<div class="skill-tier-label" style="margin-top:4px">2차</div>
-       <div class="skill-icon-row">${tier2Skills.map(([id, s]) => makeIcon(id, s)).join('')}</div>`
+    ? `<div class="skill-tier-group">
+         <div class="skill-tier-label">2차</div>
+         <div class="skill-icon-row">${tier2Skills.map(([id, s]) => makeIcon(id, s)).join('')}</div>
+       </div>`
     : '';
   const onlyHtml = onlyTier
     ? `<div class="skill-icon-row">${onlyTier.map(([id, s]) => makeIcon(id, s)).join('')}</div>`
@@ -387,8 +421,8 @@ function charSkillMiniSection(char) {
                 onclick="tryResetSkills(${char.id});renderCharacterTab();"
                 title="골드 ${resetCost.toLocaleString()} 소모">스킬초기화</button>
       </div>
-      ${onlyHtml}${tier1Html}${tier2Html}
-      <div id="skill-desc-${char.id}" class="skill-desc-panel"></div>
+      ${onlyHtml}
+      <div class="skill-tiers-row">${tier1Html}${tier2Html}</div>
     </div>`;
 }
 
@@ -465,7 +499,7 @@ function renderCharacterTab() {
             <div class="stat-inline-row" style="flex-wrap:wrap">
               ${['STR','DEX','INT','LUK'].map(stat => `
                 <div class="stat-inline-item">
-                  <span class="stat-lbl-tip" title="${STAT_LABELS[stat]}">${stat}</span>
+                  <span class="stat-lbl-tip" onclick="event.stopPropagation();showStatTip(this,'${stat}','${STAT_LABELS[stat]}')">${stat}</span>
                   <span class="stat-val" id="sv-${char.id}-${stat}">${statValHtmlFull(char, stat)}</span>
                   <button class="stat-plus-btn" id="sb-${char.id}-${stat}"
                           style="${hasPoints ? '' : 'display:none'}"

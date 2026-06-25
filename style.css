@@ -449,16 +449,37 @@ body {
   min-width: 120px;
 }
 
-/* 스킬 아이콘 이름 라벨 */
+/* 스킬 아이콘 이름+레벨 */
+.skill-icon-name-lv {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  justify-content: center;
+  flex-wrap: wrap;
+  max-width: 52px;
+}
 .skill-icon-name {
   font-size: 8px;
   color: #888;
   text-align: center;
-  max-width: 46px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 36px;
   line-height: 1.1;
+}
+
+/* 1차/2차 스킬 가로 배열 */
+.skill-tiers-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+}
+.skill-tier-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 /* exp 바 */
@@ -501,8 +522,10 @@ body {
 .stat-lbl-tip {
   font-weight: bold;
   color: #e2b96f;
-  cursor: help;
+  cursor: pointer;
   font-size: 12px;
+  position: relative;
+  user-select: none;
 }
 
 /* 캐릭터 탭 — 최종 스탯 한 줄 */
