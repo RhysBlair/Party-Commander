@@ -59,6 +59,7 @@ function calcFinalStats(char) {
     : 30 + (effLUK - 100) * 0.2) + eqCritRate; // LUK 100이하 0.3%/pt, 초과 0.2%/pt
   const maxHp      = Math.floor(100 + char.level * 20 + effSTR * 5);
 
+  const tauntDefBonus = (char.activeBuffs?.taunt?.timer > 0) ? (char.activeBuffs.taunt.defBonus || 0) : 0;
   const hpBuffMult  = (char.activeBuffs?.hp?.timer > 0) ? (char.activeBuffs.hp.mult || 1) : 1;
   const accPenalty  = (char.raidAccDown || 0) > 0 ? ZAKUM?.accDebuffAmt ?? 70 : 0;
 
@@ -68,8 +69,8 @@ function calcFinalStats(char) {
 
   return {
     atk:      Math.floor(baseAtk * atkMultiplier * (1 + atkUpgPct)),
-    physDef:  Math.floor(physDef + defUpgFlat),
-    magicDef: Math.floor(magicDef),
+    physDef:  Math.floor(physDef + defUpgFlat + tauntDefBonus),
+    magicDef: Math.floor(magicDef + tauntDefBonus),
     accuracy: Math.max(10, Math.min(accuracy - accPenalty, 99)),
     evade:    Math.min(evade, 60),
     critRate: critRate + petCritBonus,

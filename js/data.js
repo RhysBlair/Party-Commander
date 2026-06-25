@@ -128,7 +128,11 @@ const ENHANCE_SUCCESS = [100, 100, 100, 100, 100, 80, 60, 40, 25, 10];
 const SKILLS = {
   // ── 전사 ──────────────────────────────────────────────────
   orb_strike:     { name: "오브 스트라이크", classId: "warrior",
-                    targeting: "passive", orbsRequired: 5, dmgMultiplier: 20.0, cost: 500, mpCost: 30 },
+                    targeting: "passive", orbsRequired: 5, dmgMultiplier: 14.0, cost: 500, mpCost: 30 },
+  taunt:          { name: "도발", classId: "warrior",
+                    targeting: "taunt", cooldown: 12, mpCost: 15, cost: 500,
+                    buffDef: 0, buffDefPerLv: 10,
+                    buffDuration: 8 },
 
   // ── 2차 전사 ──────────────────────────────────────────────
   power_burst:    { name: "파워 버스트",       classId: "fighter",

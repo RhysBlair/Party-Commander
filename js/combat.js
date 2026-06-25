@@ -133,9 +133,11 @@ function updateCombat(dt) {
           }
           m.hitAnim = 0.15;
         } else if (aliveChars.length > 0) {
-          // 가장 가까운 캐릭터
+          // 도발 중인 캐릭터 우선, 없으면 가장 가까운 캐릭터
+          const taunters = aliveChars.filter(c => (c.activeBuffs?.taunt?.timer || 0) > 0);
+          const pool = taunters.length > 0 ? taunters : aliveChars;
           let target = null, minD2 = Infinity;
-          for (const c of aliveChars) {
+          for (const c of pool) {
             const dx = c.x - m.x, dy = c.y - m.y;
             const d2 = dx * dx + dy * dy;
             if (d2 < minD2) { minD2 = d2; target = c; }
@@ -429,8 +431,12 @@ function updateMonsterMovement(m, dt, stageData, aliveChars, field) {
   // 생존 캐릭터 없으면 그자리 대기
   if (aliveChars.length === 0) return;
 
+  // 도발 중인 캐릭터 우선 타게팅
+  const tauntersMove = aliveChars.filter(c => (c.activeBuffs?.taunt?.timer || 0) > 0);
+  const movePool = tauntersMove.length > 0 ? tauntersMove : aliveChars;
+
   let nearest = null, minD2 = Infinity;
-  for (const c of aliveChars) {
+  for (const c of movePool) {
     const dx = c.x - m.x, dy = c.y - m.y;
     const d2 = dx * dx + dy * dy;
     if (d2 < minD2) { minD2 = d2; nearest = c; }
@@ -1051,6 +1057,16 @@ function executeSkill(char, skillId, skill, stats, stage, field) {
         spawnFloatingText(stageIdx, c.x, c.y - 44, `크리 +${Math.round(critBonus * 100)}%!`, '#f1c40f', 13);
       }
     }
+    return true;
+  }
+
+  // 도발: 자신에게 어그로 + 방어력 버프
+  if (skill.targeting === 'taunt') {
+    const defBonus = Math.round((skill.buffDef || 0) + sLv * (skill.buffDefPerLv || 0));
+    const dur      = (skill.buffDuration || 8) * (1 + (sLv - 1) * 0.1);
+    if (!char.activeBuffs) char.activeBuffs = {};
+    char.activeBuffs.taunt = { defBonus, timer: dur };
+    spawnFloatingText(char.assignedStage, char.x, char.y - 36, `도발! 방어 +${defBonus}`, '#e67e22', 13);
     return true;
   }
 

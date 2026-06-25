@@ -59,7 +59,7 @@ function atkLabel(char) {
 
 // 스킬 아이콘 맵
 const SKILL_ICONS = {
-  orb_strike: '🔮', power_burst: '💥', threat: '😤', spear_aura: '🛡️',
+  orb_strike: '🔮', taunt: '📢', power_burst: '💥', threat: '😤', spear_aura: '🛡️',
   rage: '🔥', mage_blast: '💫', magic_guard: '🔷', ice_strike: '❄️',
   cleric_heal: '✨', resurrection: '⬆️', double_shot: '🏹', archer_shot: '⚡',
   shadow_partner: '👥', log_decoy: '🪵', triple_throw: '💫', savage_blow: '⚔️',
@@ -87,6 +87,8 @@ function buffIconsHtml(char) {
       list.push(['✨', '샤프아이즈', `크리티컬 데미지 +${(b.critDmg.bonus || 0).toFixed(1)}배`]);
     if ((b.cd?.timer || 0) > 0)
       list.push(['⚡', '쿨타임 단축', `쿨타임 배율 ×${(b.cd.mult || 1).toFixed(2)}`]);
+    if ((b.taunt?.timer || 0) > 0)
+      list.push(['📢', '도발', `방어 +${b.taunt.defBonus || 0} / 어그로 집중`]);
   }
 
   // 축복(업그레이드) 상시 효과
@@ -1097,6 +1099,12 @@ function skillEffectDesc(id, s, level) {
       const pbMult = s.statMultBase + (level - 1) * s.statMultPerLv;
       const pbDur  = (s.durationBase + (level - 1) * s.durationPerLv).toFixed(1);
       return `오브 스트라이크 발동 시 모든 능력치 ${pbMult.toFixed(1)}배 · ${pbDur}초 지속 (최대 1중첩)`;
+    }
+
+    case 'taunt': {
+      const defBonus = Math.round((s.buffDef || 0) + level * (s.buffDefPerLv || 0));
+      const dur = ((s.buffDuration || 8) * (1 + (level - 1) * 0.1)).toFixed(1);
+      return `${dur}초간 몬스터 어그로 집중 · 물리/마법 방어 +${defBonus}${suffix}`;
     }
 
     default:
