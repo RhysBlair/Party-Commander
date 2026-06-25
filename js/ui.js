@@ -60,6 +60,7 @@ function atkLabel(char) {
 // 스킬 아이콘 맵
 const SKILL_ICONS = {
   orb_strike: '🔮', taunt: '📢', power_burst: '💥', threat: '😤', spear_aura: '🛡️',
+  silver_hawk: '🦅',
   rage: '🔥', mage_blast: '💫', magic_guard: '🔷', ice_strike: '❄️',
   cleric_heal: '✨', resurrection: '⬆️', double_shot: '🏹', archer_shot: '⚡',
   shadow_partner: '👥', log_decoy: '🪵', triple_throw: '💫', savage_blow: '⚔️',
@@ -1105,6 +1106,14 @@ function skillEffectDesc(id, s, level) {
       const defBonus = Math.round((s.buffDef || 0) + level * (s.buffDefPerLv || 0));
       const dur = ((s.buffDuration || 8) * (1 + (level - 1) * 0.1)).toFixed(1);
       return `${dur}초간 몬스터 어그로 집중 · 물리/마법 방어 +${defBonus}${suffix}`;
+    }
+
+    case 'silver_hawk': {
+      const dmg  = ((s.hawkDmgBase || 0.8) + (level - 1) * (s.hawkDmgPerLv || 0.133)).toFixed(2);
+      const sc   = Math.round(Math.min(100, ((s.hawkStunChanceBase || 0.5) + (level - 1) * (s.hawkStunChancePerLv || 0.056)) * 100));
+      const sd   = ((s.hawkStunDurBase || 3) + (level - 1) * (s.hawkStunDurPerLv || 1.333)).toFixed(1);
+      const dur  = ((s.hawkDuration || 30) + (level - 1) * (s.hawkDurationPerLv || 3)).toFixed(0);
+      return `독수리 소환 (${dur}s) · 3초마다 ${pct(+dmg)} 공격 · 기절 확률 ${sc}% / ${sd}s${suffix}`;
     }
 
     default:

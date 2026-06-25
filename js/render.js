@@ -39,6 +39,7 @@ function render() {
   drawProjectiles(viewIdx);
   drawMeteors(viewIdx);
   drawMeteorImpacts(viewIdx);
+  drawHawks(viewIdx);
   drawDecoys(viewIdx);
   drawFloatingTexts(viewIdx);
 
@@ -159,6 +160,28 @@ function drawMonster(m, stageIdx) {
     ctx.font = 'bold 10px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(`⚠ ${(m.debuffTimer || 0).toFixed(1)}s`, m.x, m.y + R + 26);
+    ctx.textAlign = 'left';
+  }
+
+  // 기절 오버레이
+  if ((m.stunTimer || 0) > 0) {
+    ctx.globalAlpha = 0.4;
+    ctx.fillStyle   = '#f39c12';
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, R + 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = '#f1c40f';
+    ctx.lineWidth   = 2;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, R + 5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#f1c40f';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`💫 ${(m.stunTimer || 0).toFixed(1)}s`, m.x, m.y + R + 26);
     ctx.textAlign = 'left';
   }
 
@@ -785,6 +808,50 @@ function drawMeteorImpacts(viewIdx) {
     }
 
     ctx.globalAlpha = 1;
+  }
+}
+
+function drawHawks(viewIdx) {
+  const field = gameState.stageFields[viewIdx];
+  if (!field || !field.hawks || !field.hawks.length) return;
+
+  for (const hawk of field.hawks) {
+    if (hawk.duration <= 0) continue;
+    const t = Date.now() / 300;
+    const floatY = hawk.y + Math.sin(t) * 4;
+
+    // 날개 (타원 2개)
+    ctx.save();
+    ctx.translate(hawk.x, floatY);
+    ctx.fillStyle = 'rgba(192,220,255,0.85)';
+    ctx.beginPath();
+    ctx.ellipse(-10, 2, 12, 5, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(10, 2, 12, 5, 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    // 몸통
+    ctx.fillStyle = '#ddeeff';
+    ctx.strokeStyle = '#6699cc';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 7, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // 머리
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(0, -6, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    // 지속시간 바
+    const barW = 30, barX = hawk.x - barW / 2, barY = floatY - 18;
+    ctx.fillStyle = '#111';
+    ctx.fillRect(barX, barY, barW, 3);
+    ctx.fillStyle = '#4af';
+    ctx.fillRect(barX, barY, barW * (hawk.duration / Math.max(hawk.duration, 30)), 3);
   }
 }
 

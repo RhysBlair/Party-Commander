@@ -142,8 +142,8 @@ function updateCombat(dt) {
             const d2 = dx * dx + dy * dy;
             if (d2 < minD2) { minD2 = d2; target = c; }
           }
-          // aggroRange 체크, 빙결 중 공격 불가
-          if (target && minD2 <= aggR2 && !m.frozen) {
+          // aggroRange 체크, 빙결/기절 중 공격 불가
+          if (target && minD2 <= aggR2 && !m.frozen && !(m.stunTimer > 0)) {
             m.attackTimer = md2.monsterAtkInterval || MONSTER_ATTACK_INTERVAL;
             executeMonsterAttack(m, target, stageData, i);
           }
@@ -376,6 +376,13 @@ function updateMonsterMovement(m, dt, stageData, aliveChars, field) {
     return;
   }
 
+  // 기절 타이머 감소 + 이동 정지
+  if ((m.stunTimer || 0) > 0) {
+    m.stunTimer -= dt;
+    if (m.stunTimer <= 0) m.stunTimer = 0;
+    return;
+  }
+
   // 빙결 타이머 감소 + 이동 정지
   if (m.frozen) {
     m.frozenTimer = (m.frozenTimer || 0) - dt;
@@ -515,6 +522,60 @@ function updateProjectiles(dt) {
 }
 
 // ── 메테오 업데이트 ───────────────────────────────────────
+function updateHawks(dt) {
+  for (let i = 0; i < gameState.stageFields.length; i++) {
+    const field = gameState.stageFields[i];
+    if (!field || !field.hawks || !field.hawks.length) continue;
+
+    field.hawks = field.hawks.filter(h => h.duration > 0);
+
+    for (const hawk of field.hawks) {
+      hawk.duration -= dt;
+
+      const aliveMonsters = field.monsters.filter(m => m.alive);
+      if (!aliveMonsters.length) continue;
+
+      // 기절 안 된 몬스터 우선, 없으면 전체
+      const nonStunned = aliveMonsters.filter(m => !(m.stunTimer > 0));
+      const pool = nonStunned.length > 0 ? nonStunned : aliveMonsters;
+
+      // 가장 가까운 타겟
+      let target = null, minD2 = Infinity;
+      for (const m of pool) {
+        const dx = m.x - hawk.x, dy = m.y - hawk.y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 < minD2) { minD2 = d2; target = m; }
+      }
+      if (!target) continue;
+
+      // 타겟 방향으로 이동
+      const dist = Math.sqrt(minD2);
+      if (dist > 18) {
+        const dx = target.x - hawk.x, dy = target.y - hawk.y;
+        hawk.x += (dx / dist) * 300 * dt;
+        hawk.y += (dy / dist) * 300 * dt;
+      } else {
+        // 타겟 근처: 3초마다 공격
+        hawk.attackTimer = (hawk.attackTimer || 0) - dt;
+        if (hawk.attackTimer <= 0) {
+          hawk.attackTimer = 3.0;
+          const dmg = Math.max(1, Math.floor(hawk.atk * hawk.dmgMult));
+          target.currentHp -= dmg;
+          spawnFloatingText(i, target.x, target.y - 28, `${dmg}`, '#a0d8f8', 13);
+          if (Math.random() < hawk.stunChance) {
+            target.stunTimer = hawk.stunDur;
+            spawnFloatingText(i, target.x, target.y - 44, '기절!', '#f39c12', 13);
+          }
+          if (target.currentHp <= 0) {
+            const charRef = gameState.characters.find(c => c.id === hawk.charId);
+            if (charRef) killMonster(charRef, target, STAGES[i], field);
+          }
+        }
+      }
+    }
+  }
+}
+
 function updateMeteors(dt) {
   for (let i = gameState.meteors.length - 1; i >= 0; i--) {
     const mt = gameState.meteors[i];
@@ -1057,6 +1118,26 @@ function executeSkill(char, skillId, skill, stats, stage, field) {
         spawnFloatingText(stageIdx, c.x, c.y - 44, `크리 +${Math.round(critBonus * 100)}%!`, '#f1c40f', 13);
       }
     }
+    return true;
+  }
+
+  // 실버호크: 독수리 소환
+  if (skill.targeting === 'silver_hawk') {
+    const dmgMult    = (skill.hawkDmgBase || 0.8) + (sLv - 1) * (skill.hawkDmgPerLv || 0.133);
+    const stunChance = Math.min(1, (skill.hawkStunChanceBase || 0.5) + (sLv - 1) * (skill.hawkStunChancePerLv || 0.056));
+    const stunDur    = (skill.hawkStunDurBase || 3) + (sLv - 1) * (skill.hawkStunDurPerLv || 1.333);
+    const duration   = (skill.hawkDuration || 30) + (sLv - 1) * (skill.hawkDurationPerLv || 3);
+    if (!field.hawks) field.hawks = [];
+    // 같은 캐릭터의 기존 호크 제거
+    field.hawks = field.hawks.filter(h => h.charId !== char.id);
+    field.hawks.push({
+      x: char.x, y: char.y - 20,
+      charId: char.id,
+      atk: stats.atk,
+      dmgMult, stunChance, stunDur, duration,
+      attackTimer: 0,
+    });
+    spawnFloatingText(char.assignedStage, char.x, char.y - 36, '실버호크!', '#a0d8f8', 14);
     return true;
   }
 
