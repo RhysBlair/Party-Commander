@@ -377,7 +377,7 @@ function getSkillTier(char, skillId) {
   return 1;
 }
 // 인덱스 = 목표 레벨(1~10), 값 = 필요 SP
-const SKILL_SP_COSTS = [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+const SKILL_SP_COSTS = [0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2];
 // 인덱스 = 스킬 레벨(1~10), 값 = 효과 배율 (점점 가속)
 const SKILL_LEVEL_MULTS = [0, 1.00, 1.15, 1.32, 1.52, 1.75, 2.02, 2.33, 2.68, 3.08, 3.55];
 
