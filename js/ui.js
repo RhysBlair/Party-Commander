@@ -79,9 +79,9 @@ function buffIconsHtml(char) {
     if ((b.hp?.timer || 0) > 0)
       list.push(['❤️', '체력 강화', `최대 HP ×${(b.hp.mult || 1).toFixed(1)}`]);
     if ((b.atk?.timer || 0) > 0) {
-      const lbl      = b.atk.label || '공격력';
-      const skillNm  = b.atk.skillName ? `(${b.atk.skillName})` : '';
-      list.push(['⚔️', `${lbl} 강화 ${skillNm}`, `${lbl} ×${(b.atk.mult || 1).toFixed(1)}`]);
+      const lbl     = b.atk.label || '공격력';
+      const name    = b.atk.skillName || (lbl + ' 강화');
+      list.push(['⚔️', name, `${lbl} ×${(b.atk.mult || 1).toFixed(1)}`]);
     }
     if ((b.critDmg?.timer || 0) > 0)
       list.push(['✨', '샤프아이즈', `크리티컬 데미지 +${(b.critDmg.bonus || 0).toFixed(1)}배`]);
@@ -96,9 +96,9 @@ function buffIconsHtml(char) {
   if ((upg.def_boost || 0) > 0)
     list.push(['🛡️', '방어강화(축복)', `물리방어 +${upg.def_boost * 3}`]);
   if ((upg.exp_boost || 0) > 0)
-    list.push(['⭐', '경험치강화(축복)', `경험치 +${upg.exp_boost * 10}%`]);
+    list.push(['⭐', '경험치 보너스(축복)', `경험치 +${upg.exp_boost * 10}%`]);
   if ((upg.gold_boost || 0) > 0)
-    list.push(['💰', '골드강화(축복)', `골드 +${upg.gold_boost * 10}%`]);
+    list.push(['💰', '골드 보너스(축복)', `골드 +${upg.gold_boost * 10}%`]);
   if ((upg.atk_spd || 0) > 0)
     list.push(['💨', '공격속도강화(축복)', `공격속도 +${upg.atk_spd * 5}%`]);
 
