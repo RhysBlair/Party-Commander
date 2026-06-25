@@ -472,14 +472,16 @@ body {
 /* 1차/2차 스킬 가로 배열 */
 .skill-tiers-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
   align-items: flex-start;
+  overflow-x: auto;
 }
 .skill-tier-group {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  flex-shrink: 0;
 }
 
 /* exp 바 */

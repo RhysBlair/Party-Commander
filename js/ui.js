@@ -366,10 +366,10 @@ function charSkillMiniSection(char) {
     const nextCost   = learned ? (SKILL_SP_COSTS[curLv + 1] ?? Infinity) : (SKILL_SP_COSTS[1] ?? 1);
     const canUp      = !isMax && sp >= nextCost;
     const icon       = SKILL_ICONS[id] || '✦';
-    const lvLabel    = isMax ? 'MAX' : (learned ? `Lv.${curLv}` : '─');
-    const lvColor    = isMax ? '#e2b96f' : (learned ? '#4caf50' : '#444');
+    const lvLabel = isMax ? `Lv.${curLv}` : (learned ? `Lv.${curLv}` : '미습득');
+    const lvColor = isMax ? '#e2b96f' : (learned ? '#4caf50' : '#555');
     const btn = isMax
-      ? `<span style="font-size:8px;color:#e2b96f">MAX</span>`
+      ? `<button class="skill-icon-btn" style="cursor:default;opacity:0.5;pointer-events:none">MAX</button>`
       : learned
         ? `<button class="skill-icon-btn${canUp ? '' : ' disabled'}"
                    onclick="event.stopPropagation();tryUpgradeSkill(${char.id},'${id}');renderCharacterTab();">
