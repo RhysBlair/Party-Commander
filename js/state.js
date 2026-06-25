@@ -211,6 +211,12 @@ function createParty() {
 function disbandParty(partyId) {
   const idx = gameState.parties.findIndex(p => p.id === partyId);
   if (idx === -1) return;
+  const party = gameState.parties[idx];
+  // 멤버들 배치 해제
+  for (const cid of party.memberIds) {
+    const char = gameState.characters.find(c => c.id === cid);
+    if (char) char.assignedStage = -1;
+  }
   gameState.parties.splice(idx, 1);
   saveGame();
 }

@@ -897,10 +897,12 @@ function renderPartyTab() {
 
   // ── 스테이지 배치 버튼 (파티용) ─────────────────────────
   function stageAssignBtns(party) {
+    if (party.memberIds.length === 0) {
+      return '<span style="color:#444;font-size:11px">멤버를 먼저 추가하세요</span>';
+    }
     if (max < 0) return '<span style="color:#444;font-size:11px">스테이지 없음</span>';
     return Array.from({ length: max + 1 }, (_, i) => {
       const isCurrent = party.assignedStage === i;
-      // 해당 스테이지의 다른 캐릭터 수
       const others = chars.filter(c => c.assignedStage === i && !party.memberIds.includes(c.id)).length;
       const isFull = !isCurrent && others + party.memberIds.length > 6;
       return `<button class="assign-btn${isCurrent ? ' active' : isFull ? ' disabled' : ''}"
@@ -976,12 +978,17 @@ function renderPartyTab() {
                ${partyOpts}
              </select>`
           : `<span style="font-size:11px;color:#444">파티 없음</span>`;
+        const soloUnassignBtn = c.assignedStage >= 0
+          ? `<button class="assign-btn" style="font-size:10px;padding:2px 6px;color:#e07070;border-color:#4a1a1a"
+                     onclick="assignCharToStage(${c.id},${c.assignedStage});renderPartyTab();"
+                     title="솔로 배치 해제">
+               ${STAGES[c.assignedStage]?.name || ''} ✕
+             </button>`
+          : '';
         return `<div class="party-unassigned-row">
           <span style="color:${col};font-weight:bold">${c.nickname || '???'}</span>
           <span style="color:#888;font-size:11px">(${charClassName(c.classId)} Lv.${c.level})</span>
-          ${c.assignedStage >= 0
-            ? `<span style="font-size:11px;color:#888">─ ${STAGES[c.assignedStage]?.name || ''} 배치 중 (솔로)</span>`
-            : ''}
+          ${soloUnassignBtn}
           ${joinHtml}
         </div>`;
       }).join('')}
