@@ -49,8 +49,9 @@ function calcFinalStats(char) {
   const accuracy = 80 + effDEX * STAT_EFFECTS.DEX.accuracy;
   const evade    = effDEX * STAT_EFFECTS.DEX.evade + effLUK * STAT_EFFECTS.LUK.evade;
 
-  const atkUpgPct  = (gameState.upgrades?.atk_boost || 0) * 0.05;
-  const defUpgFlat = (gameState.upgrades?.def_boost || 0) * 3;
+  const charUpg    = getCharUpgrades(char);
+  const atkUpgPct  = (charUpg.atk_boost || 0) * 0.05;
+  const defUpgFlat = (charUpg.def_boost || 0) * 3;
   const eqCritRate = sumEquipStat(char, 'bonusCritRate');
   const eqCritDmg  = sumEquipStat(char, 'bonusCritDmg');
   const critRate   = (effLUK <= 100
@@ -75,6 +76,30 @@ function calcFinalStats(char) {
     critDmg:  3.0 + eqCritDmg + ((char.activeBuffs?.critDmg?.timer > 0) ? (char.activeBuffs.critDmg.bonus || 0) : 0),
     maxHp:    Math.floor(maxHp * hpBuffMult * petHpMult),
     maxMp:    Math.floor(200 + effINT * 4 + char.level * 5),
+  };
+}
+
+// 순수 기본 스탯 (장비/버프/업그레이드 없이 char.stats만 사용) — 브레이크다운 표시용
+function calcBaseStats(char) {
+  const cls = CLASSES[char.classId];
+  if (!cls) return { atk: 0, physDef: 0, magicDef: 0, accuracy: 80, evade: 0, critRate: 0, maxHp: 100, maxMp: 200 };
+  const s   = char.stats || {};
+  const STR = s.STR ?? 0;
+  const DEX = s.DEX ?? 0;
+  const INT = s.INT ?? 0;
+  const LUK = s.LUK ?? 0;
+  const primaryStat  = cls.primary ? (s[cls.primary] ?? 0) : 0;
+  const primaryBonus = primaryStat * 0.5;
+  const atkMult      = 1 + PRIMARY_STAT_DMG_COEFF * primaryStat;
+  return {
+    atk:      Math.floor((5 + primaryBonus) * atkMult),
+    physDef:  Math.floor(STR * STAT_EFFECTS.STR.physDef),
+    magicDef: Math.floor(INT * STAT_EFFECTS.INT.magicDef),
+    accuracy: 80 + DEX * STAT_EFFECTS.DEX.accuracy,
+    evade:    DEX * STAT_EFFECTS.DEX.evade + LUK * STAT_EFFECTS.LUK.evade,
+    critRate: LUK <= 100 ? LUK * 0.3 : 30 + (LUK - 100) * 0.2,
+    maxHp:    Math.floor(100 + char.level * 20 + STR * 5),
+    maxMp:    Math.floor(200 + INT * 4 + char.level * 5),
   };
 }
 

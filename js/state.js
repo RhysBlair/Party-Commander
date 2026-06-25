@@ -203,9 +203,15 @@ function getCharParty(charId) {
 function createParty() {
   const id = Date.now();
   const num = gameState.parties.length + 1;
-  gameState.parties.push({ id, name: `파티 ${num}`, memberIds: [], assignedStage: -1 });
+  gameState.parties.push({ id, name: `파티 ${num}`, memberIds: [], assignedStage: -1, upgrades: {} });
   saveGame();
   return id;
+}
+
+// 캐릭터가 속한 파티의 upgrades 반환 (미소속 시 빈 객체)
+function getCharUpgrades(char) {
+  const party = gameState.parties.find(p => p.memberIds.includes(char.id));
+  return party?.upgrades || {};
 }
 
 function disbandParty(partyId) {
@@ -400,8 +406,11 @@ function loadGame() {
     if (!gameState.potionStock) gameState.potionStock = {};
     if (!gameState.poisonFields) gameState.poisonFields = [];
 
-    // 구형 세이브: upgrades 필드 없으면 초기화
+    // 구형 세이브: upgrades 필드 없으면 초기화 (하위 호환)
     if (!gameState.upgrades) gameState.upgrades = {};
+    // 파티 upgrades 없으면 초기화
+    if (!gameState.parties) gameState.parties = [];
+    for (const p of gameState.parties) { if (!p.upgrades) p.upgrades = {}; }
     if (!gameState.crystals) gameState.crystals = { dim: 0, bright: 0, radiant: 0 };
 
     // 구형 펫 ID(pet_basic, pet_magnet 등) 제거 + ownedPets 마이그레이션

@@ -306,7 +306,7 @@ function getAttackInterval(char) {
       if (s && s.attackInterval) { interval = s.attackInterval; break; }
     }
   }
-  const spdPct    = (gameState.upgrades?.atk_spd || 0) * 0.05;
+  const spdPct    = (getCharUpgrades(char).atk_spd || 0) * 0.05;
   const petSpdPct = char.pet === 'mini_rabbit' ? (PETS['mini_rabbit']?.atkSpeed || 0) : 0;
   return Math.max(0.1, interval * (1 - spdPct - petSpdPct));
 }
@@ -1413,9 +1413,10 @@ function calcExpDistribution(baseExp, levels, killerIdx) {
 }
 
 function _giveKillRewards(char, mDef, monster) {
-  const goldMult = 1 + (gameState.upgrades?.gold_boost || 0) * 0.10;
+  const _upg     = getCharUpgrades(char);
+  const goldMult = 1 + (_upg.gold_boost || 0) * 0.10;
   gameState.gold += Math.floor(mDef.goldDrop * goldMult);
-  const expMult  = 1 + (gameState.upgrades?.exp_boost  || 0) * 0.10;
+  const expMult  = 1 + (_upg.exp_boost  || 0) * 0.10;
   const allies   = gameState.characters.filter(c => c.assignedStage === char.assignedStage);
   const killerI  = allies.indexOf(char);
   const expArr   = calcExpDistribution(Math.floor(mDef.expDrop * expMult), allies.map(c => c.level), killerI);
@@ -1483,7 +1484,8 @@ function killMonster(char, monster, stage, field) {
   monster.alive        = false;
   monster.respawnTimer = MONSTER_RESPAWN_TIME;
 
-  const goldMult = 1 + (gameState.upgrades?.gold_boost || 0) * 0.10;
+  const _upg2    = getCharUpgrades(char);
+  const goldMult = 1 + (_upg2.gold_boost || 0) * 0.10;
   gameState.gold += Math.floor(mDef.goldDrop * goldMult);
 
   // 처치수: 다음 스테이지가 아직 해금되지 않은 경우에만 카운트 + 자동 진행
@@ -1498,7 +1500,7 @@ function killMonster(char, monster, stage, field) {
   }
 
   // 경험치 분배
-  const expMult  = 1 + (gameState.upgrades?.exp_boost || 0) * 0.10;
+  const expMult  = 1 + (_upg2.exp_boost || 0) * 0.10;
   const allies   = gameState.characters.filter(c => c.assignedStage === char.assignedStage);
   const killerI  = allies.indexOf(char);
   const expArr   = calcExpDistribution(Math.floor(mDef.expDrop * expMult), allies.map(c => c.level), killerI);
@@ -1529,8 +1531,9 @@ function calcOfflineRewards(elapsedSec) {
     if (!stage) continue;
 
     const m = stage.monster;
-    const goldMult = 1 + (gameState.upgrades?.gold_boost || 0) * 0.10;
-    const expMult  = 1 + (gameState.upgrades?.exp_boost  || 0) * 0.10;
+    const _offUpg  = chars.length ? getCharUpgrades(chars[0]) : {};
+    const goldMult = 1 + (_offUpg.gold_boost || 0) * 0.10;
+    const expMult  = 1 + (_offUpg.exp_boost  || 0) * 0.10;
 
     let partyDps = 0;
     for (const char of chars) {

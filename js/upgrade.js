@@ -395,22 +395,26 @@ function trySellByGrade(grade) {
 }
 
 // ── 파티 업그레이드 ─────────────────────────────────────────
-function upgradeCost(id) {
+function upgradeCost(id, partyUpgrades) {
   const def = UPGRADES[id];
   if (!def) return 0;
-  const lv = gameState.upgrades[id] || 0;
+  const lv = (partyUpgrades || {})[id] || 0;
   return Math.floor(def.baseCost * Math.pow(def.costMult, lv));
 }
 
-function tryBuyUpgrade(id) {
+function tryBuyUpgrade(id, partyId) {
   const def = UPGRADES[id];
   if (!def) return;
-  const lv = gameState.upgrades[id] || 0;
+  const party = gameState.parties.find(p => p.id === partyId);
+  if (!party) return;
+  if (!party.upgrades) party.upgrades = {};
+  const lv = party.upgrades[id] || 0;
   if (lv >= def.maxLevel) return;
-  const cost = upgradeCost(id);
+  const cost = upgradeCost(id, party.upgrades);
   if (gameState.gold < cost) return;
   gameState.gold -= cost;
-  gameState.upgrades[id] = lv + 1;
+  party.upgrades[id] = lv + 1;
+  saveGame();
 }
 
 // 전역 물약 재고에 구매

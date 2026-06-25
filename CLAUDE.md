@@ -213,17 +213,23 @@ x, y, attackTimer, skillTimers, shadowActive, shadowTimer, currentHp, currentMp,
   - combat.js: 오브 발동 시 char.activeBuffs.statMult 설정, 기존 범용 버프 타이머 감소 로직으로 자동 처리
   - ui.js: power_burst targeting 케이스 추가
 
-- 파티 탭 추가: 캐릭터들을 파티로 묶고 파티 단위로 스테이지에 배치 (state.js parties[], renderPartyTab)
-  - 파티 생성/해산, 멤버 추가/제거, 스테이지 배치/해제 기능
-  - 파티 미소속 캐릭터 섹션에서 파티에 합류 + 솔로 배치 해제 버튼 제공
-  - advanceStageField 시 파티 assignedStage 자동 동기화
-  - 파티당 최대 6명, 스테이지당 6명 제한 유지
+- 업그레이드 탭 → "축복"으로 이름 변경 (index.html)
+- 파티별 업그레이드 시스템: `party.upgrades{}` 필드 추가, `getCharUpgrades(char)` 헬퍼 (state.js)
+  - `tryBuyUpgrade(id, partyId)` 파티 지정 구매, stats.js/combat.js 모두 `getCharUpgrades(char)` 기반
+  - renderUpgradeTab: 파티 선택 버튼 상단 배치 (`_blessingPartyId` 상태 변수), 선택 파티 기준 표시
+  - loadGame 호환: `party.upgrades` 누락 시 `{}` 자동 초기화
+- 스킬 아이콘화: `charSkillMiniSection` → 이모지 아이콘+레벨+배우기/업버튼 컴팩트 그리드
+  - `SKILL_ICONS{}` 맵 (ui.js): 스킬ID→이모지
+  - 아이콘 클릭 → `selectSkillInfo()` → `skill-desc-${charId}` 패널에 현재/다음레벨 효과 표시
+  - CSS: `.skill-icon-row/item/box/btn`, `.skill-desc-panel`, `.skill-info-popup`, `.skill-tier-label`
+- 스탯 브레이크다운: `bdStat(final, base, decimals)` 헬퍼 추가, `calcBaseStats(char)` 활용
+  - `char-fs-line` / `updateStatDisplay` / `buildModalStats` 전투능력치 → `bdStat(fs.X, bs.X)` 포맷
+  - 1차 스탯(STR/DEX/INT/LUK) → `statValHtmlFull(char, stat)`: 장비+버프 통합 `effVal(base+bonus)` 표시
+  - `buildModalStats`에 크리/최대HP 행 추가
+- 파티 탭: 파티 생성/해산, 멤버 추가/제거, 스테이지 배치/해제
   - 버그 수정: disbandParty 시 멤버 assignedStage -1 초기화
   - 버그 수정: 멤버 없는 파티 스테이지 배치 불가 ("멤버를 먼저 추가하세요" 표시)
-  - 버그 수정: 모든 스테이지 클리어 시 maxStageReached=STAGES.length(범위 초과)로 stageAssignBtns에서 TypeError 발생 → renderPartyTab 전체 실패하던 근본 원인 수정 (safeMax = Math.min(max, STAGES.length-1))
-- 스킬탭 완전 제거 → 캐릭터탭으로 통합 (charSkillMiniSection → 풀 스킬 카드)
-  - 1차 스킬 / 2차 스킬 tier 라벨 구분, 스킬 설명(현재/다음레벨), 스킬초기화 버튼 포함
-  - 배치 필드 라인 제거 → 캐릭터 카드 내부 스킬 섹션으로 교체
+  - 버그 수정: stageAssignBtns safeMax = Math.min(max, STAGES.length-1) — 전체 클리어 시 TypeError 방지
 
 ### 세션 9
 - 부활 시 상태이상·버프 초기화: 일반 리스폰 및 리저렉션 스킬 부활 모두 frozen/burned/activeBuffs/petShieldActive 초기화

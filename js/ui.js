@@ -1,6 +1,73 @@
 let uiTimer = 0;
 let _equipGradeFilter = null;
+let _charSkillSelected = {};
+let _blessingPartyId   = null;
 const HUD_INTERVAL = 0.1;
+
+// 스킬 아이콘 맵
+const SKILL_ICONS = {
+  orb_strike: '🔮', power_burst: '💥', threat: '😤', spear_aura: '🛡️',
+  rage: '🔥', mage_blast: '💫', magic_guard: '🔷', ice_strike: '❄️',
+  cleric_heal: '✨', resurrection: '⬆️', double_shot: '🏹', archer_shot: '⚡',
+  shadow_partner: '👥', log_decoy: '🪵', triple_throw: '💫', savage_blow: '⚔️',
+  meditation_tl: '🔵', meditation_fp: '🔵', poison_field: '💚', meteor: '☄️',
+  piercing: '🎯', sharp_eyes_mk: '👁️', sharp_eyes_ht: '👁️',
+};
+
+// 스킬 아이콘 클릭 — 설명 토글
+function selectSkillInfo(charId, skillId) {
+  if (_charSkillSelected[charId] === skillId) delete _charSkillSelected[charId];
+  else _charSkillSelected[charId] = skillId;
+  updateSkillDesc(charId);
+}
+function updateSkillDesc(charId) {
+  const el = document.getElementById(`skill-desc-${charId}`);
+  if (!el) return;
+  const skillId = _charSkillSelected[charId];
+  if (!skillId) { el.innerHTML = ''; return; }
+  const char = gameState.characters.find(c => c.id === charId);
+  if (!char) return;
+  const s = SKILLS[skillId];
+  if (!s) return;
+  const curLv = char.skillLevels?.[skillId] || 0;
+  const showLv = curLv > 0 ? curLv : 1;
+  const desc = skillEffectDesc(skillId, s, showLv);
+  const maxLv = s.maxLevel || SKILL_MAX_LEVEL;
+  const nextDesc = (curLv > 0 && curLv < maxLv) ? skillEffectDesc(skillId, s, curLv + 1) : '';
+  el.innerHTML = `
+    <div class="skill-info-popup">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <span style="font-size:14px">${SKILL_ICONS[skillId] || '✦'}</span>
+        <span style="font-weight:bold;color:#ddd">${s.name}</span>
+        <span style="color:${curLv > 0 ? '#4caf50' : '#666'};font-size:10px">${curLv > 0 ? `Lv.${curLv}` : '미습득'}</span>
+      </div>
+      <div style="font-size:10px;color:#aaa;line-height:1.5">
+        ${curLv === 0 ? '<span style="color:#666">Lv.1: </span>' : ''}${desc}
+      </div>
+      ${nextDesc ? `<div style="font-size:10px;color:#3a6a3a;margin-top:4px">▲ Lv.${curLv+1}: ${nextDesc}</div>` : ''}
+    </div>`;
+}
+
+// 스탯 브레이크다운 HTML (기본+추가 형식)
+function bdStat(final, base, decimals) {
+  decimals = decimals || 0;
+  const f = parseFloat(final.toFixed(decimals));
+  const b = parseFloat(base.toFixed(decimals));
+  const bonus = parseFloat((f - b).toFixed(decimals));
+  if (bonus <= 0) return `${f}`;
+  return `${f}<span class="stat-equip-bonus">(${b}+${bonus})</span>`;
+}
+
+// 1차 스탯 표시 (장비+버프 통합 보너스)
+function statValHtmlFull(char, stat) {
+  const base = char.stats?.[stat] ?? 0;
+  const eqBonus  = sumEquipStat(char, 'bonus' + stat);
+  const statMult = (char.activeBuffs?.statMult?.timer > 0) ? (char.activeBuffs.statMult.mult || 1) : 1;
+  const effVal   = Math.round((base + eqBonus) * statMult);
+  const totalBonus = effVal - base;
+  if (totalBonus <= 0) return `${base}`;
+  return `${effVal}<span class="stat-equip-bonus">(${base}+${totalBonus})</span>`;
+}
 
 // 탭 재빌드: 레벨업 등 게임 이벤트 시 rAF로 1회 실행
 let tabDirty = false;
@@ -215,56 +282,46 @@ const JOB2_DEFS = {
 function charSkillMiniSection(char) {
   const cls = CLASSES[char.classId];
   const sp  = char.skillPoints || 0;
-  const col = CLASS_COLORS[char.classId] || '#aaa';
 
   if (!cls || !cls.canSkill) {
     return `<div class="skill-mini-section"><div style="color:#444;font-size:11px">전직 후 스킬 습득 가능</div></div>`;
   }
 
-  const parentClassId = CLASSES[char.classId]?.parent;
+  const parentClassId = cls.parent;
   const tier1Skills = parentClassId ? Object.entries(SKILLS).filter(([, s]) => s.classId === parentClassId) : [];
   const tier2Skills = parentClassId ? Object.entries(SKILLS).filter(([, s]) => s.classId === char.classId) : [];
   const onlyTier    = !parentClassId ? Object.entries(SKILLS).filter(([, s]) => s.classId === char.classId) : null;
 
-  function makeCard(id, s) {
-    const curLv    = char.skillLevels?.[id] || 0;
-    const learned  = curLv > 0;
+  function makeIcon(id, s) {
+    const curLv      = char.skillLevels?.[id] || 0;
+    const learned    = curLv > 0;
     const skillMaxLv = s.maxLevel || SKILL_MAX_LEVEL;
-    const isMax    = curLv >= skillMaxLv;
-    const nextCost = learned ? (SKILL_SP_COSTS[curLv + 1] ?? Infinity) : (SKILL_SP_COSTS[1] ?? 1);
-    const canUp    = !isMax && sp >= nextCost;
-
-    const lvBadge = learned
-      ? `<span style="color:${isMax ? '#e2b96f' : '#4caf50'};font-size:10px;font-weight:bold">${isMax ? 'MAX' : `Lv.${curLv}`}</span>`
-      : `<span style="color:#444;font-size:10px">미습득</span>`;
-
-    const showLv   = learned ? curLv : 1;
-    const desc     = skillEffectDesc(id, s, showLv);
-    const nextDesc = (!isMax && learned) ? skillEffectDesc(id, s, curLv + 1) : '';
-
+    const isMax      = curLv >= skillMaxLv;
+    const nextCost   = learned ? (SKILL_SP_COSTS[curLv + 1] ?? Infinity) : (SKILL_SP_COSTS[1] ?? 1);
+    const canUp      = !isMax && sp >= nextCost;
+    const icon       = SKILL_ICONS[id] || '✦';
+    const selected   = _charSkillSelected[char.id] === id;
+    const lvLabel    = isMax ? 'MAX' : (learned ? `Lv.${curLv}` : '─');
+    const lvColor    = isMax ? '#e2b96f' : (learned ? '#4caf50' : '#444');
     const btn = isMax
-      ? `<span style="color:#e2b96f;font-size:10px;display:block;text-align:center">MAX</span>`
+      ? `<span style="font-size:8px;color:#e2b96f">MAX</span>`
       : learned
-        ? `<button class="skill-card-btn-el ${canUp ? '' : 'disabled'}"
-                   onclick="tryUpgradeSkill(${char.id},'${id}');renderCharacterTab();">
-             ${curLv}→${curLv+1} <span style="color:#888">(${nextCost}SP)</span>
+        ? `<button class="skill-icon-btn${canUp ? '' : ' disabled'}"
+                   onclick="event.stopPropagation();tryUpgradeSkill(${char.id},'${id}');renderCharacterTab();">
+             ↑<span style="color:#aaa">${nextCost}SP</span>
            </button>`
-        : `<button class="skill-card-btn-el ${canUp ? '' : 'disabled'}"
-                   onclick="tryLearnSkill(${char.id},'${id}');renderCharacterTab();">
-             배우기 <span style="color:#888">(${nextCost}SP)</span>
+        : `<button class="skill-icon-btn${canUp ? '' : ' disabled'}"
+                   onclick="event.stopPropagation();tryLearnSkill(${char.id},'${id}');renderCharacterTab();">
+             배우기
            </button>`;
-
     return `
-      <div class="skill-card ${learned ? 'skill-card-learned' : ''}">
-        <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">
-          <span style="font-size:12px;font-weight:bold;color:${learned ? col : '#666'}">${s.name}</span>
-          ${lvBadge}
+      <div class="skill-icon-item${selected ? ' skill-icon-sel' : ''}"
+           onclick="selectSkillInfo(${char.id},'${id}')" title="${s.name}">
+        <div class="skill-icon-box${learned ? ' learned' : ''}">
+          <span style="font-size:18px;line-height:1">${icon}</span>
         </div>
-        <div style="font-size:10px;color:${learned ? '#aaa' : '#555'};flex:1;line-height:1.4">
-          ${!learned ? '<span style="color:#444;font-size:9px">Lv.1 효과: </span>' : ''}${desc}
-        </div>
-        ${nextDesc ? `<div style="font-size:10px;color:#3a5a3a;margin-top:2px">▲ ${nextDesc}</div>` : ''}
-        <div style="margin-top:5px">${btn}</div>
+        <div style="font-size:9px;color:${lvColor};text-align:center">${lvLabel}</div>
+        ${btn}
       </div>`;
   }
 
@@ -272,15 +329,15 @@ function charSkillMiniSection(char) {
   const canResetSkill = gameState.gold >= resetCost;
 
   const tier1Html = tier1Skills.length
-    ? `<div class="skill-tier-label">1차 스킬</div>
-       <div class="skill-tier-row">${tier1Skills.map(([id, s]) => makeCard(id, s)).join('')}</div>`
+    ? `<div class="skill-tier-label">1차</div>
+       <div class="skill-icon-row">${tier1Skills.map(([id, s]) => makeIcon(id, s)).join('')}</div>`
     : '';
   const tier2Html = tier2Skills.length
-    ? `<div class="skill-tier-label" style="margin-top:6px">2차 스킬</div>
-       <div class="skill-tier-row">${tier2Skills.map(([id, s]) => makeCard(id, s)).join('')}</div>`
+    ? `<div class="skill-tier-label" style="margin-top:4px">2차</div>
+       <div class="skill-icon-row">${tier2Skills.map(([id, s]) => makeIcon(id, s)).join('')}</div>`
     : '';
   const onlyHtml = onlyTier
-    ? `<div class="skill-tier-row">${onlyTier.map(([id, s]) => makeCard(id, s)).join('')}</div>`
+    ? `<div class="skill-icon-row">${onlyTier.map(([id, s]) => makeIcon(id, s)).join('')}</div>`
     : '';
 
   return `
@@ -288,11 +345,12 @@ function charSkillMiniSection(char) {
       <div class="skill-mini-header">
         <span>스킬</span>
         <span style="color:${sp > 0 ? '#f1c40f' : '#555'}">SP <strong>${sp}</strong></span>
-        <button class="reset-stat-btn ${canResetSkill ? '' : 'disabled'}" style="margin-left:auto"
+        <button class="reset-stat-btn${canResetSkill ? '' : ' disabled'}" style="margin-left:auto"
                 onclick="tryResetSkills(${char.id});renderCharacterTab();"
                 title="골드 ${resetCost.toLocaleString()} 소모">스킬초기화</button>
       </div>
       ${onlyHtml}${tier1Html}${tier2Html}
+      <div id="skill-desc-${char.id}" class="skill-desc-panel"></div>
     </div>`;
 }
 
@@ -361,10 +419,9 @@ function renderCharacterTab() {
 
         <div class="stat-inline-row">
           ${['STR','DEX','INT','LUK'].map(stat => {
-            const bonus = equipStatBonus(char, stat);
             return `<div class="stat-inline-item">
               <span class="stat-lbl-tip" title="${STAT_LABELS[stat]}">${stat}</span>
-              <span class="stat-val" id="sv-${char.id}-${stat}">${statValHtml(char.stats[stat], bonus)}</span>
+              <span class="stat-val" id="sv-${char.id}-${stat}">${statValHtmlFull(char, stat)}</span>
               <button class="stat-plus-btn" id="sb-${char.id}-${stat}"
                       style="${hasPoints ? '' : 'display:none'}"
                       onclick="tryAddStatPoint(${char.id},'${stat}');updateStatDisplay(${char.id});">＋</button>
@@ -383,13 +440,15 @@ function renderCharacterTab() {
         </div>
 
         <div class="char-fs-line" id="fs-${char.id}" style="margin-bottom:5px">
-          <span>HP <strong style="color:#e74c3c">${char.maxHpCache ? Math.ceil(char.currentHp||0) : fs.maxHp}/${fs.maxHp}</strong></span>
-          <span>공격력 <strong>${fs.atk}</strong></span>
-          <span>물방 <strong>${fs.physDef}</strong></span>
-          <span>마방 <strong>${fs.magicDef}</strong></span>
-          <span>명중 <strong>${fs.accuracy.toFixed(0)}%</strong></span>
-          <span>회피 <strong>${fs.evade.toFixed(0)}%</strong></span>
-          <span>크리 <strong style="color:#f1c40f">${fs.critRate.toFixed(1)}%</strong></span>
+          ${(() => { const bs = calcBaseStats(char);
+            return `<span>HP <strong style="color:#e74c3c">${char.maxHpCache ? Math.ceil(char.currentHp||0) : fs.maxHp}/${bdStat(fs.maxHp,bs.maxHp)}</strong></span>
+            <span>공격력 <strong>${bdStat(fs.atk,bs.atk)}</strong></span>
+            <span>물방 <strong>${bdStat(fs.physDef,bs.physDef)}</strong></span>
+            <span>마방 <strong>${bdStat(fs.magicDef,bs.magicDef)}</strong></span>
+            <span>명중 <strong>${bdStat(fs.accuracy,bs.accuracy)}%</strong></span>
+            <span>회피 <strong>${bdStat(fs.evade,bs.evade)}%</strong></span>
+            <span>크리 <strong style="color:#f1c40f">${bdStat(fs.critRate,bs.critRate,1)}%</strong></span>`;
+          })()}
         </div>
 
         ${charSkillMiniSection(char)}
@@ -441,7 +500,7 @@ function updateStatDisplay(charId) {
 
   ['STR', 'DEX', 'INT', 'LUK'].forEach(stat => {
     const valEl = document.getElementById(`sv-${charId}-${stat}`);
-    if (valEl) valEl.innerHTML = statValHtml(char.stats[stat], equipStatBonus(char, stat));
+    if (valEl) valEl.innerHTML = statValHtmlFull(char, stat);
     const btnEl = document.getElementById(`sb-${charId}-${stat}`);
     if (btnEl) btnEl.style.display = hasPoints ? '' : 'none';
   });
@@ -454,16 +513,17 @@ function updateStatDisplay(charId) {
   }
 
   const fs = calcFinalStats(char);
+  const bs = calcBaseStats(char);
   const fsEl = document.getElementById(`fs-${charId}`);
   if (fsEl) {
     fsEl.innerHTML = `
-      <span>HP <strong style="color:#e74c3c">${char.maxHpCache ? Math.ceil(char.currentHp || 0) : fs.maxHp}/${fs.maxHp}</strong></span>
-      <span>공격력 <strong>${fs.atk}</strong></span>
-      <span>물방 <strong>${fs.physDef}</strong></span>
-      <span>마방 <strong>${fs.magicDef}</strong></span>
-      <span>명중 <strong>${fs.accuracy.toFixed(0)}%</strong></span>
-      <span>회피 <strong>${fs.evade.toFixed(0)}%</strong></span>
-      <span>크리 <strong style="color:#f1c40f">${fs.critRate.toFixed(1)}%</strong></span>`;
+      <span>HP <strong style="color:#e74c3c">${char.maxHpCache ? Math.ceil(char.currentHp || 0) : fs.maxHp}/${bdStat(fs.maxHp,bs.maxHp)}</strong></span>
+      <span>공격력 <strong>${bdStat(fs.atk,bs.atk)}</strong></span>
+      <span>물방 <strong>${bdStat(fs.physDef,bs.physDef)}</strong></span>
+      <span>마방 <strong>${bdStat(fs.magicDef,bs.magicDef)}</strong></span>
+      <span>명중 <strong>${bdStat(fs.accuracy,bs.accuracy)}%</strong></span>
+      <span>회피 <strong>${bdStat(fs.evade,bs.evade)}%</strong></span>
+      <span>크리 <strong style="color:#f1c40f">${bdStat(fs.critRate,bs.critRate,1)}%</strong></span>`;
   }
 }
 
@@ -1263,14 +1323,34 @@ function renderCraftTab() {
 }
 
 function renderUpgradeTab() {
-  const el = document.getElementById('tab-upgrades');
+  const el      = document.getElementById('tab-upgrades');
+  const parties = gameState.parties;
+
+  if (!parties || parties.length === 0) {
+    el.innerHTML = `<div class="eq-section-title">파티 축복</div>
+      <p style="color:#666;font-size:12px;margin:16px 0">먼저 파티 탭에서 파티를 생성하세요.</p>`;
+    return;
+  }
+
+  // 선택 파티 유효성 보장
+  if (!_blessingPartyId || !parties.find(p => p.id === _blessingPartyId)) {
+    _blessingPartyId = parties[0].id;
+  }
+  const selParty = parties.find(p => p.id === _blessingPartyId);
+  if (!selParty.upgrades) selParty.upgrades = {};
+
+  const partySelector = parties.map(p =>
+    `<button class="assign-btn${p.id === _blessingPartyId ? ' active' : ''}"
+             style="margin:2px"
+             onclick="_blessingPartyId=${p.id};renderUpgradeTab();">${p.name}</button>`
+  ).join('');
 
   const rows = Object.entries(UPGRADES).map(([id, def]) => {
-    const lv       = gameState.upgrades[id] || 0;
-    const isMax    = lv >= def.maxLevel;
-    const cost     = isMax ? 0 : upgradeCost(id);
+    const lv        = selParty.upgrades[id] || 0;
+    const isMax     = lv >= def.maxLevel;
+    const cost      = isMax ? 0 : upgradeCost(id, selParty.upgrades);
     const canAfford = !isMax && gameState.gold >= cost;
-    const nextLv   = lv + 1;
+    const nextLv    = lv + 1;
     const nextEffect = (() => {
       switch (id) {
         case 'atk_boost':  return `공격력 +${nextLv * 5}%`;
@@ -1293,13 +1373,13 @@ function renderUpgradeTab() {
           </div>
         </div>
         <div class="upgrade-right">
-          <span class="upgrade-level ${isMax ? 'upgrade-max' : ''}">
+          <span class="upgrade-level${isMax ? ' upgrade-max' : ''}">
             ${isMax ? 'MAX' : `Lv.${lv} / ${def.maxLevel}`}
           </span>
           ${isMax
             ? ''
-            : `<button class="small-btn ${canAfford ? '' : 'disabled'}"
-                       onclick="tryBuyUpgrade('${id}');renderUpgradeTab();">
+            : `<button class="small-btn${canAfford ? '' : ' disabled'}"
+                       onclick="tryBuyUpgrade('${id}',${_blessingPartyId});renderUpgradeTab();">
                  ${cost.toLocaleString()}G
                </button>`}
         </div>
@@ -1307,9 +1387,10 @@ function renderUpgradeTab() {
   }).join('');
 
   el.innerHTML = `
-    <div class="eq-section-title">파티 업그레이드</div>
+    <div class="eq-section-title">파티 축복</div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">${partySelector}</div>
     <div style="font-size:11px;color:#666;margin-bottom:12px">
-      골드를 사용해 파티 전체에 영구 강화를 적용합니다.
+      <strong style="color:#aaa">${selParty.name}</strong>에만 적용되는 영구 강화입니다.
     </div>
     <div class="upgrade-list">${rows}</div>`;
 }
@@ -1690,20 +1771,20 @@ function renderCharModalBody() {
 
 function buildModalStats(char) {
   const fs        = calcFinalStats(char);
+  const bs        = calcBaseStats(char);
   const hasPoints = char.unspentPoints > 0;
   const isMagic   = CLASSES[char.classId]?.damageType === 'magical';
   const resetCost = 100 * char.level;
   const canReset  = gameState.gold >= resetCost;
 
   const statRows = ['STR', 'DEX', 'INT', 'LUK'].map(stat => {
-    const bonus = equipStatBonus(char, stat);
     const btn = hasPoints
       ? `<button class="stat-plus-btn" onclick="tryAddStatPoint(${char.id},'${stat}');renderCharModalBody();">＋</button>`
       : `<span class="stat-plus-placeholder"></span>`;
     return `
       <div class="stat-row">
         <span class="stat-label">${stat}</span>
-        <span class="stat-val">${statValHtml(char.stats[stat], bonus)}</span>
+        <span class="stat-val">${statValHtmlFull(char, stat)}</span>
         ${btn}
         <span class="stat-desc" style="font-size:10px">${STAT_LABELS[stat]}</span>
       </div>`;
@@ -1711,14 +1792,16 @@ function buildModalStats(char) {
 
   const curMp  = Math.floor(char.currentMp ?? fs.maxMp);
   const combatRows = [
-    ['공격력',    `${fs.atk}`],
-    ['물리방어',  `${fs.physDef}`],
-    ['마법공격',  isMagic ? `${fs.atk}` : `<span style="color:#555">—</span>`],
-    ['마법방어',  `${fs.magicDef}`],
-    ['명중률',    `${fs.accuracy.toFixed(0)}%`],
-    ['회피율',    `${fs.evade.toFixed(0)}%`],
+    ['공격력',    bdStat(fs.atk,      bs.atk)],
+    ['물리방어',  bdStat(fs.physDef,  bs.physDef)],
+    ['마법공격',  isMagic ? bdStat(fs.atk, bs.atk) : `<span style="color:#555">—</span>`],
+    ['마법방어',  bdStat(fs.magicDef, bs.magicDef)],
+    ['명중률',    bdStat(fs.accuracy, bs.accuracy) + '%'],
+    ['회피율',    bdStat(fs.evade,    bs.evade)    + '%'],
+    ['크리',      bdStat(fs.critRate, bs.critRate, 1) + '%'],
     ['이동속도',  `${CHAR_SPEED} px/s`],
-    ['최대 MP',   `<span style="color:#3498db">${fs.maxMp}</span> <span style="color:#555;font-size:10px">(현재 ${curMp})</span>`],
+    ['최대 HP',   bdStat(fs.maxHp,   bs.maxHp)],
+    ['최대 MP',   `<span style="color:#3498db">${bdStat(fs.maxMp, bs.maxMp)}</span> <span style="color:#555;font-size:10px">(현재 ${curMp})</span>`],
   ].map(([label, val]) => `
     <div class="stat-row">
       <span class="stat-label" style="width:64px;color:#aaa">${label}</span>

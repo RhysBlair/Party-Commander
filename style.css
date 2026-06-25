@@ -1140,6 +1140,67 @@ body {
 .skill-mini-btn:hover:not(.disabled) { background: #1a3a6a; }
 .skill-mini-btn.disabled { opacity: 0.35; cursor: default; }
 
+/* 스킬 아이콘 그리드 */
+.skill-icon-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 2px;
+}
+.skill-icon-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  min-width: 44px;
+}
+.skill-icon-item:hover { border-color: #2a4a6a; background: #0d1a28; }
+.skill-icon-item.skill-icon-sel { border-color: #3a7ab0; background: #0d1e30; }
+.skill-icon-box {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  background: #0a1525;
+  border: 1px solid #1a2a3a;
+  display: flex; align-items: center; justify-content: center;
+}
+.skill-icon-box.learned {
+  border-color: #1e4a2e;
+  background: #08160e;
+}
+.skill-icon-btn {
+  font-size: 9px;
+  padding: 1px 3px;
+  border: 1px solid #1a3a5a;
+  border-radius: 3px;
+  background: #0d2040;
+  color: #b0c8e8;
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: center;
+  width: 100%;
+}
+.skill-icon-btn:hover:not(.disabled) { background: #1a3a70; }
+.skill-icon-btn.disabled { opacity: 0.35; cursor: default; }
+.skill-desc-panel {
+  margin-top: 6px;
+}
+.skill-info-popup {
+  background: #0a1828;
+  border: 1px solid #1e4060;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 11px;
+}
+.skill-tier-label {
+  font-size: 10px;
+  color: #446688;
+  margin-bottom: 2px;
+}
+
 /* 파티 탭 */
 .party-tab-header {
   display: flex;
