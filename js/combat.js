@@ -1592,7 +1592,7 @@ function checkLevelUp(char) {
     char.level++;
     char.unspentPoints += STAT_POINTS_PER_LEVEL;
     if (char.autoAssign) autoAssignStats(char);
-    if (char.level >= 10 && (char.level - 10) % 2 === 0)
+    if (char.level >= 10 && char.level < 30 && (char.level - 10) % 2 === 0)
       char.skillPoints1 = (char.skillPoints1 || 0) + 1;
     if (char.level >= 30 && (char.level - 30) % 2 === 0)
       char.skillPoints2 = (char.skillPoints2 || 0) + 1;
