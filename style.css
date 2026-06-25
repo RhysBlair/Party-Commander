@@ -452,11 +452,13 @@ body {
 /* 스킬 아이콘 이름+레벨 */
 .skill-icon-name-lv {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 1px;
   justify-content: center;
-  flex-wrap: wrap;
   max-width: 52px;
+  height: 24px;
+  overflow: hidden;
 }
 .skill-icon-name {
   font-size: 8px;
@@ -1280,6 +1282,8 @@ body {
   border: 1px solid transparent;
   min-width: 52px;
   width: 52px;
+  height: 82px;
+  box-sizing: border-box;
 }
 .skill-icon-item:hover { border-color: #2a4a6a; background: #0d1a28; }
 .skill-icon-item.skill-icon-sel { border-color: #3a7ab0; background: #0d1e30; }
@@ -1309,6 +1313,8 @@ body {
   line-height: 18px;
   display: block;
   box-sizing: border-box;
+  margin-top: auto;
+  flex-shrink: 0;
 }
 .skill-icon-btn:hover:not(.disabled) { background: #1a3a70; }
 .skill-icon-btn.disabled { opacity: 0.35; cursor: default; }
