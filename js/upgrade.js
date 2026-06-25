@@ -418,9 +418,20 @@ function tryBuyUpgrade(id) {
 function tryAssignBlessing(id, partyId) {
   if (!gameState.upgradeAssignments) gameState.upgradeAssignments = {};
   if (gameState.upgradeAssignments[id] === partyId) {
-    delete gameState.upgradeAssignments[id]; // 토글: 해제
+    delete gameState.upgradeAssignments[id];
   } else {
     gameState.upgradeAssignments[id] = partyId;
+  }
+  saveGame();
+}
+
+// 드롭다운용: value가 "" 이면 해제, 아니면 해당 파티로 배정
+function tryAssignBlessingDrop(id, partyIdStr) {
+  if (!gameState.upgradeAssignments) gameState.upgradeAssignments = {};
+  if (!partyIdStr) {
+    delete gameState.upgradeAssignments[id];
+  } else {
+    gameState.upgradeAssignments[id] = Number(partyIdStr);
   }
   saveGame();
 }

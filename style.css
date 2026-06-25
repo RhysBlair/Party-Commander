@@ -887,6 +887,27 @@ body {
   font-weight: bold;
 }
 
+/* 축복 드롭다운 */
+.blessing-select {
+  display: block;
+  margin-top: 4px;
+  width: 100%;
+  background: #1a1611;
+  border: 1px solid #3a3020;
+  color: #ccc;
+  font-size: 10px;
+  padding: 3px 4px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.blessing-select:focus {
+  outline: none;
+  border-color: #e2b96f;
+}
+.blessing-select option {
+  background: #1a1611;
+}
+
 /* 장비 탭 */
 .eq-section-title {
   font-size: 12px;

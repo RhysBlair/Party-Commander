@@ -1418,17 +1418,6 @@ function renderUpgradeTab() {
     return;
   }
 
-  if (!_blessingPartyId || !parties.find(p => p.id === _blessingPartyId)) {
-    _blessingPartyId = parties[0].id;
-  }
-  const selParty = parties.find(p => p.id === _blessingPartyId);
-
-  const partySelector = parties.map(p =>
-    `<button class="assign-btn${p.id === _blessingPartyId ? ' active' : ''}"
-             style="margin:2px"
-             onclick="_blessingPartyId=${p.id};renderUpgradeTab();">${p.name}</button>`
-  ).join('');
-
   const rows = Object.entries(UPGRADES).map(([id, def]) => {
     const lv        = gameState.upgrades?.[id] || 0;
     const isMax     = lv >= def.maxLevel;
@@ -1447,16 +1436,18 @@ function renderUpgradeTab() {
     })();
 
     const assignedPartyId = assigns[id];
-    const assignedParty   = assignedPartyId ? parties.find(p => p.id === assignedPartyId) : null;
-    const isAssignedToSel = assignedPartyId === selParty.id;
-
-    const assignBtn = lv > 0
-      ? `<button class="small-btn${isAssignedToSel ? ' active' : ''}"
-                 style="margin-top:4px;width:100%;font-size:10px;padding:3px 4px"
-                 onclick="tryAssignBlessing('${id}',${selParty.id});renderUpgradeTab();">
-           ${isAssignedToSel ? `✓ ${selParty.name}에 부여됨` : (assignedParty ? `${assignedParty.name}에 부여중` : `${selParty.name}에 부여`)}
-         </button>`
-      : `<span style="font-size:10px;color:#444">먼저 구매하세요</span>`;
+    // 드롭다운: "없음" + 각 파티
+    const dropdownOpts = `<option value=""${!assignedPartyId ? ' selected' : ''}>— 없음</option>`
+      + parties.map(p =>
+          `<option value="${p.id}"${assignedPartyId === p.id ? ' selected' : ''}>${p.name}</option>`
+        ).join('');
+    const dropdown = lv > 0
+      ? `<select class="blessing-select"
+                 onchange="tryAssignBlessingDrop('${id}',this.value);renderUpgradeTab();"
+                 onclick="event.stopPropagation()">
+           ${dropdownOpts}
+         </select>`
+      : `<span style="font-size:10px;color:#444">구매 후 부여 가능</span>`;
 
     return `
       <div class="upgrade-row">
@@ -1478,15 +1469,14 @@ function renderUpgradeTab() {
                        onclick="tryBuyUpgrade('${id}');renderUpgradeTab();">
                  ${cost.toLocaleString()}G
                </button>`}
-          ${assignBtn}
+          ${dropdown}
         </div>
       </div>`;
   }).join('');
 
   el.innerHTML = `
     <div class="eq-section-title">파티 축복</div>
-    <div style="font-size:11px;color:#888;margin-bottom:6px">축복 레벨은 전역 공유 — 부여할 파티를 선택해 배정하세요.</div>
-    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px">${partySelector}</div>
+    <div style="font-size:11px;color:#888;margin-bottom:10px">축복 레벨은 전역 공유 — 각 축복을 부여할 파티를 드롭다운으로 선택하세요.</div>
     <div class="upgrade-list">${rows}</div>`;
 }
 
