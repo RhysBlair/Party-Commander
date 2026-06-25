@@ -784,7 +784,7 @@ function updateCharacter(char, dt, stage, field) {
       if (p) {
         char.currentHp = Math.min(stats.maxHp, char.currentHp + p.restoreAmt);
         pot.count--;
-        char.potionHpCd = 0.5;
+        char.potionHpCd = 1.0;
         spawnFloatingText(char.assignedStage, char.x, char.y - 50, `HP +${p.restoreAmt}`, '#2ecc71', 12);
       }
     }
@@ -798,7 +798,7 @@ function updateCharacter(char, dt, stage, field) {
       if (p) {
         char.currentMp = Math.min(maxMp, (char.currentMp || 0) + p.restoreAmt);
         pot.count--;
-        char.potionMpCd = 0.5;
+        char.potionMpCd = 1.0;
         spawnFloatingText(char.assignedStage, char.x, char.y - 62, `MP +${p.restoreAmt}`, '#3498db', 12);
       }
     }
@@ -1042,7 +1042,7 @@ function executeSkill(char, skillId, skill, stats, stage, field) {
       }
       if (skill.buffAtk) {
         const atkMult = skill.buffAtk + (sLv - 1) * (skill.buffAtkPerLv || 0);
-        c.activeBuffs.atk = { mult: atkMult, timer: buffDur };
+        c.activeBuffs.atk = { mult: atkMult, timer: buffDur, label: skill.buffAtkLabel || '공격력', skillName: skill.name };
         spawnFloatingText(stageIdx, c.x, c.y - 30, `공격 +${Math.round((atkMult - 1) * 100)}%!`, '#e74c3c', 13);
       }
       if (skill.buffCritDmg) {
