@@ -212,6 +212,7 @@ x, y, attackTimer, skillTimers, shadowActive, shadowTimer, currentHp, currentMp,
   - 파티당 최대 6명, 스테이지당 6명 제한 유지
   - 버그 수정: disbandParty 시 멤버 assignedStage -1 초기화
   - 버그 수정: 멤버 없는 파티 스테이지 배치 불가 ("멤버를 먼저 추가하세요" 표시)
+  - 버그 수정: 모든 스테이지 클리어 시 maxStageReached=STAGES.length(범위 초과)로 stageAssignBtns에서 TypeError 발생 → renderPartyTab 전체 실패하던 근본 원인 수정 (safeMax = Math.min(max, STAGES.length-1))
 - 스킬탭 완전 제거 → 캐릭터탭으로 통합 (charSkillMiniSection → 풀 스킬 카드)
   - 1차 스킬 / 2차 스킬 tier 라벨 구분, 스킬 설명(현재/다음레벨), 스킬초기화 버튼 포함
   - 배치 필드 라인 제거 → 캐릭터 카드 내부 스킬 섹션으로 교체

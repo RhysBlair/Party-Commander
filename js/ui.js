@@ -901,7 +901,9 @@ function renderPartyTab() {
       return '<span style="color:#444;font-size:11px">멤버를 먼저 추가하세요</span>';
     }
     if (max < 0) return '<span style="color:#444;font-size:11px">스테이지 없음</span>';
-    return Array.from({ length: max + 1 }, (_, i) => {
+    // maxStageReached는 모든 스테이지 클리어 시 STAGES.length가 되므로 안전하게 cap
+    const safeMax = Math.min(max, STAGES.length - 1);
+    return Array.from({ length: safeMax + 1 }, (_, i) => {
       const isCurrent = party.assignedStage === i;
       const others = chars.filter(c => c.assignedStage === i && !party.memberIds.includes(c.id)).length;
       const isFull = !isCurrent && others + party.memberIds.length > 6;
