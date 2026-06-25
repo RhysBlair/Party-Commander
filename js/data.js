@@ -357,14 +357,14 @@ const CHARACTER_RESPAWN_TIME = 8.0;
 // 스킬 레벨 시스템
 const SKILL_MAX_LEVEL    = 10;
 const SKILL_SP_PER_LEVEL = 5;  // (레거시, 미사용)
-// 1차 SP: Lv10에 1개, 이후 2레벨마다 1개 (최대 Lv29까지만)
+// 1차 SP: Lv10~29 매 레벨마다 1개 (최대 20개)
 function calcSP1Earned(level) {
-  const cap = Math.min(level, 29);
-  return cap >= 10 ? Math.floor((cap - 10) / 2) + 1 : 0;
+  if (level < 10) return 0;
+  return Math.min(level, 29) - 10 + 1;
 }
-// 2차 SP: Lv30에 1개, 이후 2레벨마다 1개
+// 2차 SP: Lv30 이후 매 레벨마다 1개
 function calcSP2Earned(level) {
-  return level >= 30 ? Math.floor((level - 30) / 2) + 1 : 0;
+  return level >= 30 ? level - 30 + 1 : 0;
 }
 // 스킬 차수 판별 (1=1차, 2=2차)
 function getSkillTier(char, skillId) {
