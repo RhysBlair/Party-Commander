@@ -210,9 +210,9 @@ x, y, attackTimer, skillTimers, shadowActive, shadowTimer, currentHp, currentMp,
   - 파티 미소속 캐릭터 섹션에서 파티에 합류 가능
   - advanceStageField 시 파티 assignedStage 자동 동기화
   - 파티당 최대 6명, 스테이지당 6명 제한 유지
-- 캐릭터 탭: 배치 필드 라인 제거 → 미니 스킬 섹션으로 교체 (charSkillMiniSection)
-  - 스킬 이름/레벨/배우기·레벨업 버튼을 카드 내부 인라인 표시
-  - 스킬 탭 기능과 동일하게 동작 (tryLearnSkill/tryUpgradeSkill)
+- 스킬탭 완전 제거 → 캐릭터탭으로 통합 (charSkillMiniSection → 풀 스킬 카드)
+  - 1차 스킬 / 2차 스킬 tier 라벨 구분, 스킬 설명(현재/다음레벨), 스킬초기화 버튼 포함
+  - 배치 필드 라인 제거 → 캐릭터 카드 내부 스킬 섹션으로 교체
 
 ### 세션 9
 - 부활 시 상태이상·버프 초기화: 일반 리스폰 및 리저렉션 스킬 부활 모두 frozen/burned/activeBuffs/petShieldActive 초기화

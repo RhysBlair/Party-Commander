@@ -176,7 +176,6 @@ function renderActiveTab() {
   else if (tab === 'party')      renderPartyTab();
   else if (tab === 'equipment')  renderEquipmentTab();
   else if (tab === 'shop')       renderShopTab();
-  else if (tab === 'skills')     renderSkillTab();
   else if (tab === 'pets')       renderPetTab();
   else if (tab === 'craft')      renderCraftTab();
   else if (tab === 'upgrades')   renderUpgradeTab();
@@ -216,48 +215,84 @@ const JOB2_DEFS = {
 function charSkillMiniSection(char) {
   const cls = CLASSES[char.classId];
   const sp  = char.skillPoints || 0;
-  if (!cls || !cls.canSkill) {
-    return `<div style="color:#444;font-size:11px;padding:4px 0;border-top:1px solid #1a2535;margin-top:5px">전직 후 스킬 습득 가능</div>`;
-  }
   const col = CLASS_COLORS[char.classId] || '#aaa';
+
+  if (!cls || !cls.canSkill) {
+    return `<div class="skill-mini-section"><div style="color:#444;font-size:11px">전직 후 스킬 습득 가능</div></div>`;
+  }
+
   const parentClassId = CLASSES[char.classId]?.parent;
-  const allSkills = parentClassId
-    ? [
-        ...Object.entries(SKILLS).filter(([, s]) => s.classId === parentClassId),
-        ...Object.entries(SKILLS).filter(([, s]) => s.classId === char.classId),
-      ]
-    : Object.entries(SKILLS).filter(([, s]) => s.classId === char.classId);
+  const tier1Skills = parentClassId ? Object.entries(SKILLS).filter(([, s]) => s.classId === parentClassId) : [];
+  const tier2Skills = parentClassId ? Object.entries(SKILLS).filter(([, s]) => s.classId === char.classId) : [];
+  const onlyTier    = !parentClassId ? Object.entries(SKILLS).filter(([, s]) => s.classId === char.classId) : null;
 
-  if (!allSkills.length) return '';
-
-  const cards = allSkills.map(([id, s]) => {
-    const curLv  = char.skillLevels?.[id] || 0;
-    const learned = curLv > 0;
+  function makeCard(id, s) {
+    const curLv    = char.skillLevels?.[id] || 0;
+    const learned  = curLv > 0;
     const skillMaxLv = s.maxLevel || SKILL_MAX_LEVEL;
-    const isMax  = curLv >= skillMaxLv;
+    const isMax    = curLv >= skillMaxLv;
     const nextCost = learned ? (SKILL_SP_COSTS[curLv + 1] ?? Infinity) : (SKILL_SP_COSTS[1] ?? 1);
-    const canUp  = !isMax && sp >= nextCost;
-    const lvText = learned ? (isMax ? 'MAX' : `Lv.${curLv}`) : '—';
-    const btnHtml = isMax ? '' : `
-      <button class="skill-mini-btn${canUp ? '' : ' disabled'}"
-              onclick="${learned ? `tryUpgradeSkill(${char.id},'${id}')` : `tryLearnSkill(${char.id},'${id}')`};markTabDirty();"
-              ${canUp ? '' : 'disabled'}>
-        ${learned ? '↑' : '배우기'}<span style="font-size:9px;color:#888">(${nextCost}SP)</span>
-      </button>`;
-    return `<div class="skill-mini-item${learned ? ' skill-mini-learned' : ''}">
-      <span class="skill-mini-name" style="color:${learned ? col : '#555'}">${s.name}</span>
-      <span class="skill-mini-lv" style="color:${isMax ? '#e2b96f' : learned ? '#4caf50' : '#333'}">${lvText}</span>
-      ${btnHtml}
-    </div>`;
-  }).join('');
+    const canUp    = !isMax && sp >= nextCost;
+
+    const lvBadge = learned
+      ? `<span style="color:${isMax ? '#e2b96f' : '#4caf50'};font-size:10px;font-weight:bold">${isMax ? 'MAX' : `Lv.${curLv}`}</span>`
+      : `<span style="color:#444;font-size:10px">미습득</span>`;
+
+    const showLv   = learned ? curLv : 1;
+    const desc     = skillEffectDesc(id, s, showLv);
+    const nextDesc = (!isMax && learned) ? skillEffectDesc(id, s, curLv + 1) : '';
+
+    const btn = isMax
+      ? `<span style="color:#e2b96f;font-size:10px;display:block;text-align:center">MAX</span>`
+      : learned
+        ? `<button class="skill-card-btn-el ${canUp ? '' : 'disabled'}"
+                   onclick="tryUpgradeSkill(${char.id},'${id}');renderCharacterTab();">
+             ${curLv}→${curLv+1} <span style="color:#888">(${nextCost}SP)</span>
+           </button>`
+        : `<button class="skill-card-btn-el ${canUp ? '' : 'disabled'}"
+                   onclick="tryLearnSkill(${char.id},'${id}');renderCharacterTab();">
+             배우기 <span style="color:#888">(${nextCost}SP)</span>
+           </button>`;
+
+    return `
+      <div class="skill-card ${learned ? 'skill-card-learned' : ''}">
+        <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">
+          <span style="font-size:12px;font-weight:bold;color:${learned ? col : '#666'}">${s.name}</span>
+          ${lvBadge}
+        </div>
+        <div style="font-size:10px;color:${learned ? '#aaa' : '#555'};flex:1;line-height:1.4">
+          ${!learned ? '<span style="color:#444;font-size:9px">Lv.1 효과: </span>' : ''}${desc}
+        </div>
+        ${nextDesc ? `<div style="font-size:10px;color:#3a5a3a;margin-top:2px">▲ ${nextDesc}</div>` : ''}
+        <div style="margin-top:5px">${btn}</div>
+      </div>`;
+  }
+
+  const resetCost     = 100 * char.level;
+  const canResetSkill = gameState.gold >= resetCost;
+
+  const tier1Html = tier1Skills.length
+    ? `<div class="skill-tier-label">1차 스킬</div>
+       <div class="skill-tier-row">${tier1Skills.map(([id, s]) => makeCard(id, s)).join('')}</div>`
+    : '';
+  const tier2Html = tier2Skills.length
+    ? `<div class="skill-tier-label" style="margin-top:6px">2차 스킬</div>
+       <div class="skill-tier-row">${tier2Skills.map(([id, s]) => makeCard(id, s)).join('')}</div>`
+    : '';
+  const onlyHtml = onlyTier
+    ? `<div class="skill-tier-row">${onlyTier.map(([id, s]) => makeCard(id, s)).join('')}</div>`
+    : '';
 
   return `
     <div class="skill-mini-section">
       <div class="skill-mini-header">
         <span>스킬</span>
         <span style="color:${sp > 0 ? '#f1c40f' : '#555'}">SP <strong>${sp}</strong></span>
+        <button class="reset-stat-btn ${canResetSkill ? '' : 'disabled'}" style="margin-left:auto"
+                onclick="tryResetSkills(${char.id});renderCharacterTab();"
+                title="골드 ${resetCost.toLocaleString()} 소모">스킬초기화</button>
       </div>
-      <div class="skill-mini-row">${cards}</div>
+      ${onlyHtml}${tier1Html}${tier2Html}
     </div>`;
 }
 
@@ -835,112 +870,6 @@ function skillEffectDesc(id, s, level) {
     default:
       return `위력 ${pct((s.dmgMultiplier || 1) * m)}${suffix}`;
   }
-}
-
-function renderSkillTab() {
-  const el = document.getElementById('tab-skills');
-  if (gameState.characters.length === 0) {
-    el.innerHTML = '<p style="color:#888">캐릭터가 없습니다.</p>';
-    return;
-  }
-
-  const html = gameState.characters.map(char => {
-    const cls = CLASSES[char.classId];
-    const sp  = char.skillPoints || 0;
-    if (!cls.canSkill) {
-      return `
-        <div class="char-card">
-          <h3 style="color:${CLASS_COLORS[char.classId]||'#aaa'};margin-bottom:6px">
-            ${char.nickname || '???'} <span style="color:#888;font-size:12px;font-weight:normal">(${charClassName(char.classId)})</span> Lv.${char.level}
-          </h3>
-          <div style="color:#555;font-size:12px">전직 후 스킬을 배울 수 있습니다.</div>
-        </div>`;
-    }
-
-    const parentClassId = CLASSES[char.classId]?.parent;
-    const col = CLASS_COLORS[char.classId] || '#aaa';
-
-    // 1차 / 2차 스킬 분리
-    // parentClassId 있음 = 2차 직업: 1차(parent) + 2차(현재) 분리 표시
-    // parentClassId 없음 = 1차 직업 or 노비스: 현재 직업 스킬만 단일 표시
-    const tier1Skills = parentClassId ? Object.entries(SKILLS).filter(([, s]) => s.classId === parentClassId) : [];
-    const tier2Skills = parentClassId ? Object.entries(SKILLS).filter(([, s]) => s.classId === char.classId) : [];
-    const onlyTier    = !parentClassId ? Object.entries(SKILLS).filter(([, s]) => s.classId === char.classId) : null;
-
-    function makeSkillCard(id, s) {
-      const curLv    = char.skillLevels?.[id] || 0;
-      const learned  = curLv > 0;
-      const skillMaxLv = s.maxLevel || SKILL_MAX_LEVEL;
-      const isMax    = curLv >= skillMaxLv;
-      const nextCost = learned ? (SKILL_SP_COSTS[curLv + 1] ?? Infinity) : (SKILL_SP_COSTS[1] ?? 1);
-      const canUp    = !isMax && sp >= nextCost;
-
-      const lvBadge = learned
-        ? `<span style="color:${isMax ? '#e2b96f' : '#4caf50'};font-size:10px;font-weight:bold">${isMax ? 'MAX' : `Lv.${curLv}`}</span>`
-        : `<span style="color:#444;font-size:10px">미습득</span>`;
-
-      // 미습득: Lv.1 효과 표시, 습득: 현재 레벨 효과
-      const showLv  = learned ? curLv : 1;
-      const desc    = skillEffectDesc(id, s, showLv);
-      const nextDesc = (!isMax && learned) ? skillEffectDesc(id, s, curLv + 1) : '';
-
-      const btn = isMax
-        ? `<span style="color:#e2b96f;font-size:10px;display:block;text-align:center">MAX</span>`
-        : learned
-          ? `<button class="skill-card-btn-el ${canUp ? '' : 'disabled'}"
-                     onclick="tryUpgradeSkill(${char.id},'${id}');renderSkillTab();">
-               ${curLv}→${curLv+1} <span style="color:#888">(${nextCost}SP)</span>
-             </button>`
-          : `<button class="skill-card-btn-el ${canUp ? '' : 'disabled'}"
-                     onclick="tryLearnSkill(${char.id},'${id}');renderSkillTab();">
-               배우기 <span style="color:#888">(${nextCost}SP)</span>
-             </button>`;
-
-      return `
-        <div class="skill-card ${learned ? 'skill-card-learned' : ''}">
-          <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">
-            <span style="font-size:12px;font-weight:bold;color:${learned ? col : '#666'}">${s.name}</span>
-            ${lvBadge}
-          </div>
-          <div style="font-size:10px;color:${learned ? '#aaa' : '#555'};flex:1;line-height:1.4">
-            ${!learned ? '<span style="color:#444;font-size:9px">Lv.1 효과: </span>' : ''}${desc}
-          </div>
-          ${nextDesc ? `<div style="font-size:10px;color:#3a5a3a;margin-top:2px">▲ ${nextDesc}</div>` : ''}
-          <div style="margin-top:5px">${btn}</div>
-        </div>`;
-    }
-
-    const tier1Html = tier1Skills.length
-      ? `<div class="skill-tier-label">1차 스킬</div>
-         <div class="skill-tier-row">${tier1Skills.map(([id, s]) => makeSkillCard(id, s)).join('')}</div>`
-      : '';
-    const tier2Html = tier2Skills.length
-      ? `<div class="skill-tier-label" style="margin-top:6px">2차 스킬</div>
-         <div class="skill-tier-row">${tier2Skills.map(([id, s]) => makeSkillCard(id, s)).join('')}</div>`
-      : '';
-    const onlyHtml = onlyTier
-      ? `<div class="skill-tier-row">${onlyTier.map(([id, s]) => makeSkillCard(id, s)).join('')}</div>`
-      : '';
-
-    const resetCost     = 100 * char.level;
-    const canResetSkill = gameState.gold >= resetCost;
-
-    return `
-      <div class="char-card">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
-          <h3 style="color:${col};flex:1;margin:0">
-            ${char.nickname || '???'} <span style="color:#888;font-size:12px;font-weight:normal">(${charClassName(char.classId)})</span> Lv.${char.level}
-          </h3>
-          <span style="color:${sp > 0 ? '#f1c40f' : '#555'};font-size:12px">SP <strong>${sp}</strong></span>
-          <button class="reset-stat-btn ${canResetSkill ? '' : 'disabled'}"
-                  onclick="tryResetSkills(${char.id});renderSkillTab();"
-                  title="골드 ${resetCost.toLocaleString()} 소모">스킬초기화</button>
-        </div>
-        ${onlyHtml}${tier1Html}${tier2Html}
-      </div>`;
-  }).join('');
-
-  el.innerHTML = html;
 }
 
 // ── 파티 탭 ────────────────────────────────────────────────
