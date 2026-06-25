@@ -163,8 +163,7 @@ function updateCombat(dt) {
             if (dx * dx + dy * dy <= aoeR2) {
               const cStats  = calcFinalStats(c);
               const cDef    = (md.aoeDamageType || md.atkDamageType) === 'magical' ? cStats.magicDef : cStats.physDef;
-              const minDmg  = Math.max(1, Math.floor(md.aoeAtk * 0.2));
-              const aoeDmg  = Math.max(minDmg, Math.floor(md.aoeAtk * (1 - cDef / (cDef + 200))));
+              const aoeDmg  = Math.max(1, Math.floor(md.aoeAtk * DEF_K / (cDef + DEF_K)));
               takeDamage(c, aoeDmg, i);
               hit = true;
             }
@@ -683,9 +682,7 @@ function executeMonsterAttack(m, target, stageData, stageIdx) {
 
   const stats   = calcFinalStats(target);
   const charDef = md.atkDamageType === 'magical' ? stats.magicDef : stats.physDef;
-  // 퍼센트 감소: def/(def+200) 비율만큼 감소, 최소 20% 관통
-  const minDmg  = Math.max(1, Math.floor(md.atk * 0.2));
-  const dmg     = Math.max(minDmg, Math.floor(md.atk * (1 - charDef / (charDef + 200))));
+  const dmg     = Math.max(1, Math.floor(md.atk * DEF_K / (charDef + DEF_K)));
 
   if (md.attackType === 'ranged') {
     const extras = md.freezeOnHit ? { freezeOnHit: true, freezeDuration: md.freezeDuration || 3.0 } : undefined;
@@ -1407,7 +1404,8 @@ function dealSkillDamage(char, monster, dmg, stage, field, stats) {
   const _monDef   = monster.def || stage.monster;
   const mDef      = dmgType === 'magical' ? _monDef.magicDef : _monDef.physDef;
   const debuffMult = (monster.debuffTimer > 0) ? (monster.debuffDmgMult || 1) : 1;
-  const actualDmg = Math.max(1, Math.floor((Math.floor(dmg * critMult) - mDef) * debuffMult));
+  const baseDmgAfterDef = Math.floor(dmg * critMult * DEF_K / (mDef + DEF_K));
+  const actualDmg = Math.max(1, Math.floor(baseDmgAfterDef * debuffMult));
 
   const col  = isCrit ? '#f1c40f' : '#5b9bd5';
   const size = isCrit ? 17 : 13;
@@ -1476,7 +1474,7 @@ function dealDamage(char, monster, stats, stage, field, dmgMult = 1.0) {
     const orbLv  = char.skillLevels?.['orb_strike'] || 1;
     const orbMult = SKILL_LEVEL_MULTS[orbLv] ?? 1.0;
     const mult   = (skill ? skill.dmgMultiplier : 20) * orbMult;
-    baseDmg      = Math.max(1, Math.floor(stats.atk * mult) - mDef);
+    baseDmg      = Math.max(1, Math.floor(stats.atk * mult * DEF_K / (mDef + DEF_K)));
     char.orbReady   = false;
     char.orbCount   = 0;
     char.attackAnim = 0.6;
@@ -1495,7 +1493,7 @@ function dealDamage(char, monster, stats, stage, field, dmgMult = 1.0) {
   } else {
     const atkMult    = getSkillAtkMult(char);
     const atkBufMult = (char.activeBuffs?.atk?.timer > 0) ? (char.activeBuffs.atk.mult || 1) : 1;
-    const rawDmg  = Math.max(1, Math.floor(stats.atk * atkMult * atkBufMult) - mDef);
+    const rawDmg  = Math.max(1, Math.floor(stats.atk * atkMult * atkBufMult * DEF_K / (mDef + DEF_K)));
     baseDmg       = Math.max(1, Math.floor(rawDmg * dmgMult));
     if (hasOrb) {
       char.orbCount = (char.orbCount || 0) + 1;

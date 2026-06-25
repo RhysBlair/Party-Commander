@@ -361,6 +361,9 @@ const charAddCost = (currentCount) => Math.floor(500 * Math.pow(3, currentCount)
 // 몬스터 공격 주기 (초)
 const MONSTER_ATTACK_INTERVAL = 2.0;
 
+// 방어력 감소 공식: 감소율 = def / (def + DEF_K), 최종 데미지 = atk × DEF_K / (def + DEF_K)
+const DEF_K = 200;
+
 // 캐릭터 사망 후 부활 대기 시간 (초)
 const CHARACTER_RESPAWN_TIME = 8.0;
 
