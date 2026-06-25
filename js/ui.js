@@ -4,6 +4,15 @@ let _charSkillSelected = {};
 let _blessingPartyId   = null;
 const HUD_INTERVAL = 0.1;
 
+// 골드 단위 축약: 1000→1K, 1000000→1M, 1000000000→1B
+function fmtG(n) {
+  n = Math.floor(n);
+  if (n >= 1e9) return (n / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+  return String(n);
+}
+
 // 스킬 아이콘 맵
 const SKILL_ICONS = {
   orb_strike: '🔮', power_burst: '💥', threat: '😤', spear_aura: '🛡️',
@@ -283,7 +292,7 @@ function updateStageBar() {
 
 function updateHUD() {
   const s = gameState;
-  document.getElementById('hud-gold').textContent = `골드: ${s.gold.toLocaleString()}`;
+  document.getElementById('hud-gold').textContent = `골드: ${fmtG(s.gold)}`;
   document.getElementById('hud-gems').textContent = `젬: ${s.gems.toLocaleString()}`;
   if (s.viewRaid) {
     const rf = s.raidField;
@@ -419,7 +428,7 @@ function charSkillMiniSection(char) {
         <span style="color:${sp > 0 ? '#f1c40f' : '#555'}">SP <strong>${sp}</strong></span>
         <button class="reset-stat-btn${canResetSkill ? '' : ' disabled'}" style="margin-left:auto"
                 onclick="tryResetSkills(${char.id});renderCharacterTab();"
-                title="골드 ${resetCost.toLocaleString()} 소모">스킬초기화</button>
+                title="골드 ${fmtG(resetCost)} 소모">스킬초기화</button>
       </div>
       ${onlyHtml}
       <div class="skill-tiers-row">${tier1Html}${tier2Html}</div>
@@ -514,7 +523,7 @@ function renderCharacterTab() {
               </button>
               <button id="freset-${char.id}" class="reset-stat-btn${canReset ? '' : ' disabled'}" style="font-size:10px"
                       onclick="tryResetStats(${char.id});renderCharacterTab();"
-                      title="골드 ${resetCost.toLocaleString()} 소모">스텟초기화</button>
+                      title="골드 ${fmtG(resetCost)} 소모">스텟초기화</button>
             </div>
             <div class="char-fs-line" id="fs-${char.id}">
               <span>HP <strong style="color:#e74c3c">${char.maxHpCache ? Math.ceil(char.currentHp||0) : fs.maxHp}/${bdStat(fs.maxHp,bs.maxHp)}</strong></span>
@@ -555,7 +564,7 @@ function renderCharacterTab() {
        </div>
        <button class="small-btn ${canAfford ? '' : 'disabled'}"
                onclick="tryAddCharacter(); renderCharacterTab();">
-         영입 ${addCost.toLocaleString()}G
+         영입 ${fmtG(addCost)}G
        </button>
      </div>`;
 
@@ -685,7 +694,7 @@ function renderEquipmentTab() {
         return `<button class="small-btn enhance-btn ${canAff ? '' : 'disabled'}"
                         onclick="this.disabled=true;showEnhanceFloat(this,tryEnhanceEquipment(${item.uid}));markTabDirty();"
                         title="성공률 ${succPct}%">
-                  강화 ${cost.toLocaleString()}G (${succPct}%)
+                  강화 ${fmtG(cost)}G (${succPct}%)
                 </button>`;
       })() : (item && _eMax > 0 && item.enhance >= _eMax ? `<span style="color:#e2b96f;font-size:10px">MAX</span>` : '');
 
@@ -736,7 +745,7 @@ function renderEquipmentTab() {
             ? `<button class="small-btn enhance-btn ${canAff ? '' : 'disabled'}"
                        onclick="this.disabled=true;showEnhanceFloat(this,tryEnhanceEquipment(${item.uid}));markTabDirty();"
                        title="성공률 ${succPct}%">
-                 강화 ${enhanceCost(item).toLocaleString()}G (${succPct}%)
+                 강화 ${fmtG(enhanceCost(item))}G (${succPct}%)
                </button>`
             : `<span style="color:#e2b96f;font-size:10px">MAX</span>`;
 
@@ -744,7 +753,7 @@ function renderEquipmentTab() {
         const sellBtn   = sellPrice > 0
           ? `<button class="equip-remove sell-btn"
                      onclick="trySellItem(${item.uid});renderEquipmentTab();">
-               판매 ${sellPrice.toLocaleString()}G
+               판매 ${fmtG(sellPrice)}G
              </button>`
           : '';
 
@@ -880,7 +889,7 @@ function renderShopTab() {
       const canAff = gameState.gold >= cost;
       return `<button class="potion-buy-btn ${canAff ? '' : 'disabled'}"
                       onclick="tryBuyPotion('${potionId}',${qty});renderShopTab();">
-                +${qty}<br><span style="font-size:9px;color:#aaa">${cost.toLocaleString()}G</span>
+                +${qty}<br><span style="font-size:9px;color:#aaa">${fmtG(cost)}G</span>
               </button>`;
     }).join('');
 
@@ -895,7 +904,7 @@ function renderShopTab() {
 
   el.innerHTML = `
     <div class="eq-section-title">
-      물약 상점 <span style="color:#e2b96f;font-size:11px"> 골드: ${gameState.gold.toLocaleString()}G</span>
+      물약 상점 <span style="color:#e2b96f;font-size:11px"> 골드: ${fmtG(gameState.gold)}G</span>
     </div>
     <div style="font-size:10px;color:#555;margin-bottom:10px">HP 50% 이하·MP 30% 이하 시 자동 사용 · 소진 시 100개 자동 충전 (5초 행동 중지)</div>
     <div class="shop-potion-label" style="color:#2ecc71">체력 물약</div>
@@ -1189,7 +1198,7 @@ function renderPetTab() {
       } else {
         actionHtml = `<button class="small-btn ${canAfford ? '' : 'disabled'}" style="font-size:10px;padding:2px 6px"
                                onclick="tryBuyPet(${char.id},'${id}');renderPetTab();">
-                        ${p.cost.toLocaleString()}G
+                        ${fmtG(p.cost)}G
                       </button>`;
       }
       return `
@@ -1467,7 +1476,7 @@ function renderUpgradeTab() {
             ? ''
             : `<button class="small-btn${canAfford ? '' : ' disabled'}"
                        onclick="tryBuyUpgrade('${id}');renderUpgradeTab();">
-                 ${cost.toLocaleString()}G
+                 ${fmtG(cost)}G
                </button>`}
           ${dropdown}
         </div>
@@ -1607,7 +1616,7 @@ function showOfflineModal(result) {
   }).filter(Boolean).join('');
 
   document.getElementById('offline-time').textContent = timeStr;
-  document.getElementById('offline-gold').textContent = result.totalGold.toLocaleString() + 'G';
+  document.getElementById('offline-gold').textContent = fmtG(result.totalGold) + 'G';
   document.getElementById('offline-exp-list').innerHTML = expLines || '<div style="color:#555;font-size:12px">없음</div>';
   el.classList.add('active');
 }
@@ -1907,7 +1916,7 @@ function buildModalStats(char) {
     <div class="stat-grid" style="margin-bottom:12px">${combatRows}</div>
     <button class="small-btn reset-btn ${canReset ? '' : 'disabled'}" style="width:100%"
             onclick="tryResetStats(${char.id});renderCharModalBody();">
-      스탯 초기화 (${resetCost.toLocaleString()}G)
+      스탯 초기화 (${fmtG(resetCost)}G)
     </button>`;
 }
 
@@ -1926,7 +1935,7 @@ function buildModalEquipment(char) {
       const succPct = ENHANCE_SUCCESS[item.enhance];
       return `<button class="small-btn enhance-btn ${canAff ? '' : 'disabled'}"
                       onclick="this.disabled=true;showEnhanceFloat(this,tryEnhanceEquipment(${item.uid}));markCharModalDirty();"
-                      title="성공률 ${succPct}%">강화 ${cost.toLocaleString()}G (${succPct}%)</button>`;
+                      title="성공률 ${succPct}%">강화 ${fmtG(cost)}G (${succPct}%)</button>`;
     })() : (item && _mMax > 0 && item.enhance >= _mMax ? `<span style="color:#e2b96f;font-size:10px">MAX</span>` : '');
     return `
       <div class="equip-slot">
@@ -1969,14 +1978,14 @@ function buildModalEquipment(char) {
           : `<button class="assign-btn" onclick="tryEquipItem(${char.id},${item.uid});renderCharModalBody();">장착</button>`;
         const sellPrice = e.cost ? Math.floor(e.cost * 0.6) : 0;
         const sellBtn = sellPrice > 0
-          ? `<button class="equip-remove sell-btn" onclick="trySellItem(${item.uid});renderCharModalBody();">판매 ${sellPrice.toLocaleString()}G</button>`
+          ? `<button class="equip-remove sell-btn" onclick="trySellItem(${item.uid});renderCharModalBody();">판매 ${fmtG(sellPrice)}G</button>`
           : '';
         const _invMax = itemMaxEnhance(item);
         const canAff  = _invMax > 0 && item.enhance < _invMax && gameState.gold >= enhanceCost(item);
         const enhBtn  = _invMax === 0 ? ''
           : item.enhance < _invMax
             ? `<button class="small-btn enhance-btn ${canAff ? '' : 'disabled'}"
-                       onclick="this.disabled=true;showEnhanceFloat(this,tryEnhanceEquipment(${item.uid}));markCharModalDirty();">강화 ${enhanceCost(item).toLocaleString()}G</button>`
+                       onclick="this.disabled=true;showEnhanceFloat(this,tryEnhanceEquipment(${item.uid}));markCharModalDirty();">강화 ${fmtG(enhanceCost(item))}G</button>`
             : `<span style="color:#e2b96f;font-size:10px">MAX</span>`;
         return `
           <div class="inv-item">
@@ -2108,6 +2117,6 @@ function buildModalSkills(char) {
     ${rows}
     <button class="small-btn reset-btn ${canReset ? '' : 'disabled'}" style="width:100%;margin-top:12px"
             onclick="tryResetSkills(${char.id});renderCharModalBody();">
-      스킬 초기화 (${resetCost.toLocaleString()}G)
+      스킬 초기화 (${fmtG(resetCost)}G)
     </button>`;
 }
