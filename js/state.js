@@ -14,6 +14,7 @@ const gameState = {
 
   nextItemUid: 1,          // 아이템 인스턴스 고유 ID 카운터
   maxStageReached: 0,
+  parties: [],             // [{ id, name, memberIds:[], assignedStage:-1 }]
   drops: [],
   upgrades: {},            // { upgradeId: level }
   crystals: { dim: 0, bright: 0, radiant: 0 },  // 분해 결정
@@ -186,6 +187,96 @@ function advanceStageField(stageIdx) {
 
   // 이전 필드 리셋 (파밍용으로 유지)
   if (field) { field.kills = 0; initStageField(stageIdx); }
+
+  // 파티 assignedStage 동기화
+  for (const party of gameState.parties) {
+    if (party.assignedStage === stageIdx) party.assignedStage = next;
+  }
+}
+
+// ── 파티 시스템 ────────────────────────────────────────────
+
+function getCharParty(charId) {
+  return gameState.parties.find(p => p.memberIds.includes(charId)) || null;
+}
+
+function createParty() {
+  const id = Date.now();
+  const num = gameState.parties.length + 1;
+  gameState.parties.push({ id, name: `파티 ${num}`, memberIds: [], assignedStage: -1 });
+  saveGame();
+  return id;
+}
+
+function disbandParty(partyId) {
+  const idx = gameState.parties.findIndex(p => p.id === partyId);
+  if (idx === -1) return;
+  gameState.parties.splice(idx, 1);
+  saveGame();
+}
+
+function addCharToParty(partyId, charId) {
+  const party = gameState.parties.find(p => p.id === partyId);
+  if (!party || party.memberIds.length >= 6) return;
+  // 기존 파티에서 제거
+  for (const p of gameState.parties) {
+    const i = p.memberIds.indexOf(charId);
+    if (i !== -1) { p.memberIds.splice(i, 1); break; }
+  }
+  party.memberIds.push(charId);
+  // 파티가 스테이지에 배치되어 있으면 캐릭터도 해당 스테이지로 이동
+  if (party.assignedStage >= 0) {
+    const char = gameState.characters.find(c => c.id === charId);
+    if (char) {
+      char.assignedStage = party.assignedStage;
+      if (!gameState.stageFields[party.assignedStage]) initStageField(party.assignedStage);
+      resetCharPos(char);
+    }
+  }
+  saveGame();
+}
+
+function removeCharFromParty(charId) {
+  for (const p of gameState.parties) {
+    const i = p.memberIds.indexOf(charId);
+    if (i !== -1) { p.memberIds.splice(i, 1); break; }
+  }
+  saveGame();
+}
+
+function assignPartyToStage(partyId, stageIdx) {
+  if (stageIdx < 0 || stageIdx > gameState.maxStageReached) return;
+  const party = gameState.parties.find(p => p.id === partyId);
+  if (!party) return;
+
+  // 재클릭 → 배정 해제
+  if (party.assignedStage === stageIdx) {
+    party.assignedStage = -1;
+    for (const cid of party.memberIds) {
+      const char = gameState.characters.find(c => c.id === cid);
+      if (char) char.assignedStage = -1;
+    }
+    saveGame();
+    return;
+  }
+
+  // 해당 스테이지의 다른 파티 멤버 수 체크 (6명 제한)
+  const outsiders = gameState.characters.filter(
+    c => c.assignedStage === stageIdx && !party.memberIds.includes(c.id)
+  ).length;
+  if (outsiders + party.memberIds.length > 6) return;
+
+  party.assignedStage = stageIdx;
+  if (!gameState.stageFields[stageIdx]) initStageField(stageIdx);
+
+  for (const cid of party.memberIds) {
+    const char = gameState.characters.find(c => c.id === cid);
+    if (char) {
+      char.assignedStage = stageIdx;
+      resetCharPos(char);
+    }
+  }
+  saveGame();
 }
 
 // 뷰 스테이지 변경 — 캐릭터 배치는 변경하지 않음
@@ -265,6 +356,7 @@ function loadGame() {
       return item;
     });
     if (!gameState.nextItemUid) gameState.nextItemUid = 100;
+    if (!gameState.parties) gameState.parties = [];
 
     // 구형 세이브 호환: 전역 pets[] → 첫 캐릭터 pet 필드로 마이그레이션
     if (saved.pets && saved.pets.length > 0) {

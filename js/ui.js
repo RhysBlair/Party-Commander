@@ -173,6 +173,7 @@ function renderActiveTab() {
   if (!activeBtn) return;
   const tab = activeBtn.dataset.tab;
   if (tab === 'characters') renderCharacterTab();
+  else if (tab === 'party')      renderPartyTab();
   else if (tab === 'equipment')  renderEquipmentTab();
   else if (tab === 'shop')       renderShopTab();
   else if (tab === 'skills')     renderSkillTab();
@@ -211,6 +212,54 @@ const JOB2_DEFS = {
     { id: 'marksman',  name: '사수',    color: '#229954', desc: 'DEX/LUK · 석궁 · 크리티컬 정밀사격' },
   ],
 };
+
+function charSkillMiniSection(char) {
+  const cls = CLASSES[char.classId];
+  const sp  = char.skillPoints || 0;
+  if (!cls || !cls.canSkill) {
+    return `<div style="color:#444;font-size:11px;padding:4px 0;border-top:1px solid #1a2535;margin-top:5px">전직 후 스킬 습득 가능</div>`;
+  }
+  const col = CLASS_COLORS[char.classId] || '#aaa';
+  const parentClassId = CLASSES[char.classId]?.parent;
+  const allSkills = parentClassId
+    ? [
+        ...Object.entries(SKILLS).filter(([, s]) => s.classId === parentClassId),
+        ...Object.entries(SKILLS).filter(([, s]) => s.classId === char.classId),
+      ]
+    : Object.entries(SKILLS).filter(([, s]) => s.classId === char.classId);
+
+  if (!allSkills.length) return '';
+
+  const cards = allSkills.map(([id, s]) => {
+    const curLv  = char.skillLevels?.[id] || 0;
+    const learned = curLv > 0;
+    const skillMaxLv = s.maxLevel || SKILL_MAX_LEVEL;
+    const isMax  = curLv >= skillMaxLv;
+    const nextCost = learned ? (SKILL_SP_COSTS[curLv + 1] ?? Infinity) : (SKILL_SP_COSTS[1] ?? 1);
+    const canUp  = !isMax && sp >= nextCost;
+    const lvText = learned ? (isMax ? 'MAX' : `Lv.${curLv}`) : '—';
+    const btnHtml = isMax ? '' : `
+      <button class="skill-mini-btn${canUp ? '' : ' disabled'}"
+              onclick="${learned ? `tryUpgradeSkill(${char.id},'${id}')` : `tryLearnSkill(${char.id},'${id}')`};markTabDirty();"
+              ${canUp ? '' : 'disabled'}>
+        ${learned ? '↑' : '배우기'}<span style="font-size:9px;color:#888">(${nextCost}SP)</span>
+      </button>`;
+    return `<div class="skill-mini-item${learned ? ' skill-mini-learned' : ''}">
+      <span class="skill-mini-name" style="color:${learned ? col : '#555'}">${s.name}</span>
+      <span class="skill-mini-lv" style="color:${isMax ? '#e2b96f' : learned ? '#4caf50' : '#333'}">${lvText}</span>
+      ${btnHtml}
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="skill-mini-section">
+      <div class="skill-mini-header">
+        <span>스킬</span>
+        <span style="color:${sp > 0 ? '#f1c40f' : '#555'}">SP <strong>${sp}</strong></span>
+      </div>
+      <div class="skill-mini-row">${cards}</div>
+    </div>`;
+}
 
 function renderCharacterTab() {
   const el = document.getElementById('tab-characters');
@@ -308,22 +357,7 @@ function renderCharacterTab() {
           <span>크리 <strong style="color:#f1c40f">${fs.critRate.toFixed(1)}%</strong></span>
         </div>
 
-        <div class="assign-section">
-          <span class="assign-label">배치 필드 <span style="color:#555;font-size:10px">(스테이지당 최대 6명)</span></span>
-          <div class="assign-btns">
-            ${Array.from({ length: gameState.maxStageReached + 1 }, (_, i) => {
-              const inStage = gameState.characters.filter(c => c.assignedStage === i).length;
-              const isCurrent = char.assignedStage === i;
-              const isFull = !isCurrent && inStage >= 6;
-              return `<button class="assign-btn ${isCurrent ? 'active' : isFull ? 'disabled' : ''}"
-                              onclick="assignCharToStage(${char.id}, ${i}); renderCharacterTab();"
-                              title="${isFull ? '파티 만원' : ''}"
-                              ${isFull ? 'disabled' : ''}>
-                        ${STAGES[i].name} <span style="font-size:9px;opacity:0.7">${inStage}/6</span>
-                      </button>`;
-            }).join('')}
-          </div>
-        </div>
+        ${charSkillMiniSection(char)}
         ${jobSection}
         ${job2Section}
       </div>`;
@@ -907,6 +941,133 @@ function renderSkillTab() {
   }).join('');
 
   el.innerHTML = html;
+}
+
+// ── 파티 탭 ────────────────────────────────────────────────
+function renderPartyTab() {
+  const el = document.getElementById('tab-party');
+  if (!el) return;
+
+  const chars  = gameState.characters;
+  const parties = gameState.parties;
+  const max    = gameState.maxStageReached;
+
+  if (chars.length === 0) {
+    el.innerHTML = '<p style="color:#888;padding:10px">캐릭터가 없습니다.</p>';
+    return;
+  }
+
+  // 각 캐릭터가 속한 파티 id 맵
+  const charPartyMap = {};
+  for (const p of parties) {
+    for (const cid of p.memberIds) charPartyMap[cid] = p.id;
+  }
+
+  // 파티 미소속 캐릭터
+  const unassigned = chars.filter(c => !charPartyMap[c.id]);
+
+  // ── 스테이지 배치 버튼 (파티용) ─────────────────────────
+  function stageAssignBtns(party) {
+    if (max < 0) return '<span style="color:#444;font-size:11px">스테이지 없음</span>';
+    return Array.from({ length: max + 1 }, (_, i) => {
+      const isCurrent = party.assignedStage === i;
+      // 해당 스테이지의 다른 캐릭터 수
+      const others = chars.filter(c => c.assignedStage === i && !party.memberIds.includes(c.id)).length;
+      const isFull = !isCurrent && others + party.memberIds.length > 6;
+      return `<button class="assign-btn${isCurrent ? ' active' : isFull ? ' disabled' : ''}"
+                      onclick="assignPartyToStage(${party.id},${i});renderPartyTab();"
+                      ${isFull ? 'disabled' : ''}
+                      title="${isFull ? '정원 초과 (6명)' : ''}">
+                ${STAGES[i].name}
+              </button>`;
+    }).join('');
+  }
+
+  // ── 파티 카드 ─────────────────────────────────────────────
+  const partyCards = parties.map(party => {
+    const memberChips = party.memberIds.map(cid => {
+      const c = chars.find(ch => ch.id === cid);
+      if (!c) return '';
+      const col = CLASS_COLORS[c.classId] || '#aaa';
+      return `<span class="party-member-chip" style="border-color:${col}">
+        <span style="color:${col}">${c.nickname || '???'}</span>
+        <span style="color:#666;font-size:10px">&nbsp;${charClassName(c.classId)} Lv.${c.level}</span>
+        <button class="party-chip-remove" onclick="removeCharFromParty(${cid});renderPartyTab();">✕</button>
+      </span>`;
+    }).join('');
+
+    // 추가 가능한 캐릭터 select
+    const addOptions = unassigned.map(c =>
+      `<option value="${c.id}">${c.nickname || '???'} (${charClassName(c.classId)} Lv.${c.level})</option>`
+    ).join('');
+    const addHtml = party.memberIds.length < 6 && unassigned.length > 0
+      ? `<select class="party-add-select" onchange="if(this.value){addCharToParty(${party.id},Number(this.value));renderPartyTab();}this.value='';">
+           <option value="">+ 멤버 추가...</option>
+           ${addOptions}
+         </select>`
+      : party.memberIds.length >= 6
+        ? `<span style="font-size:11px;color:#555">파티 만원 (6/6)</span>`
+        : `<span style="font-size:11px;color:#555">추가할 캐릭터 없음</span>`;
+
+    const stageLabel = party.assignedStage >= 0
+      ? `<span style="color:#f39c12;font-size:11px">배치 중: ${STAGES[party.assignedStage]?.name || ''}</span>`
+      : `<span style="color:#555;font-size:11px">미배치</span>`;
+
+    return `
+      <div class="party-card">
+        <div class="party-card-header">
+          <span class="party-name">${party.name}</span>
+          <span style="color:#666;font-size:11px">${party.memberIds.length}/6명</span>
+          ${stageLabel}
+          <button class="party-disband-btn" onclick="disbandParty(${party.id});renderPartyTab();">해산</button>
+        </div>
+        <div class="party-members">
+          ${memberChips || '<span style="color:#444;font-size:11px">멤버 없음</span>'}
+          ${addHtml}
+        </div>
+        <div class="party-stage-row">
+          <span style="font-size:11px;color:#666">배치 스테이지</span>
+          <div class="assign-btns" style="flex-wrap:wrap;gap:3px">${stageAssignBtns(party)}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  // ── 미소속 캐릭터 섹션 ────────────────────────────────────
+  const unassignedHtml = unassigned.length === 0 ? '' : `
+    <div class="party-unassigned-section">
+      <div class="eq-section-title" style="margin-bottom:6px">파티 미소속 캐릭터</div>
+      ${unassigned.map(c => {
+        const col = CLASS_COLORS[c.classId] || '#aaa';
+        const partyOpts = parties.map(p =>
+          `<option value="${p.id}">${p.name} (${p.memberIds.length}/6)</option>`
+        ).filter((_, i) => parties[i].memberIds.length < 6).join('');
+        const joinHtml = parties.length > 0 && partyOpts
+          ? `<select class="party-add-select" onchange="if(this.value){addCharToParty(Number(this.value),${c.id});renderPartyTab();}this.value='';">
+               <option value="">파티에 합류...</option>
+               ${partyOpts}
+             </select>`
+          : `<span style="font-size:11px;color:#444">파티 없음</span>`;
+        return `<div class="party-unassigned-row">
+          <span style="color:${col};font-weight:bold">${c.nickname || '???'}</span>
+          <span style="color:#888;font-size:11px">(${charClassName(c.classId)} Lv.${c.level})</span>
+          ${c.assignedStage >= 0
+            ? `<span style="font-size:11px;color:#888">─ ${STAGES[c.assignedStage]?.name || ''} 배치 중 (솔로)</span>`
+            : ''}
+          ${joinHtml}
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  el.innerHTML = `
+    <div class="party-tab-header">
+      <div class="eq-section-title">파티 관리</div>
+      <button class="small-btn" onclick="createParty();renderPartyTab();">+ 파티 생성</button>
+    </div>
+    <div style="font-size:11px;color:#666;margin-bottom:10px">파티 단위로 스테이지에 배치합니다. 파티당 최대 6명.</div>
+    ${parties.length === 0
+      ? '<div style="color:#444;font-size:12px;padding:10px 0">파티가 없습니다. 파티를 생성하세요.</div>'
+      : partyCards}
+    ${unassignedHtml}`;
 }
 
 // ── 펫 탭 ──────────────────────────────────────────────────

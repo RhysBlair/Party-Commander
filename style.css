@@ -1089,6 +1089,152 @@ body {
 .skill-card-btn-el:hover:not(.disabled) { background: #1a4a80; }
 .skill-card-btn-el.disabled { opacity: 0.35; cursor: default; }
 
+/* 캐릭터 탭 — 미니 스킬 섹션 */
+.skill-mini-section {
+  margin-top: 7px;
+  border-top: 1px solid #1a2535;
+  padding-top: 5px;
+}
+.skill-mini-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 5px;
+}
+.skill-mini-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.skill-mini-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  border: 1px solid #1a2535;
+  border-radius: 4px;
+  background: #090e18;
+  font-size: 11px;
+}
+.skill-mini-item.skill-mini-learned {
+  border-color: #1a3a2a;
+  background: #08150e;
+}
+.skill-mini-name { font-weight: bold; }
+.skill-mini-lv {
+  font-size: 10px;
+  font-weight: bold;
+}
+.skill-mini-btn {
+  padding: 1px 5px;
+  font-size: 10px;
+  border: 1px solid #1a3a5a;
+  border-radius: 3px;
+  background: #0d2040;
+  color: #c0d8f0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.skill-mini-btn:hover:not(.disabled) { background: #1a3a6a; }
+.skill-mini-btn.disabled { opacity: 0.35; cursor: default; }
+
+/* 파티 탭 */
+.party-tab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.party-card {
+  background: #0d1b2a;
+  border: 1px solid #1a3a5a;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+.party-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+  flex-wrap: wrap;
+}
+.party-name {
+  font-weight: bold;
+  color: #8ab4d4;
+  font-size: 13px;
+  flex: 1;
+}
+.party-disband-btn {
+  padding: 2px 8px;
+  font-size: 11px;
+  border: 1px solid #4a1a1a;
+  border-radius: 3px;
+  background: #1a0808;
+  color: #e07070;
+  cursor: pointer;
+}
+.party-disband-btn:hover { background: #2a0f0f; }
+.party-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+  margin-bottom: 8px;
+  min-height: 26px;
+}
+.party-member-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border: 1px solid #2a4a6a;
+  border-radius: 12px;
+  background: #0a1828;
+  font-size: 11px;
+}
+.party-chip-remove {
+  background: none;
+  border: none;
+  color: #555;
+  cursor: pointer;
+  font-size: 10px;
+  padding: 0 1px;
+  line-height: 1;
+}
+.party-chip-remove:hover { color: #e07070; }
+.party-add-select {
+  padding: 2px 6px;
+  font-size: 11px;
+  background: #0d1b2a;
+  border: 1px solid #2a3a4a;
+  border-radius: 4px;
+  color: #c0d0e0;
+  cursor: pointer;
+}
+.party-stage-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.party-unassigned-section {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #1a2535;
+}
+.party-unassigned-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 5px 0;
+  border-bottom: 1px solid #111;
+  font-size: 12px;
+}
+
 /* 상점 탭 — 물약 미니 카드 */
 .shop-potion-label {
   font-size: 11px;

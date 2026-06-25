@@ -204,7 +204,17 @@ x, y, attackTimer, skillTimers, shadowActive, shadowTimer, currentHp, currentMp,
 
 ## 개발 이력 (최신순)
 
-### 세션 9 (현재)
+### 세션 10 (현재)
+- 파티 탭 추가: 캐릭터들을 파티로 묶고 파티 단위로 스테이지에 배치 (state.js parties[], renderPartyTab)
+  - 파티 생성/해산, 멤버 추가/제거, 스테이지 배치/해제 기능
+  - 파티 미소속 캐릭터 섹션에서 파티에 합류 가능
+  - advanceStageField 시 파티 assignedStage 자동 동기화
+  - 파티당 최대 6명, 스테이지당 6명 제한 유지
+- 캐릭터 탭: 배치 필드 라인 제거 → 미니 스킬 섹션으로 교체 (charSkillMiniSection)
+  - 스킬 이름/레벨/배우기·레벨업 버튼을 카드 내부 인라인 표시
+  - 스킬 탭 기능과 동일하게 동작 (tryLearnSkill/tryUpgradeSkill)
+
+### 세션 9
 - 부활 시 상태이상·버프 초기화: 일반 리스폰 및 리저렉션 스킬 부활 모두 frozen/burned/activeBuffs/petShieldActive 초기화
 - 쉐도우파트너 재사용 버그 수정: 발동 후 skillTimers=9999 고착 방식 제거 → 분신 활성 중 타이머 0 유지, 소멸 즉시 재발동하도록 변경
 - 주스탯 공격력 균등화: 기존 STR 전용 기본 공격력 보너스(effSTR×0.5)를 주스탯(primary)×0.5로 변경 (stats.js)
