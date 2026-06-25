@@ -98,6 +98,7 @@ function calcBaseStats(char) {
     accuracy: 80 + DEX * STAT_EFFECTS.DEX.accuracy,
     evade:    DEX * STAT_EFFECTS.DEX.evade + LUK * STAT_EFFECTS.LUK.evade,
     critRate: LUK <= 100 ? LUK * 0.3 : 30 + (LUK - 100) * 0.2,
+    critDmg:  3.0,
     maxHp:    Math.floor(100 + char.level * 20 + STR * 5),
     maxMp:    Math.floor(200 + INT * 4 + char.level * 5),
   };
