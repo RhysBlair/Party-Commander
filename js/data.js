@@ -171,11 +171,10 @@ const SKILLS = {
   // ── 궁수 ──────────────────────────────────────────────────
   silver_hawk:    { name: "실버호크",         classId: "archer",  cooldown: 20, mpCost: 20, cost: 500,
                     targeting: "silver_hawk",
-                    hawkDmgBase: 0.8,    hawkDmgPerLv: 0.133,
+                    hawkDmgBase: 0.8,        hawkDmgPerLv: 0.133,
                     hawkStunChanceBase: 0.5, hawkStunChancePerLv: 0.0556,
-                    hawkStunDurBase: 3.0,    hawkStunDurPerLv: 1.333,
-                    hawkAttackInterval: 3.0,
-                    hawkDuration: 30,    hawkDurationPerLv: 3 },
+                    hawkStunDurBase: 3.0,    hawkStunDurPerLv: 0.556,
+                    hawkDuration: 30,        hawkDurationPerLv: 3 },
   double_shot:    { name: "더블샷",          classId: "archer",  cooldown: 3.0,
                     targeting: "double_hit", hits: 2, dmgMultiplier: 0.8, cost: 500, mpCost: 10 },
 

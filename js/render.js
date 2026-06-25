@@ -817,41 +817,42 @@ function drawHawks(viewIdx) {
 
   for (const hawk of field.hawks) {
     if (hawk.duration <= 0) continue;
-    const t = Date.now() / 300;
-    const floatY = hawk.y + Math.sin(t) * 4;
 
-    // 날개 (타원 2개)
+    const flying = hawk.state === 'flying' || hawk.state === 'returning';
+    const t = Date.now() / 250;
+    const floatY = hawk.y + (flying ? 0 : Math.sin(t) * 3);
+    const wingFlap = flying ? Math.abs(Math.sin(t * 4)) * 0.4 : Math.abs(Math.sin(t * 2)) * 0.25;
+
     ctx.save();
     ctx.translate(hawk.x, floatY);
-    ctx.fillStyle = 'rgba(192,220,255,0.85)';
+
+    // 날개 펄럭임
+    ctx.fillStyle = flying ? 'rgba(160,216,255,0.95)' : 'rgba(192,220,255,0.8)';
     ctx.beginPath();
-    ctx.ellipse(-10, 2, 12, 5, -0.4, 0, Math.PI * 2);
+    ctx.ellipse(-11, 1, 13, 4 + wingFlap * 6, -0.3 - wingFlap, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.ellipse(10, 2, 12, 5, 0.4, 0, Math.PI * 2);
+    ctx.ellipse(11, 1, 13, 4 + wingFlap * 6, 0.3 + wingFlap, 0, Math.PI * 2);
     ctx.fill();
+
     // 몸통
-    ctx.fillStyle = '#ddeeff';
-    ctx.strokeStyle = '#6699cc';
+    ctx.fillStyle = flying ? '#c8e8ff' : '#ddeeff';
+    ctx.strokeStyle = '#4488bb';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.ellipse(0, 0, 7, 5, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, 6, 5, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
+
     // 머리
     ctx.fillStyle = '#fff';
+    ctx.strokeStyle = '#4488bb';
     ctx.beginPath();
-    ctx.arc(0, -6, 4, 0, Math.PI * 2);
+    ctx.arc(0, -5, 3.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    ctx.restore();
 
-    // 지속시간 바
-    const barW = 30, barX = hawk.x - barW / 2, barY = floatY - 18;
-    ctx.fillStyle = '#111';
-    ctx.fillRect(barX, barY, barW, 3);
-    ctx.fillStyle = '#4af';
-    ctx.fillRect(barX, barY, barW * (hawk.duration / Math.max(hawk.duration, 30)), 3);
+    ctx.restore();
   }
 }
 

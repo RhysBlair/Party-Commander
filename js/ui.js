@@ -1111,9 +1111,9 @@ function skillEffectDesc(id, s, level) {
     case 'silver_hawk': {
       const dmg  = ((s.hawkDmgBase || 0.8) + (level - 1) * (s.hawkDmgPerLv || 0.133)).toFixed(2);
       const sc   = Math.round(Math.min(100, ((s.hawkStunChanceBase || 0.5) + (level - 1) * (s.hawkStunChancePerLv || 0.056)) * 100));
-      const sd   = ((s.hawkStunDurBase || 3) + (level - 1) * (s.hawkStunDurPerLv || 1.333)).toFixed(1);
+      const sd   = ((s.hawkStunDurBase || 3) + (level - 1) * (s.hawkStunDurPerLv || 0.556)).toFixed(1);
       const dur  = ((s.hawkDuration || 30) + (level - 1) * (s.hawkDurationPerLv || 3)).toFixed(0);
-      return `독수리 소환 (${dur}s) · 3초마다 ${pct(+dmg)} 공격 · 기절 확률 ${sc}% / ${sd}s${suffix}`;
+      return `독수리 소환 (${dur}s) · 3초 주기로 돌진 공격 ${pct(+dmg)} · 기절 ${sc}% / ${sd}s${suffix}`;
     }
 
     default:

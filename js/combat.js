@@ -524,6 +524,9 @@ function updateProjectiles(dt) {
 
 // ── 메테오 업데이트 ───────────────────────────────────────
 function updateHawks(dt) {
+  const SPEED = 520; // px/s — 빠른 이동
+  const CYCLE = 3.0; // 공격 사이클 (초)
+
   for (let i = 0; i < gameState.stageFields.length; i++) {
     const field = gameState.stageFields[i];
     if (!field || !field.hawks || !field.hawks.length) continue;
@@ -533,33 +536,48 @@ function updateHawks(dt) {
     for (const hawk of field.hawks) {
       hawk.duration -= dt;
 
-      const aliveMonsters = field.monsters.filter(m => m.alive);
-      if (!aliveMonsters.length) continue;
+      const owner = gameState.characters.find(c => c.id === hawk.charId);
+      if (!owner || owner.isDead) continue;
 
-      // 기절 안 된 몬스터 우선, 없으면 전체
-      const nonStunned = aliveMonsters.filter(m => !(m.stunTimer > 0));
-      const pool = nonStunned.length > 0 ? nonStunned : aliveMonsters;
+      const homeX = owner.x + (owner.facing || 1) * 20;
+      const homeY = owner.y - 28;
 
-      // 가장 가까운 타겟
-      let target = null, minD2 = Infinity;
-      for (const m of pool) {
-        const dx = m.x - hawk.x, dy = m.y - hawk.y;
-        const d2 = dx * dx + dy * dy;
-        if (d2 < minD2) { minD2 = d2; target = m; }
-      }
-      if (!target) continue;
+      if (hawk.state === 'idle') {
+        // 주인 곁에 대기
+        hawk.x = homeX;
+        hawk.y = homeY;
+        hawk.idleTimer = (hawk.idleTimer || 0) - dt;
 
-      // 타겟 방향으로 이동
-      const dist = Math.sqrt(minD2);
-      if (dist > 18) {
+        if (hawk.idleTimer <= 0) {
+          // 타겟 선정: 기절 안 된 몬스터 우선
+          const alive = field.monsters.filter(m => m.alive);
+          if (!alive.length) { hawk.idleTimer = 0.5; continue; }
+          const pool = alive.filter(m => !(m.stunTimer > 0));
+          const src  = pool.length ? pool : alive;
+          let target = null, minD2 = Infinity;
+          for (const m of src) {
+            const dx = m.x - hawk.x, dy = m.y - hawk.y;
+            const d2 = dx * dx + dy * dy;
+            if (d2 < minD2) { minD2 = d2; target = m; }
+          }
+          if (target) {
+            hawk.targetMonster = target;
+            hawk.state = 'flying';
+            hawk.atk = calcFinalStats(owner).atk;
+          } else {
+            hawk.idleTimer = 0.5;
+          }
+        }
+
+      } else if (hawk.state === 'flying') {
+        const target = hawk.targetMonster;
+        if (!target || !target.alive) { hawk.state = 'returning'; continue; }
+
         const dx = target.x - hawk.x, dy = target.y - hawk.y;
-        hawk.x += (dx / dist) * 300 * dt;
-        hawk.y += (dy / dist) * 300 * dt;
-      } else {
-        // 타겟 근처: 3초마다 공격
-        hawk.attackTimer = (hawk.attackTimer || 0) - dt;
-        if (hawk.attackTimer <= 0) {
-          hawk.attackTimer = 3.0;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist <= 14) {
+          // 도착 → 공격
           const dmg = Math.max(1, Math.floor(hawk.atk * hawk.dmgMult));
           target.currentHp -= dmg;
           spawnFloatingText(i, target.x, target.y - 28, `${dmg}`, '#a0d8f8', 13);
@@ -567,10 +585,27 @@ function updateHawks(dt) {
             target.stunTimer = hawk.stunDur;
             spawnFloatingText(i, target.x, target.y - 44, '기절!', '#f39c12', 13);
           }
-          if (target.currentHp <= 0) {
-            const charRef = gameState.characters.find(c => c.id === hawk.charId);
-            if (charRef) killMonster(charRef, target, STAGES[i], field);
+          if (target.currentHp <= 0 && target.alive) {
+            killMonster(owner, target, STAGES[i], field);
           }
+          hawk.state = 'returning';
+        } else {
+          hawk.x += (dx / dist) * SPEED * dt;
+          hawk.y += (dy / dist) * SPEED * dt;
+        }
+
+      } else if (hawk.state === 'returning') {
+        const dx = homeX - hawk.x, dy = homeY - hawk.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist <= 14) {
+          hawk.x = homeX;
+          hawk.y = homeY;
+          hawk.state = 'idle';
+          hawk.idleTimer = CYCLE;
+        } else {
+          hawk.x += (dx / dist) * SPEED * dt;
+          hawk.y += (dy / dist) * SPEED * dt;
         }
       }
     }
@@ -1133,11 +1168,12 @@ function executeSkill(char, skillId, skill, stats, stage, field) {
     // 같은 캐릭터의 기존 호크 제거
     field.hawks = field.hawks.filter(h => h.charId !== char.id);
     field.hawks.push({
-      x: char.x, y: char.y - 20,
+      x: char.x, y: char.y - 28,
       charId: char.id,
       atk: stats.atk,
       dmgMult, stunChance, stunDur, duration,
-      attackTimer: 0,
+      state: 'idle',
+      idleTimer: 0, // 즉시 출발
     });
     spawnFloatingText(char.assignedStage, char.x, char.y - 36, '실버호크!', '#a0d8f8', 14);
     return true;
