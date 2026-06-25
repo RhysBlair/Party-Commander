@@ -328,17 +328,17 @@ function getSkillAtkMult(char) {
 
 function takeDamage(char, dmg, stageIdx) {
   if (char.isDead) return;
+  // 아기거북이 쉴드: 공격 1회 완전 흡수 (메테오 캐스팅 취소보다 우선)
+  if (char.petShieldActive) {
+    char.petShieldActive = false;
+    spawnFloatingText(stageIdx, char.x, char.y - 30, '쉴드!', '#4fc3f7', 14);
+    return;
+  }
   // 메테오 캐스팅 중 피격 → 취소
   if (char.meteorCasting) {
     char.meteorCasting = false;
     char.meteorCastTimer = 0;
     spawnFloatingText(stageIdx, char.x, char.y - 46, '캐스팅 취소!', '#e74c3c', 13);
-  }
-  // 아기거북이 방어막: 공격 1회 완전 흡수
-  if (char.petShieldActive) {
-    char.petShieldActive = false;
-    spawnFloatingText(stageIdx, char.x, char.y - 30, '방어막!', '#4fc3f7', 14);
-    return;
   }
   // 매직가드: 피해의 80%를 HP 대신 MP로 흡수
   if (char.skills?.includes('magic_guard') && (char.skillLevels?.magic_guard || 0) > 0) {

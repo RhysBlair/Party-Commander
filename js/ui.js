@@ -1083,8 +1083,7 @@ function renderPetTab() {
   }
 
   const charCards = gameState.characters.map(char => {
-    const highLevel = char.level >= 30;
-    const visiblePets = Object.entries(PETS).filter(([id]) => id === 'mini_slime' || highLevel);
+    const visiblePets = Object.entries(PETS);
 
     const owned = char.ownedPets || [];
     const petCards = visiblePets.map(([id, p]) => {
@@ -1325,6 +1324,7 @@ function renderCraftTab() {
 function renderUpgradeTab() {
   const el      = document.getElementById('tab-upgrades');
   const parties = gameState.parties;
+  const assigns = gameState.upgradeAssignments || {};
 
   if (!parties || parties.length === 0) {
     el.innerHTML = `<div class="eq-section-title">파티 축복</div>
@@ -1332,12 +1332,10 @@ function renderUpgradeTab() {
     return;
   }
 
-  // 선택 파티 유효성 보장
   if (!_blessingPartyId || !parties.find(p => p.id === _blessingPartyId)) {
     _blessingPartyId = parties[0].id;
   }
   const selParty = parties.find(p => p.id === _blessingPartyId);
-  if (!selParty.upgrades) selParty.upgrades = {};
 
   const partySelector = parties.map(p =>
     `<button class="assign-btn${p.id === _blessingPartyId ? ' active' : ''}"
@@ -1346,9 +1344,9 @@ function renderUpgradeTab() {
   ).join('');
 
   const rows = Object.entries(UPGRADES).map(([id, def]) => {
-    const lv        = selParty.upgrades[id] || 0;
+    const lv        = gameState.upgrades?.[id] || 0;
     const isMax     = lv >= def.maxLevel;
-    const cost      = isMax ? 0 : upgradeCost(id, selParty.upgrades);
+    const cost      = isMax ? 0 : upgradeCost(id);
     const canAfford = !isMax && gameState.gold >= cost;
     const nextLv    = lv + 1;
     const nextEffect = (() => {
@@ -1361,6 +1359,18 @@ function renderUpgradeTab() {
         default: return '';
       }
     })();
+
+    const assignedPartyId = assigns[id];
+    const assignedParty   = assignedPartyId ? parties.find(p => p.id === assignedPartyId) : null;
+    const isAssignedToSel = assignedPartyId === selParty.id;
+
+    const assignBtn = lv > 0
+      ? `<button class="small-btn${isAssignedToSel ? ' active' : ''}"
+                 style="margin-top:4px;width:100%;font-size:10px;padding:3px 4px"
+                 onclick="tryAssignBlessing('${id}',${selParty.id});renderUpgradeTab();">
+           ${isAssignedToSel ? `✓ ${selParty.name}에 부여됨` : (assignedParty ? `${assignedParty.name}에 부여중` : `${selParty.name}에 부여`)}
+         </button>`
+      : `<span style="font-size:10px;color:#444">먼저 구매하세요</span>`;
 
     return `
       <div class="upgrade-row">
@@ -1379,19 +1389,18 @@ function renderUpgradeTab() {
           ${isMax
             ? ''
             : `<button class="small-btn${canAfford ? '' : ' disabled'}"
-                       onclick="tryBuyUpgrade('${id}',${_blessingPartyId});renderUpgradeTab();">
+                       onclick="tryBuyUpgrade('${id}');renderUpgradeTab();">
                  ${cost.toLocaleString()}G
                </button>`}
+          ${assignBtn}
         </div>
       </div>`;
   }).join('');
 
   el.innerHTML = `
     <div class="eq-section-title">파티 축복</div>
-    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">${partySelector}</div>
-    <div style="font-size:11px;color:#666;margin-bottom:12px">
-      <strong style="color:#aaa">${selParty.name}</strong>에만 적용되는 영구 강화입니다.
-    </div>
+    <div style="font-size:11px;color:#888;margin-bottom:6px">축복 레벨은 전역 공유 — 부여할 파티를 선택해 배정하세요.</div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px">${partySelector}</div>
     <div class="upgrade-list">${rows}</div>`;
 }
 

@@ -16,7 +16,8 @@ const gameState = {
   maxStageReached: 0,
   parties: [],             // [{ id, name, memberIds:[], assignedStage:-1 }]
   drops: [],
-  upgrades: {},            // { upgradeId: level }
+  upgrades: {},            // { upgradeId: level } — 글로벌
+  upgradeAssignments: {},  // { upgradeId: partyId } — 어느 파티에 부여했는지
   crystals: { dim: 0, bright: 0, radiant: 0 },  // 분해 결정
   floatingTexts: [],       // 런타임 전용 — 저장 제외
   projectiles:   [],       // 런타임 전용 — 저장 제외
@@ -211,7 +212,13 @@ function createParty() {
 // 캐릭터가 속한 파티의 upgrades 반환 (미소속 시 빈 객체)
 function getCharUpgrades(char) {
   const party = gameState.parties.find(p => p.memberIds.includes(char.id));
-  return party?.upgrades || {};
+  if (!party) return {};
+  const assigns = gameState.upgradeAssignments || {};
+  const result  = {};
+  for (const id of Object.keys(UPGRADES)) {
+    if (assigns[id] === party.id) result[id] = gameState.upgrades?.[id] || 0;
+  }
+  return result;
 }
 
 function disbandParty(partyId) {
@@ -408,15 +415,15 @@ function loadGame() {
 
     // 구형 세이브: upgrades 필드 없으면 초기화 (하위 호환)
     if (!gameState.upgrades) gameState.upgrades = {};
-    // 파티 upgrades 없으면 초기화
+    if (!gameState.upgradeAssignments) gameState.upgradeAssignments = {};
     if (!gameState.parties) gameState.parties = [];
-    for (const p of gameState.parties) { if (!p.upgrades) p.upgrades = {}; }
     if (!gameState.crystals) gameState.crystals = { dim: 0, bright: 0, radiant: 0 };
 
-    // 구형 펫 ID(pet_basic, pet_magnet 등) 제거 + ownedPets 마이그레이션
+    // 구형 펫 ID(pet_basic, pet_magnet, mini_slime 등) 제거 + ownedPets 마이그레이션
     for (const char of gameState.characters) {
       if (char.pet && !PETS[char.pet]) char.pet = null;
       if (!char.ownedPets) char.ownedPets = [];
+      char.ownedPets = char.ownedPets.filter(id => PETS[id]); // 삭제된 펫 ID 제거
       // 현재 장착 중인 펫이 ownedPets에 없으면 추가 (구형 세이브 호환)
       if (char.pet && !char.ownedPets.includes(char.pet)) char.ownedPets.push(char.pet);
     }

@@ -230,6 +230,13 @@ x, y, attackTimer, skillTimers, shadowActive, shadowTimer, currentHp, currentMp,
   - 버그 수정: disbandParty 시 멤버 assignedStage -1 초기화
   - 버그 수정: 멤버 없는 파티 스테이지 배치 불가 ("멤버를 먼저 추가하세요" 표시)
   - 버그 수정: stageAssignBtns safeMax = Math.min(max, STAGES.length-1) — 전체 클리어 시 TypeError 방지
+- 축복(업그레이드) 재설계: 레벨 전역 공유, `upgradeAssignments[id]=partyId` 로 파티별 부여 선택
+  - `tryAssignBlessing(id, partyId)` 토글, `getCharUpgrades` 부여된 파티에만 효과 반환
+- 아기거북이 쉴드 이름 변경, 하늘색 보호막 캔버스 렌더 (drawShields 함수, 펄스 애니메이션)
+- 쉴드 우선처리: 쉴드 있을 때 메테오 캐스팅 취소 방지 (takeDamage 순서 변경)
+- 미니슬라임 펫 제거, 모든 펫 아이템 자동 수집 (loot.js updateSlimePets → 모든 pet 대상)
+  - 펫 레벨 제한 제거 (이전 Lv30 조건 삭제)
+  - 펫별 색상 맵(PET_COLORS) 공통 토끼 형태 렌더링
 
 ### 세션 9
 - 부활 시 상태이상·버프 초기화: 일반 리스폰 및 리저렉션 스킬 부활 모두 frozen/burned/activeBuffs/petShieldActive 초기화

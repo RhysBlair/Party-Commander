@@ -1,11 +1,9 @@
 // 드랍 & 펫 모듈
 
-const DROP_CHANCE        = 0.15;  // 몬스터 처치 시 드랍 확률
-const PET_SPEED          = 180;   // 기본 펫 이동 속도 (px/s)
-const PET_PICKUP_RADIUS  = 16;    // 기본 펫 수집 판정 반경 (px)
-const MAGNET_INTERVAL    = 0.4;   // 자석 펫 흡수 주기 (s)
-const SLIME_PET_SPEED    = 220;   // 미니슬라임 이동 속도 (px/s)
-const SLIME_PICKUP_DIST  = 14;    // 미니슬라임 아이템 수집 판정 거리 (px)
+const DROP_CHANCE       = 0.15;  // 몬스터 처치 시 드랍 확률
+const PET_SPEED         = 180;   // 기본 펫 이동 속도 (px/s)
+const PET_PICKUP_RADIUS = 16;    // 기본 펫 수집 판정 반경 (px)
+const PET_PICKUP_DIST   = 14;    // 펫 아이템 수집 판정 거리 (px)
 
 let nextDropUid = 1;
 
@@ -65,14 +63,14 @@ function updateLoot(dt) {
         if (dx * dx + dy * dy < 22 * 22) pickupDrop(i);
       }
     }
-    // 미니슬라임은 updateSlimePets에서 이동 후 수집
+    // 펫 있는 캐릭터: updatePetMovement에서 petX/petY 위치로 수집
   }
 }
 
-// 미니슬라임 펫: 아이템 향해 이동 → 수집 → 캐릭터 복귀
+// 모든 펫: 아이템 향해 이동 → 수집 → 캐릭터 복귀
 function updateSlimePets(dt) {
   for (const char of gameState.characters) {
-    if (char.pet !== 'mini_slime' || char.isDead || char.assignedStage < 0) continue;
+    if (!char.pet || char.isDead || char.assignedStage < 0) continue;
 
     // 위치 초기화
     if (char.petX === undefined) {
@@ -90,16 +88,14 @@ function updateSlimePets(dt) {
     }
 
     if (target) {
-      // 아이템 쪽으로 이동
       const dx = target.x - char.petX, dy = target.y - char.petY;
       const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist <= SLIME_PICKUP_DIST) {
-        // 수집
+      if (dist <= PET_PICKUP_DIST) {
         const idx = gameState.drops.indexOf(target);
         if (idx !== -1) pickupDrop(idx);
       } else {
-        char.petX += (dx / dist) * SLIME_PET_SPEED * dt;
-        char.petY += (dy / dist) * SLIME_PET_SPEED * dt;
+        char.petX += (dx / dist) * PET_SPEED * dt;
+        char.petY += (dy / dist) * PET_SPEED * dt;
       }
     } else {
       // 아이템 없으면 캐릭터 옆으로 복귀
@@ -108,8 +104,8 @@ function updateSlimePets(dt) {
       const dx = homeX - char.petX, dy = homeY - char.petY;
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist > 6) {
-        char.petX += (dx / dist) * SLIME_PET_SPEED * dt;
-        char.petY += (dy / dist) * SLIME_PET_SPEED * dt;
+        char.petX += (dx / dist) * PET_SPEED * dt;
+        char.petY += (dy / dist) * PET_SPEED * dt;
       }
     }
   }

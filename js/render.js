@@ -475,11 +475,36 @@ function drawShadow(char) {
   ctx.globalAlpha = 1;
 }
 
+function drawShields(viewIdx) {
+  const now = Date.now();
+  for (const char of gameState.characters) {
+    if (char.assignedStage !== viewIdx || !char.petShieldActive) continue;
+    const pulse = 0.55 + Math.sin(now / 200) * 0.2;
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    const grad = ctx.createRadialGradient(char.x, char.y - 18, 10, char.x, char.y - 18, 30);
+    grad.addColorStop(0,   'rgba(80,200,255,0.0)');
+    grad.addColorStop(0.7, 'rgba(80,200,255,0.18)');
+    grad.addColorStop(1.0, 'rgba(80,200,255,0.55)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(char.x, char.y - 18, 30, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(120,220,255,0.9)';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#4fc3f7';
+    ctx.shadowBlur  = 8;
+    ctx.stroke();
+    ctx.shadowBlur  = 0;
+    ctx.restore();
+  }
+}
+
 function drawPets(viewIdx) {
+  drawShields(viewIdx);
   for (const char of gameState.characters) {
     if (char.assignedStage !== viewIdx || !char.pet) continue;
 
-    const isSlime  = char.pet === 'mini_slime';
     const isMagnet = char.pet === 'pet_magnet';
 
     let px, py;
@@ -489,55 +514,17 @@ function drawPets(viewIdx) {
       px = char.x - (char.facing || 1) * 25; py = char.y + 10;
     }
 
-    if (isSlime) {
-      // ── 미니슬라임: 초록 물방울 ──
-      const now  = Date.now();
-      const bob  = Math.sin(now / 350) * 2; // 위아래 움직임
-      const sy   = py + bob;
-      const rW   = 11, rH = 10 + Math.abs(Math.sin(now / 350)) * 2;
-
-      // 몸통 (타원형 초록 슬라임)
-      ctx.fillStyle   = '#3cb371';
-      ctx.strokeStyle = '#2a8a50';
-      ctx.lineWidth   = 1.5;
-      ctx.beginPath();
-      ctx.ellipse(px, sy, rW, rH, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      // 광택
-      ctx.fillStyle   = 'rgba(255,255,255,0.3)';
-      ctx.beginPath();
-      ctx.ellipse(px - 3, sy - 4, 4, 3, -0.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 눈
-      ctx.fillStyle = '#111';
-      ctx.beginPath();
-      ctx.arc(px - 3.5, sy - 2, 2.2, 0, Math.PI * 2);
-      ctx.arc(px + 3.5, sy - 2, 2.2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#fff';
-      ctx.beginPath();
-      ctx.arc(px - 2.8, sy - 2.6, 0.8, 0, Math.PI * 2);
-      ctx.arc(px + 4.2, sy - 2.6, 0.8, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 아이템 목적지로 이동 중일 때 흔적 효과
-      const hasTarget = gameState.drops.some(d => d.stageIdx === char.assignedStage);
-      if (hasTarget) {
-        ctx.globalAlpha = 0.25 + Math.sin(now / 200) * 0.1;
-        ctx.fillStyle   = '#3cb371';
-        ctx.beginPath();
-        ctx.ellipse(px, sy + rH - 2, rW * 0.6, 4, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      }
-
-    } else {
-      // ── 일반 펫: 토끼/자석 ──
-      const bodyCol = isMagnet ? '#5b9bd5' : '#f39c12';
-      const earCol  = isMagnet ? '#3a78b5' : '#d4820f';
+    {
+      // ── 펫 공통 렌더: 토끼 형태 ──
+      const PET_COLORS = {
+        mini_rabbit: ['#f39c12', '#d4820f'],
+        mini_bat:    ['#7d3c98', '#5d2d7a'],
+        baby_bear:   ['#a0522d', '#7d3c1a'],
+        baby_snake:  ['#27ae60', '#1e8449'],
+        baby_turtle: ['#16a085', '#0e7060'],
+      };
+      const [bodyCol, earCol] = PET_COLORS[char.pet] || ['#888', '#666'];
+      const isMagnetLocal = isMagnet;
 
       // 귀
       ctx.fillStyle = earCol;
@@ -568,16 +555,28 @@ function drawPets(viewIdx) {
       ctx.fill();
 
       // 코
-      ctx.fillStyle = isMagnet ? '#a0c8f0' : '#e8a87c';
+      ctx.fillStyle = '#e8a87c';
       ctx.beginPath();
       ctx.arc(px, py + 2, 1.5, 0, Math.PI * 2);
       ctx.fill();
 
-      if (isMagnet) {
-        ctx.globalAlpha = 0.18;
-        ctx.fillStyle = '#5b9bd5';
+      // 펫별 특수 표시
+      if (char.pet === 'baby_turtle') {
+        // 거북이: 등껍질 무늬
+        ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+        ctx.lineWidth = 0.8;
         ctx.beginPath();
-        ctx.arc(px, py, 22, 0, Math.PI * 2);
+        ctx.arc(px, py, 5, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      // 아이템 향해 이동 중 반짝임
+      const hasTarget = gameState.drops.some(d => d.stageIdx === char.assignedStage);
+      if (hasTarget) {
+        const now2 = Date.now();
+        ctx.globalAlpha = 0.3 + Math.sin(now2 / 150) * 0.15;
+        ctx.fillStyle   = bodyCol;
+        ctx.beginPath();
+        ctx.arc(px, py, 13, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 1;
       }

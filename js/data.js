@@ -232,12 +232,11 @@ const UPGRADES = {
 
 // 펫 정의
 const PETS = {
-  mini_slime:  { name: "미니슬라임",  desc: "아이템을 자동으로 주워준다",             pickupRange: 9999, cost: 1000 },
-  mini_rabbit: { name: "미니래빗",    desc: "공격속도가 30% 증가한다",               atkSpeed: 0.30,   cost: 5000 },
-  mini_bat:    { name: "꼬마박쥐",    desc: "크리티컬 확률을 20% 증가시켜준다",      critBonus: 20,    cost: 5000 },
-  baby_bear:   { name: "아기곰",      desc: "최대 체력을 50% 증가시켜준다",          hpMult: 0.50,     cost: 5000 },
-  baby_snake:  { name: "아기뱀",      desc: "5초마다 체력을 100%으로 회복시켜준다",  healInterval: 5.0, cost: 5000 },
-  baby_turtle: { name: "아기거북이",  desc: "5초마다 방어막을 생성해 공격을 1회 방어해준다", shieldInterval: 5.0, cost: 5000 },
+  mini_rabbit: { name: "미니래빗",    desc: "공격속도가 30% 증가한다 / 아이템 자동 수집",  atkSpeed: 0.30,    cost: 5000 },
+  mini_bat:    { name: "꼬마박쥐",    desc: "크리티컬 확률을 20% 증가 / 아이템 자동 수집", critBonus: 20,     cost: 5000 },
+  baby_bear:   { name: "아기곰",      desc: "최대 체력을 50% 증가 / 아이템 자동 수집",     hpMult: 0.50,     cost: 5000 },
+  baby_snake:  { name: "아기뱀",      desc: "5초마다 체력 100% 회복 / 아이템 자동 수집",   healInterval: 5.0, cost: 5000 },
+  baby_turtle: { name: "아기거북이",  desc: "5초마다 쉴드로 공격 1회 방어 / 아이템 자동 수집", shieldInterval: 5.0, cost: 5000 },
 };
 
 // 물약 정의
