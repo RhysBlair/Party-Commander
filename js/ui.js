@@ -14,6 +14,43 @@ const SKILL_ICONS = {
   piercing: '🎯', sharp_eyes_mk: '👁️', sharp_eyes_ht: '👁️',
 };
 
+// 활성 버프 아이콘 HTML 생성
+function buffIconsHtml(char) {
+  const b = char.activeBuffs;
+  if (!b) return '';
+  const list = [];
+  if ((b.statMult?.timer || 0) > 0)
+    list.push(['💥', '파워버스트', `전 능력치 ×${(b.statMult.mult || 1).toFixed(1)}`]);
+  if ((b.hp?.timer || 0) > 0)
+    list.push(['❤️', '체력 강화', `최대 HP ×${(b.hp.mult || 1).toFixed(1)}`]);
+  if ((b.atk?.timer || 0) > 0) {
+    const lbl = b.atk.label || '공격력';
+    list.push(['⚔️', lbl + ' 강화', `${lbl} ×${(b.atk.mult || 1).toFixed(1)}`]);
+  }
+  if ((b.critDmg?.timer || 0) > 0)
+    list.push(['✨', '샤프아이즈', `크리티컬 데미지 +${(b.critDmg.bonus || 0).toFixed(1)}배`]);
+  if ((b.cd?.timer || 0) > 0)
+    list.push(['⚡', '쿨타임 단축', `쿨타임 배율 ×${(b.cd.mult || 1).toFixed(2)}`]);
+  if (!list.length) return '';
+  return list.map(([icon, name, effect]) =>
+    `<span class="buff-icon-badge"
+           onclick="event.stopPropagation();showBuffTip(this,'${name}','${effect}')"
+           title="${name}">${icon}</span>`
+  ).join('');
+}
+
+function showBuffTip(el, name, effect) {
+  document.querySelectorAll('.buff-tip-pop').forEach(e => e.remove());
+  const tip = document.createElement('div');
+  tip.className = 'buff-tip-pop';
+  tip.innerHTML = `<strong style="color:#ddd">${name}</strong><br><span style="color:#aaa">${effect}</span>`;
+  el.style.position = 'relative';
+  el.appendChild(tip);
+  const close = () => tip.remove();
+  setTimeout(close, 4000);
+  document.addEventListener('click', close, { once: true });
+}
+
 // 스킬 아이콘 클릭 — 설명 토글
 function selectSkillInfo(charId, skillId) {
   if (_charSkillSelected[charId] === skillId) delete _charSkillSelected[charId];
@@ -320,6 +357,7 @@ function charSkillMiniSection(char) {
         <div class="skill-icon-box${learned ? ' learned' : ''}">
           <span style="font-size:18px;line-height:1">${icon}</span>
         </div>
+        <div class="skill-icon-name">${s.name}</div>
         <div style="font-size:9px;color:${lvColor};text-align:center">${lvLabel}</div>
         ${btn}
       </div>`;
@@ -404,54 +442,69 @@ function renderCharacterTab() {
       ? `<span style="color:#f39c12;font-size:11px">${STAGES[char.assignedStage]?.name || ''}</span>`
       : `<span style="color:#666;font-size:11px">미배정</span>`;
 
+    const bs = calcBaseStats(char);
+    const buffIcons = buffIconsHtml(char);
+
     return `
       <div class="char-card" style="cursor:pointer"
            onclick="if(!event.target.closest('button,input')){${char.assignedStage >= 0 ? `goToStage(${char.assignedStage})` : ''}}">
-        <h3 style="color:${classColor}">${char.nickname || '???'}
-          <span style="color:#888;font-size:12px;font-weight:normal"> (${charClassName(char.classId)})</span>
-          <span style="color:#666;font-size:11px;font-weight:normal"> Lv.${char.level}</span>
-          <span style="float:right;margin-top:2px">${stageLabel}</span>
-        </h3>
-        <div style="font-size:12px;color:#888;margin-bottom:4px">
-          EXP ${char.exp} / ${needed} (${pct}%)
-        </div>
-        <div class="exp-bar-wrap"><div class="exp-bar-fill" style="width:${pct}%"></div></div>
 
-        <div class="stat-inline-row">
-          ${['STR','DEX','INT','LUK'].map(stat => {
-            return `<div class="stat-inline-item">
-              <span class="stat-lbl-tip" title="${STAT_LABELS[stat]}">${stat}</span>
-              <span class="stat-val" id="sv-${char.id}-${stat}">${statValHtmlFull(char, stat)}</span>
-              <button class="stat-plus-btn" id="sb-${char.id}-${stat}"
-                      style="${hasPoints ? '' : 'display:none'}"
-                      onclick="tryAddStatPoint(${char.id},'${stat}');updateStatDisplay(${char.id});">＋</button>
-            </div>`;
-          }).join('')}
-          <div style="margin-left:auto;display:flex;align-items:center;gap:5px">
-            <span id="sp-${char.id}" style="color:#f1c40f;font-size:11px${char.unspentPoints > 0 ? '' : ';display:none'}">잔여&nbsp;<strong id="spv-${char.id}">${char.unspentPoints}</strong>pt</span>
-            <button class="toggle-btn ${char.autoAssign ? 'active' : ''}"
-                    onclick="tryToggleAutoAssign(${char.id});renderCharacterTab();">
-              자동배분 ${char.autoAssign ? 'ON' : 'OFF'}
-            </button>
-            <button id="freset-${char.id}" class="reset-stat-btn ${canReset ? '' : 'disabled'}"
-                    onclick="tryResetStats(${char.id});renderCharacterTab();"
-                    title="골드 ${resetCost.toLocaleString()} 소모">스텟초기화</button>
+        <!-- 헤더: 이름 + 클래스 + 레벨 + 버프 아이콘 + 스테이지 -->
+        <div class="char-header-row">
+          <span style="color:${classColor};font-weight:bold;font-size:14px">${char.nickname || '???'}</span>
+          <span style="color:#888;font-size:11px;margin-left:4px">(${charClassName(char.classId)})</span>
+          <span style="color:#666;font-size:11px;margin-left:4px">Lv.${char.level}</span>
+          ${buffIcons ? `<span class="buff-icons-inline">${buffIcons}</span>` : ''}
+          <span style="margin-left:auto">${stageLabel}</span>
+        </div>
+
+        <!-- 바디: 좌(스탯) / 우(스킬) 2단 -->
+        <div class="char-body-cols">
+          <!-- 왼쪽: 스탯 -->
+          <div class="char-col-left">
+            <div class="stat-inline-row" style="flex-wrap:wrap">
+              ${['STR','DEX','INT','LUK'].map(stat => `
+                <div class="stat-inline-item">
+                  <span class="stat-lbl-tip" title="${STAT_LABELS[stat]}">${stat}</span>
+                  <span class="stat-val" id="sv-${char.id}-${stat}">${statValHtmlFull(char, stat)}</span>
+                  <button class="stat-plus-btn" id="sb-${char.id}-${stat}"
+                          style="${hasPoints ? '' : 'display:none'}"
+                          onclick="tryAddStatPoint(${char.id},'${stat}');updateStatDisplay(${char.id});">＋</button>
+                </div>`).join('')}
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin:3px 0">
+              <span id="sp-${char.id}" style="color:#f1c40f;font-size:11px${char.unspentPoints > 0 ? '' : ';display:none'}">잔여&nbsp;<strong id="spv-${char.id}">${char.unspentPoints}</strong>pt</span>
+              <button class="toggle-btn${char.autoAssign ? ' active' : ''}" style="font-size:10px;padding:2px 6px"
+                      onclick="tryToggleAutoAssign(${char.id});renderCharacterTab();">
+                자동배분 ${char.autoAssign ? 'ON' : 'OFF'}
+              </button>
+              <button id="freset-${char.id}" class="reset-stat-btn${canReset ? '' : ' disabled'}" style="font-size:10px"
+                      onclick="tryResetStats(${char.id});renderCharacterTab();"
+                      title="골드 ${resetCost.toLocaleString()} 소모">스텟초기화</button>
+            </div>
+            <div class="char-fs-line" id="fs-${char.id}">
+              <span>HP <strong style="color:#e74c3c">${char.maxHpCache ? Math.ceil(char.currentHp||0) : fs.maxHp}/${bdStat(fs.maxHp,bs.maxHp)}</strong></span>
+              <span>공격력 <strong>${bdStat(fs.atk,bs.atk)}</strong></span>
+              <span>물방 <strong>${bdStat(fs.physDef,bs.physDef)}</strong></span>
+              <span>마방 <strong>${bdStat(fs.magicDef,bs.magicDef)}</strong></span>
+              <span>명중 <strong>${bdStat(fs.accuracy,bs.accuracy)}%</strong></span>
+              <span>회피 <strong>${bdStat(fs.evade,bs.evade)}%</strong></span>
+              <span>크리 <strong style="color:#f1c40f">${bdStat(fs.critRate,bs.critRate,1)}%</strong></span>
+            </div>
+          </div>
+
+          <!-- 오른쪽: 스킬 -->
+          <div class="char-col-right">
+            ${charSkillMiniSection(char)}
           </div>
         </div>
 
-        <div class="char-fs-line" id="fs-${char.id}" style="margin-bottom:5px">
-          ${(() => { const bs = calcBaseStats(char);
-            return `<span>HP <strong style="color:#e74c3c">${char.maxHpCache ? Math.ceil(char.currentHp||0) : fs.maxHp}/${bdStat(fs.maxHp,bs.maxHp)}</strong></span>
-            <span>공격력 <strong>${bdStat(fs.atk,bs.atk)}</strong></span>
-            <span>물방 <strong>${bdStat(fs.physDef,bs.physDef)}</strong></span>
-            <span>마방 <strong>${bdStat(fs.magicDef,bs.magicDef)}</strong></span>
-            <span>명중 <strong>${bdStat(fs.accuracy,bs.accuracy)}%</strong></span>
-            <span>회피 <strong>${bdStat(fs.evade,bs.evade)}%</strong></span>
-            <span>크리 <strong style="color:#f1c40f">${bdStat(fs.critRate,bs.critRate,1)}%</strong></span>`;
-          })()}
+        <!-- EXP 바 (하단) -->
+        <div style="margin-top:6px">
+          <div style="font-size:11px;color:#888;margin-bottom:2px">EXP ${char.exp} / ${needed} (${pct}%)</div>
+          <div class="exp-bar-wrap"><div class="exp-bar-fill" style="width:${pct}%"></div></div>
         </div>
 
-        ${charSkillMiniSection(char)}
         ${jobSection}
         ${job2Section}
       </div>`;

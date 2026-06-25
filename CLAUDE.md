@@ -230,6 +230,11 @@ x, y, attackTimer, skillTimers, shadowActive, shadowTimer, currentHp, currentMp,
   - 버그 수정: disbandParty 시 멤버 assignedStage -1 초기화
   - 버그 수정: 멤버 없는 파티 스테이지 배치 불가 ("멤버를 먼저 추가하세요" 표시)
   - 버그 수정: stageAssignBtns safeMax = Math.min(max, STAGES.length-1) — 전체 클리어 시 TypeError 방지
+- 캐릭터 탭 2단 레이아웃: 좌(스탯) / 우(스킬) 반씩 분할, EXP 바는 하단으로 이동
+  - `.char-body-cols` flex, `.char-col-left/right` CSS 추가
+  - 스킬 아이콘에 이름 라벨 추가 (`.skill-icon-name`)
+  - 버프 아이콘: `buffIconsHtml(char)` — 활성 버프(파워버스트/체력/공격력/크리/쿨타임) 헤더 옆 표시
+  - 클릭 시 `showBuffTip(el,name,effect)` 팝업 4초 표시 (`.buff-tip-pop`)
 - 축복(업그레이드) 재설계: 레벨 전역 공유, `upgradeAssignments[id]=partyId` 로 파티별 부여 선택
   - `tryAssignBlessing(id, partyId)` 토글, `getCharUpgrades` 부여된 파티에만 효과 반환
 - 아기거북이 쉴드 이름 변경, 하늘색 보호막 캔버스 렌더 (drawShields 함수, 펄스 애니메이션)

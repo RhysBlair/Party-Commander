@@ -385,6 +385,82 @@ body {
   margin-bottom: 6px;
 }
 
+/* 캐릭터 카드 헤더 (이름+레벨+버프+스테이지) */
+.char-header-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+/* 캐릭터 카드 2단 바디 */
+.char-body-cols {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.char-col-left {
+  flex: 1;
+  min-width: 0;
+}
+.char-col-right {
+  width: 200px;
+  flex-shrink: 0;
+  border-left: 1px solid #1a2535;
+  padding-left: 8px;
+}
+.char-col-right .skill-mini-section {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+
+/* 버프 아이콘 */
+.buff-icons-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+}
+.buff-icon-badge {
+  cursor: pointer;
+  font-size: 14px;
+  position: relative;
+  user-select: none;
+  border-radius: 4px;
+  padding: 0 2px;
+  transition: background 0.1s;
+}
+.buff-icon-badge:hover { background: rgba(255,255,255,0.08); }
+.buff-tip-pop {
+  position: absolute;
+  top: 22px;
+  left: 0;
+  z-index: 200;
+  background: #0d1e30;
+  border: 1px solid #2a5080;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: #ddd;
+  white-space: nowrap;
+  pointer-events: none;
+  min-width: 120px;
+}
+
+/* 스킬 아이콘 이름 라벨 */
+.skill-icon-name {
+  font-size: 8px;
+  color: #888;
+  text-align: center;
+  max-width: 46px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.1;
+}
+
 /* exp 바 */
 .exp-bar-wrap {
   background: #111;
