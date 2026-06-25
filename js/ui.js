@@ -1066,7 +1066,8 @@ function renderPartyTab() {
       : `<span style="color:#555;font-size:11px">미배치</span>`;
 
     return `
-      <div class="party-card">
+      <div class="party-card" style="cursor:${party.assignedStage >= 0 ? 'pointer' : 'default'}"
+           onclick="if(!event.target.closest('button,select')&&${party.assignedStage >= 0}){goToStage(${party.assignedStage});}">
         <div class="party-card-header">
           <span class="party-name">${party.name}</span>
           <span style="color:#666;font-size:11px">${party.memberIds.length}/6명</span>
@@ -1167,9 +1168,7 @@ function renderPetTab() {
         </div>`;
     }).join('');
 
-    const lockNotice = !highLevel
-      ? `<div style="font-size:10px;color:#666;padding:4px 0">Lv.30 이상 시 더 많은 펫 해금</div>`
-      : '';
+    const lockNotice = '';
 
     return `
       <div class="char-card" style="margin-bottom:10px">

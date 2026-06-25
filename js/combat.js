@@ -331,7 +331,7 @@ function takeDamage(char, dmg, stageIdx) {
   // 아기거북이 쉴드: 공격 1회 완전 흡수 (메테오 캐스팅 취소보다 우선)
   if (char.petShieldActive) {
     char.petShieldActive = false;
-    spawnFloatingText(stageIdx, char.x, char.y - 30, '쉴드!', '#4fc3f7', 14);
+    spawnFloatingText(stageIdx, char.x, char.y - 30, '방어!', '#4fc3f7', 14);
     return;
   }
   // 메테오 캐스팅 중 피격 → 취소
@@ -655,7 +655,7 @@ function updateCharacter(char, dt, stage, field) {
     if (char.petShieldTimer <= 0) {
       char.petShieldTimer = 5.0;
       char.petShieldActive = true;
-      spawnFloatingText(char.assignedStage, char.x, char.y - 44, '방어막 준비!', '#4fc3f7', 12);
+      spawnFloatingText(char.assignedStage, char.x, char.y - 44, '쉴드!', '#4fc3f7', 12);
     }
   }
 
