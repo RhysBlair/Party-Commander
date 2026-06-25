@@ -66,20 +66,37 @@ const SKILL_ICONS = {
 // 활성 버프 아이콘 HTML 생성
 function buffIconsHtml(char) {
   const b = char.activeBuffs;
-  if (!b) return '';
   const list = [];
-  if ((b.statMult?.timer || 0) > 0)
-    list.push(['💥', '파워버스트', `전 능력치 ×${(b.statMult.mult || 1).toFixed(1)}`]);
-  if ((b.hp?.timer || 0) > 0)
-    list.push(['❤️', '체력 강화', `최대 HP ×${(b.hp.mult || 1).toFixed(1)}`]);
-  if ((b.atk?.timer || 0) > 0) {
-    const lbl = b.atk.label || '공격력';
-    list.push(['⚔️', lbl + ' 강화', `${lbl} ×${(b.atk.mult || 1).toFixed(1)}`]);
+
+  // 스킬 버프 (타이머 기반)
+  if (b) {
+    if ((b.statMult?.timer || 0) > 0)
+      list.push(['💥', '파워버스트', `전 능력치 ×${(b.statMult.mult || 1).toFixed(1)}`]);
+    if ((b.hp?.timer || 0) > 0)
+      list.push(['❤️', '체력 강화', `최대 HP ×${(b.hp.mult || 1).toFixed(1)}`]);
+    if ((b.atk?.timer || 0) > 0) {
+      const lbl = b.atk.label || '공격력';
+      list.push(['⚔️', lbl + ' 강화', `${lbl} ×${(b.atk.mult || 1).toFixed(1)}`]);
+    }
+    if ((b.critDmg?.timer || 0) > 0)
+      list.push(['✨', '샤프아이즈', `크리티컬 데미지 +${(b.critDmg.bonus || 0).toFixed(1)}배`]);
+    if ((b.cd?.timer || 0) > 0)
+      list.push(['⚡', '쿨타임 단축', `쿨타임 배율 ×${(b.cd.mult || 1).toFixed(2)}`]);
   }
-  if ((b.critDmg?.timer || 0) > 0)
-    list.push(['✨', '샤프아이즈', `크리티컬 데미지 +${(b.critDmg.bonus || 0).toFixed(1)}배`]);
-  if ((b.cd?.timer || 0) > 0)
-    list.push(['⚡', '쿨타임 단축', `쿨타임 배율 ×${(b.cd.mult || 1).toFixed(2)}`]);
+
+  // 축복(업그레이드) 상시 효과
+  const upg = getCharUpgrades(char);
+  if ((upg.atk_boost || 0) > 0)
+    list.push(['🗡️', '공격강화', `공격력 +${upg.atk_boost * 5}%`]);
+  if ((upg.def_boost || 0) > 0)
+    list.push(['🛡️', '방어강화', `물리방어 +${upg.def_boost * 3}`]);
+  if ((upg.exp_boost || 0) > 0)
+    list.push(['⭐', '경험치강화', `경험치 +${upg.exp_boost * 10}%`]);
+  if ((upg.gold_boost || 0) > 0)
+    list.push(['💰', '골드강화', `골드 +${upg.gold_boost * 10}%`]);
+  if ((upg.atk_spd || 0) > 0)
+    list.push(['💨', '공격속도강화', `공격속도 +${upg.atk_spd * 5}%`]);
+
   if (!list.length) return '';
   return list.map(([icon, name, effect]) =>
     `<span class="buff-icon-badge"
@@ -566,13 +583,13 @@ function renderCharacterTab() {
                       title="골드 ${fmtG(resetCost)} 소모">스텟초기화</button>
             </div>
             <div class="char-fs-line" id="fs-${char.id}">
-              <span>HP <strong style="color:#e74c3c">${char.maxHpCache ? Math.ceil(char.currentHp||0) : fs.maxHp}/${bdStat(fs.maxHp,bs.maxHp)}</strong>${statBuffTag(char,'maxHp')}</span>
-              <span>${atkLabel(char)} <strong>${bdStat(fs.atk,bs.atk)}</strong>${statBuffTag(char,'atk')}</span>
-              <span>물방 <strong>${bdStat(fs.physDef,bs.physDef)}</strong>${statBuffTag(char,'physDef')}</span>
-              <span>마방 <strong>${bdStat(fs.magicDef,bs.magicDef)}</strong>${statBuffTag(char,'magicDef')}</span>
-              <span>명중 <strong>${bdStat(fs.accuracy,bs.accuracy)}%</strong>${statBuffTag(char,'accuracy')}</span>
-              <span>회피 <strong>${bdStat(fs.evade,bs.evade)}%</strong>${statBuffTag(char,'evade')}</span>
-              <span>크리 <strong style="color:#f1c40f">${bdStat(fs.critRate,bs.critRate,1)}%</strong>${statBuffTag(char,'critRate')}</span>
+              <span>HP <strong style="color:#e74c3c">${char.maxHpCache ? Math.ceil(char.currentHp||0) : fs.maxHp}/${bdStat(fs.maxHp,bs.maxHp)}</strong></span>
+              <span>${atkLabel(char)} <strong>${bdStat(fs.atk,bs.atk)}</strong></span>
+              <span>물방 <strong>${bdStat(fs.physDef,bs.physDef)}</strong></span>
+              <span>마방 <strong>${bdStat(fs.magicDef,bs.magicDef)}</strong></span>
+              <span>명중 <strong>${bdStat(fs.accuracy,bs.accuracy)}%</strong></span>
+              <span>회피 <strong>${bdStat(fs.evade,bs.evade)}%</strong></span>
+              <span>크리 <strong style="color:#f1c40f">${bdStat(fs.critRate,bs.critRate,1)}%</strong></span>
             </div>
           </div>
 
@@ -653,13 +670,13 @@ function updateStatDisplay(charId) {
   const fsEl = document.getElementById(`fs-${charId}`);
   if (fsEl) {
     fsEl.innerHTML = `
-      <span>HP <strong style="color:#e74c3c">${char.maxHpCache ? Math.ceil(char.currentHp || 0) : fs.maxHp}/${bdStat(fs.maxHp,bs.maxHp)}</strong>${statBuffTag(char,'maxHp')}</span>
-      <span>${atkLabel(char)} <strong>${bdStat(fs.atk,bs.atk)}</strong>${statBuffTag(char,'atk')}</span>
-      <span>물방 <strong>${bdStat(fs.physDef,bs.physDef)}</strong>${statBuffTag(char,'physDef')}</span>
-      <span>마방 <strong>${bdStat(fs.magicDef,bs.magicDef)}</strong>${statBuffTag(char,'magicDef')}</span>
-      <span>명중 <strong>${bdStat(fs.accuracy,bs.accuracy)}%</strong>${statBuffTag(char,'accuracy')}</span>
-      <span>회피 <strong>${bdStat(fs.evade,bs.evade)}%</strong>${statBuffTag(char,'evade')}</span>
-      <span>크리 <strong style="color:#f1c40f">${bdStat(fs.critRate,bs.critRate,1)}%</strong>${statBuffTag(char,'critRate')}</span>`;
+      <span>HP <strong style="color:#e74c3c">${char.maxHpCache ? Math.ceil(char.currentHp || 0) : fs.maxHp}/${bdStat(fs.maxHp,bs.maxHp)}</strong></span>
+      <span>${atkLabel(char)} <strong>${bdStat(fs.atk,bs.atk)}</strong></span>
+      <span>물방 <strong>${bdStat(fs.physDef,bs.physDef)}</strong></span>
+      <span>마방 <strong>${bdStat(fs.magicDef,bs.magicDef)}</strong></span>
+      <span>명중 <strong>${bdStat(fs.accuracy,bs.accuracy)}%</strong></span>
+      <span>회피 <strong>${bdStat(fs.evade,bs.evade)}%</strong></span>
+      <span>크리 <strong style="color:#f1c40f">${bdStat(fs.critRate,bs.critRate,1)}%</strong></span>`;
   }
 }
 
@@ -1927,15 +1944,15 @@ function buildModalStats(char) {
   const curMp  = Math.floor(char.currentMp ?? fs.maxMp);
   const aLabel = isMagic ? '마공' : '물공';
   const combatRows = [
-    [aLabel,      bdStat(fs.atk,      bs.atk)      + statBuffTag(char, 'atk')],
-    ['물리방어',  bdStat(fs.physDef,  bs.physDef)  + statBuffTag(char, 'physDef')],
-    ['마법방어',  bdStat(fs.magicDef, bs.magicDef) + statBuffTag(char, 'magicDef')],
-    ['명중률',    bdStat(fs.accuracy, bs.accuracy)  + '%' + statBuffTag(char, 'accuracy')],
-    ['회피율',    bdStat(fs.evade,    bs.evade)     + '%' + statBuffTag(char, 'evade')],
-    ['크리확률',  bdStat(fs.critRate, bs.critRate, 1) + '%' + statBuffTag(char, 'critRate')],
-    ['크리피해',  bdStat(fs.critDmg,  bs.critDmg,  1) + '배' + statBuffTag(char, 'critDmg')],
+    [aLabel,      bdStat(fs.atk,      bs.atk)],
+    ['물리방어',  bdStat(fs.physDef,  bs.physDef)],
+    ['마법방어',  bdStat(fs.magicDef, bs.magicDef)],
+    ['명중률',    bdStat(fs.accuracy, bs.accuracy) + '%'],
+    ['회피율',    bdStat(fs.evade,    bs.evade)    + '%'],
+    ['크리확률',  bdStat(fs.critRate, bs.critRate, 1) + '%'],
+    ['크리피해',  bdStat(fs.critDmg,  bs.critDmg,  1) + '배'],
     ['이동속도',  `${CHAR_SPEED} px/s`],
-    ['최대 HP',   bdStat(fs.maxHp,   bs.maxHp)     + statBuffTag(char, 'maxHp')],
+    ['최대 HP',   bdStat(fs.maxHp,   bs.maxHp)],
     ['최대 MP',   `<span style="color:#3498db">${bdStat(fs.maxMp, bs.maxMp)}</span> <span style="color:#555;font-size:10px">(현재 ${curMp})</span>`],
   ].map(([label, val]) => `
     <div class="stat-row">
