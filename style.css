@@ -405,7 +405,7 @@ body {
   min-width: 0;
 }
 .char-col-right {
-  width: 200px;
+  width: 500px;
   flex-shrink: 0;
   border-left: 1px solid #1a2535;
   padding-left: 8px;
