@@ -372,6 +372,18 @@ function drawCharacter(char) {
   ctx.strokeStyle = 'rgba(255,255,255,0.4)';
   ctx.lineWidth = 1.5;
   ctx.strokeRect(char.x - 14, char.y - 24, 28, 36);
+
+  // 파티 엠블럼 (몸통 중앙, 70% 불투명도)
+  const charParty = (gameState.parties || []).find(p => p.memberIds && p.memberIds.includes(char.id));
+  if (charParty && charParty.emblem) {
+    ctx.globalAlpha = 0.7;
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(charParty.emblem, char.x, char.y - 8);
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = 1;
+  }
+
   ctx.fillStyle = '#f5cba7';
   ctx.beginPath();
   ctx.arc(char.x, char.y - 32, 10, 0, Math.PI * 2);

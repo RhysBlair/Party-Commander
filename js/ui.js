@@ -57,6 +57,14 @@ function atkLabel(char) {
   return CLASSES[char.classId]?.damageType === 'magical' ? '마공' : '물공';
 }
 
+// 파티 엠블럼 목록
+const PARTY_EMBLEMS = [
+  '🔥','❄️','⚡','🌊','🌿','☀️','🌙','🌟',
+  '💀','👑','🐉','🦁','🐺','🦅','🐉','🌺',
+  '⚔️','🛡️','🏹','🔮','💎','🗡️','🪄','🎯',
+  '🌈','🌸','🍀','🦋','🐻','🐯','🦊','🦄',
+];
+
 // 스킬 아이콘 맵
 const SKILL_ICONS = {
   orb_strike: '🔮', taunt: '📢', power_burst: '💥', threat: '😤', spear_aura: '🛡️',
@@ -299,6 +307,10 @@ function initStageBar() {
     wrap.className = 'sdot-wrap';
     wrap.id = `sdot-wrap-${i}`;
 
+    const emb = document.createElement('div');
+    emb.className = 'sdot-emblem';
+    emb.id = `sdot-emb-${i}`;
+
     const dot = document.createElement('div');
     dot.className = 'sdot';
     dot.id = `sdot-${i}`;
@@ -309,6 +321,7 @@ function initStageBar() {
     cnt.className = 'sdot-cnt';
     cnt.id = `sdot-cnt-${i}`;
 
+    wrap.appendChild(emb);
     wrap.appendChild(dot);
     wrap.appendChild(cnt);
 
@@ -336,6 +349,7 @@ function updateStageBar() {
     const wrap = document.getElementById(`sdot-wrap-${i}`);
     const dot  = document.getElementById(`sdot-${i}`);
     const cnt  = document.getElementById(`sdot-cnt-${i}`);
+    const emb  = document.getElementById(`sdot-emb-${i}`);
     const line = document.getElementById(`sdot-line-${i}`);
     if (!wrap || !dot || !cnt) continue;
 
@@ -343,6 +357,12 @@ function updateStageBar() {
     const isView     = i === view;
     const conquered  = i < max;
     const n          = gameState.characters.filter(c => c.assignedStage === i).length;
+
+    // 해당 스테이지에 배치된 파티 엠블럼
+    if (emb) {
+      const assignedParty = (gameState.parties || []).find(p => p.assignedStage === i);
+      emb.textContent = (assignedParty && assignedParty.emblem) ? assignedParty.emblem : '';
+    }
 
     wrap.classList.toggle('sdot-wrap-locked', !unlocked);
 
@@ -1195,15 +1215,26 @@ function renderPartyTab() {
       ? `<span style="color:#f39c12;font-size:11px">배치 중: ${STAGES[party.assignedStage]?.name || ''}</span>`
       : `<span style="color:#555;font-size:11px">미배치</span>`;
 
+    const emblem = party.emblem || '⚪';
+    const emblemPicker = PARTY_EMBLEMS.map(e =>
+      `<button class="emblem-btn${e === party.emblem ? ' emblem-sel' : ''}"
+               onclick="event.stopPropagation();setPartyEmblem(${party.id},'${e}');renderPartyTab();">${e}</button>`
+    ).join('');
+
     return `
       <div class="party-card" style="cursor:${party.assignedStage >= 0 ? 'pointer' : 'default'}"
-           onclick="if(!event.target.closest('button,select')&&${party.assignedStage >= 0}){goToStage(${party.assignedStage});}">
+           onclick="if(!event.target.closest('button,select,details')&&${party.assignedStage >= 0}){goToStage(${party.assignedStage});}">
         <div class="party-card-header">
+          <span class="party-emblem-badge">${emblem}</span>
           <span class="party-name">${party.name}</span>
           <span style="color:#666;font-size:11px">${party.memberIds.length}/6명</span>
           ${stageLabel}
           <button class="party-disband-btn" onclick="disbandParty(${party.id});renderPartyTab();">해산</button>
         </div>
+        <details class="emblem-picker-wrap" onclick="event.stopPropagation()">
+          <summary class="emblem-picker-summary">엠블럼 선택 ${emblem}</summary>
+          <div class="emblem-picker-grid">${emblemPicker}</div>
+        </details>
         <div class="party-members">
           ${memberChips || '<span style="color:#444;font-size:11px">멤버 없음</span>'}
           ${addHtml}

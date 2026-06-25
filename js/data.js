@@ -252,11 +252,11 @@ const PETS = {
 // 물약 정의
 const POTIONS = {
   hp_s: { name: "체력 물약 (소)", type: "hp", restoreAmt: 500,  cost: 200     },
-  hp_m: { name: "체력 물약 (중)", type: "hp", restoreAmt: 2000, cost: 200000  },
-  hp_l: { name: "체력 물약 (대)", type: "hp", restoreAmt: 8000, cost: 2000000 },
+  hp_m: { name: "체력 물약 (중)", type: "hp", restoreAmt: 2000, cost: 25000   },
+  hp_l: { name: "체력 물약 (대)", type: "hp", restoreAmt: 8000, cost: 1000000 },
   mp_s: { name: "마나 물약 (소)", type: "mp", restoreAmt: 150,  cost: 250     },
-  mp_m: { name: "마나 물약 (중)", type: "mp", restoreAmt: 600,  cost: 200000  },
-  mp_l: { name: "마나 물약 (대)", type: "mp", restoreAmt: 2500, cost: 2000000 },
+  mp_m: { name: "마나 물약 (중)", type: "mp", restoreAmt: 600,  cost: 25000   },
+  mp_l: { name: "마나 물약 (대)", type: "mp", restoreAmt: 2500, cost: 1000000 },
 };
 
 // 드랍 아이템 소멸 시간(초)

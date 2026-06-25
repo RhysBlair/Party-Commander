@@ -205,9 +205,16 @@ function getCharParty(charId) {
 function createParty() {
   const id = Date.now();
   const num = gameState.parties.length + 1;
-  gameState.parties.push({ id, name: `파티 ${num}`, memberIds: [], assignedStage: -1, upgrades: {} });
+  gameState.parties.push({ id, name: `파티 ${num}`, memberIds: [], assignedStage: -1, upgrades: {}, emblem: '' });
   saveGame();
   return id;
+}
+
+function setPartyEmblem(partyId, emblem) {
+  const party = gameState.parties.find(p => p.id === partyId);
+  if (!party) return;
+  party.emblem = emblem;
+  saveGame();
 }
 
 // 캐릭터가 속한 파티의 upgrades 반환 (미소속 시 빈 객체)
@@ -431,6 +438,9 @@ function loadGame() {
     if (!gameState.upgrades) gameState.upgrades = {};
     if (!gameState.upgradeAssignments) gameState.upgradeAssignments = {};
     if (!gameState.parties) gameState.parties = [];
+    for (const p of gameState.parties) {
+      if (p.emblem === undefined) p.emblem = '';
+    }
     if (!gameState.crystals) gameState.crystals = { dim: 0, bright: 0, radiant: 0 };
 
     // 구형 펫 ID(pet_basic, pet_magnet, mini_slime 등) 제거 + ownedPets 마이그레이션

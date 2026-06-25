@@ -91,6 +91,12 @@ body {
 .sdot-chars     { border-color: #e2b96f !important; color: #e2b96f !important; }
 .sdot-conquered { border-color: #4caf5066 !important; color: #4caf5088 !important; }
 .sdot-locked    { background: #0d1017; border-color: #1a2030; color: #2a3040; cursor: default; }
+.sdot-emblem {
+  font-size: 11px;
+  min-height: 13px;
+  line-height: 1;
+  text-align: center;
+}
 .sdot-cnt {
   font-size: 9px;
   color: #e2b96f;
@@ -1361,6 +1367,43 @@ body {
   font-size: 13px;
   flex: 1;
 }
+.party-emblem-badge {
+  font-size: 18px;
+  line-height: 1;
+  min-width: 22px;
+  text-align: center;
+}
+.emblem-picker-wrap {
+  margin-bottom: 7px;
+}
+.emblem-picker-summary {
+  font-size: 11px;
+  color: #8ab4d4;
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 0;
+}
+.emblem-picker-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 5px;
+}
+.emblem-btn {
+  width: 26px;
+  height: 26px;
+  font-size: 15px;
+  background: #0a1828;
+  border: 1px solid #1a3a5a;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.1s;
+}
+.emblem-btn:hover { border-color: #4caf50; }
+.emblem-btn.emblem-sel { border-color: #e2b96f; background: #1a2a10; }
 .party-disband-btn {
   padding: 2px 8px;
   font-size: 11px;
