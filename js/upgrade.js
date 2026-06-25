@@ -33,10 +33,10 @@ function tryResetSkills(charId) {
   const cost = 100 * char.level;
   if (gameState.gold < cost) return;
   gameState.gold -= cost;
-  const totalEarned = Math.floor((char.level - 1) / SKILL_SP_PER_LEVEL);
   char.skillLevels = {};
   char.skills = [];
-  char.skillPoints = totalEarned;
+  char.skillPoints1 = calcSP1Earned(char.level);
+  char.skillPoints2 = calcSP2Earned(char.level);
 }
 
 function tryAdvanceJob(charId, classId) {
@@ -266,10 +266,12 @@ function tryLearnSkill(charId, skillId) {
   if (!char || !skill) return;
   const parentClass = CLASSES[char.classId]?.parent || char.classId;
   if (skill.classId !== char.classId && skill.classId !== parentClass) return;
-  if ((char.skillLevels?.[skillId] || 0) > 0) return; // 이미 습득
-  const cost = SKILL_SP_COSTS[1] ?? 1;
-  if ((char.skillPoints || 0) < cost) return;
-  char.skillPoints -= cost;
+  if ((char.skillLevels?.[skillId] || 0) > 0) return;
+  const cost   = SKILL_SP_COSTS[1] ?? 1;
+  const tier   = getSkillTier(char, skillId);
+  const spKey  = tier === 2 ? 'skillPoints2' : 'skillPoints1';
+  if ((char[spKey] || 0) < cost) return;
+  char[spKey] -= cost;
   if (!char.skillLevels) char.skillLevels = {};
   char.skillLevels[skillId] = 1;
   if (!char.skills.includes(skillId)) char.skills.push(skillId);
@@ -281,11 +283,13 @@ function tryUpgradeSkill(charId, skillId) {
   if (!char || !skill) return;
   const cur   = char.skillLevels?.[skillId] || 0;
   const maxLv = skill.maxLevel || SKILL_MAX_LEVEL;
-  if (cur === 0) return; // 먼저 tryLearnSkill 사용
+  if (cur === 0) return;
   if (cur >= maxLv) return;
-  const cost = SKILL_SP_COSTS[cur + 1];
-  if ((char.skillPoints || 0) < cost) return;
-  char.skillPoints -= cost;
+  const cost  = SKILL_SP_COSTS[cur + 1];
+  const tier  = getSkillTier(char, skillId);
+  const spKey = tier === 2 ? 'skillPoints2' : 'skillPoints1';
+  if ((char[spKey] || 0) < cost) return;
+  char[spKey] -= cost;
   char.skillLevels[skillId] = cur + 1;
 }
 

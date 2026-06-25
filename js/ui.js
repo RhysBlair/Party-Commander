@@ -418,7 +418,8 @@ const JOB2_DEFS = {
 
 function charSkillMiniSection(char) {
   const cls = CLASSES[char.classId];
-  const sp  = char.skillPoints || 0;
+  const sp1 = char.skillPoints1 || 0;
+  const sp2 = char.skillPoints2 || 0;
 
   if (!cls || !cls.canSkill) {
     return `<div class="skill-mini-section"><div style="color:#444;font-size:11px">전직 후 스킬 습득 가능</div></div>`;
@@ -429,13 +430,14 @@ function charSkillMiniSection(char) {
   const tier2Skills = parentClassId ? Object.entries(SKILLS).filter(([, s]) => s.classId === char.classId) : [];
   const onlyTier    = !parentClassId ? Object.entries(SKILLS).filter(([, s]) => s.classId === char.classId) : null;
 
-  function makeIcon(id, s) {
+  function makeIcon(id, s, tier) {
+    const spPool     = tier === 2 ? sp2 : sp1;
     const curLv      = char.skillLevels?.[id] || 0;
     const learned    = curLv > 0;
     const skillMaxLv = s.maxLevel || SKILL_MAX_LEVEL;
     const isMax      = curLv >= skillMaxLv;
     const nextCost   = learned ? (SKILL_SP_COSTS[curLv + 1] ?? Infinity) : (SKILL_SP_COSTS[1] ?? 1);
-    const canUp      = !isMax && sp >= nextCost;
+    const canUp      = !isMax && spPool >= nextCost;
     const icon       = SKILL_ICONS[id] || '✦';
     const lvLabel = isMax ? `Lv.${curLv}` : (learned ? `Lv.${curLv}` : '미습득');
     const lvColor = isMax ? '#e2b96f' : (learned ? '#4caf50' : '#555');
@@ -467,27 +469,33 @@ function charSkillMiniSection(char) {
   const resetCost     = 100 * char.level;
   const canResetSkill = gameState.gold >= resetCost;
 
+  function spBadge(sp) {
+    return `<span style="color:${sp > 0 ? '#f1c40f' : '#555'};font-size:9px;margin-left:3px">SP ${sp}</span>`;
+  }
+
   const tier1Html = tier1Skills.length
     ? `<div class="skill-tier-group">
-         <div class="skill-tier-label">1차</div>
-         <div class="skill-icon-row">${tier1Skills.map(([id, s]) => makeIcon(id, s)).join('')}</div>
+         <div class="skill-tier-label">1차${spBadge(sp1)}</div>
+         <div class="skill-icon-row">${tier1Skills.map(([id, s]) => makeIcon(id, s, 1)).join('')}</div>
        </div>`
     : '';
   const tier2Html = tier2Skills.length
     ? `<div class="skill-tier-group">
-         <div class="skill-tier-label">2차</div>
-         <div class="skill-icon-row">${tier2Skills.map(([id, s]) => makeIcon(id, s)).join('')}</div>
+         <div class="skill-tier-label">2차${spBadge(sp2)}</div>
+         <div class="skill-icon-row">${tier2Skills.map(([id, s]) => makeIcon(id, s, 2)).join('')}</div>
        </div>`
     : '';
   const onlyHtml = onlyTier
-    ? `<div class="skill-icon-row">${onlyTier.map(([id, s]) => makeIcon(id, s)).join('')}</div>`
+    ? `<div>
+         <div class="skill-tier-label">스킬${spBadge(sp1)}</div>
+         <div class="skill-icon-row">${onlyTier.map(([id, s]) => makeIcon(id, s, 1)).join('')}</div>
+       </div>`
     : '';
 
   return `
     <div class="skill-mini-section">
       <div class="skill-mini-header">
         <span>스킬</span>
-        <span style="color:${sp > 0 ? '#f1c40f' : '#555'}">SP <strong>${sp}</strong></span>
         <button class="reset-stat-btn${canResetSkill ? '' : ' disabled'}" style="margin-left:auto"
                 onclick="tryResetSkills(${char.id});renderCharacterTab();"
                 title="골드 ${fmtGNum(resetCost)}G 소모">스킬초기화</button>
@@ -2134,7 +2142,8 @@ function buildModalEquipment(char) {
 
 function buildModalSkills(char) {
   const cls = CLASSES[char.classId];
-  const sp  = char.skillPoints || 0;
+  const sp1 = char.skillPoints1 || 0;
+  const sp2 = char.skillPoints2 || 0;
   if (!cls.canSkill) return `<div style="color:#555;font-size:12px;padding:8px 0">전직 후 스킬을 배울 수 있습니다.</div>`;
 
   const parentClassId = CLASSES[char.classId]?.parent;
@@ -2143,11 +2152,13 @@ function buildModalSkills(char) {
   );
 
   const rows = charSkills.map(([id, s]) => {
+    const tier    = getSkillTier(char, id);
+    const spPool  = tier === 2 ? sp2 : sp1;
     const curLv   = char.skillLevels?.[id] || 0;
     const learned = curLv > 0;
     const isMax   = curLv >= SKILL_MAX_LEVEL;
     const nextCost = learned ? (SKILL_SP_COSTS[curLv + 1] ?? Infinity) : (SKILL_SP_COSTS[1] ?? 1);
-    const canUp   = !isMax && sp >= nextCost;
+    const canUp   = !isMax && spPool >= nextCost;
     const col     = CLASS_COLORS[char.classId] || '#aaa';
     const lvBadge = learned
       ? `<span style="color:${isMax ? '#e2b96f' : '#4caf50'};font-weight:bold;font-size:11px">${isMax ? 'MAX' : `Lv.${curLv}`}</span>`
@@ -2174,8 +2185,9 @@ function buildModalSkills(char) {
   const canReset   = gameState.gold >= resetCost && char.skills.length > 0;
 
   return `
-    <div style="font-size:12px;color:${sp > 0 ? '#f1c40f' : '#555'};margin-bottom:10px">
-      스킬 포인트: <strong>${sp}</strong>
+    <div style="font-size:12px;margin-bottom:10px;display:flex;gap:12px">
+      <span style="color:${sp1 > 0 ? '#f1c40f' : '#555'}">1차 SP: <strong>${sp1}</strong></span>
+      <span style="color:${sp2 > 0 ? '#3a9fd5' : '#555'}">2차 SP: <strong>${sp2}</strong></span>
     </div>
     ${rows}
     <button class="small-btn reset-btn ${canReset ? '' : 'disabled'}" style="width:100%;margin-top:12px"

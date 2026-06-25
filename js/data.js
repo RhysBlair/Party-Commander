@@ -241,12 +241,12 @@ const PETS = {
 
 // 물약 정의
 const POTIONS = {
-  hp_s: { name: "체력 물약 (소)", type: "hp", restoreAmt: 500,  cost: 200  },
-  hp_m: { name: "체력 물약 (중)", type: "hp", restoreAmt: 2000, cost: 700  },
-  hp_l: { name: "체력 물약 (대)", type: "hp", restoreAmt: 8000, cost: 2500 },
-  mp_s: { name: "마나 물약 (소)", type: "mp", restoreAmt: 150,  cost: 250  },
-  mp_m: { name: "마나 물약 (중)", type: "mp", restoreAmt: 600,  cost: 900  },
-  mp_l: { name: "마나 물약 (대)", type: "mp", restoreAmt: 2500, cost: 3000 },
+  hp_s: { name: "체력 물약 (소)", type: "hp", restoreAmt: 500,  cost: 200     },
+  hp_m: { name: "체력 물약 (중)", type: "hp", restoreAmt: 2000, cost: 200000  },
+  hp_l: { name: "체력 물약 (대)", type: "hp", restoreAmt: 8000, cost: 2000000 },
+  mp_s: { name: "마나 물약 (소)", type: "mp", restoreAmt: 150,  cost: 250     },
+  mp_m: { name: "마나 물약 (중)", type: "mp", restoreAmt: 600,  cost: 200000  },
+  mp_l: { name: "마나 물약 (대)", type: "mp", restoreAmt: 2500, cost: 2000000 },
 };
 
 // 드랍 아이템 소멸 시간(초)
@@ -356,7 +356,25 @@ const CHARACTER_RESPAWN_TIME = 8.0;
 
 // 스킬 레벨 시스템
 const SKILL_MAX_LEVEL    = 10;
-const SKILL_SP_PER_LEVEL = 5;  // 레벨 5당 SP 1 획득
+const SKILL_SP_PER_LEVEL = 5;  // (레거시, 미사용)
+// 1차 SP: Lv10에 1개, 이후 2레벨마다 1개
+function calcSP1Earned(level) {
+  return level >= 10 ? Math.floor((level - 10) / 2) + 1 : 0;
+}
+// 2차 SP: Lv30에 1개, 이후 2레벨마다 1개
+function calcSP2Earned(level) {
+  return level >= 30 ? Math.floor((level - 30) / 2) + 1 : 0;
+}
+// 스킬 차수 판별 (1=1차, 2=2차)
+function getSkillTier(char, skillId) {
+  const skill = SKILLS[skillId];
+  const cls   = CLASSES[char.classId];
+  if (!skill || !cls) return 1;
+  if (!cls.parent) return 1;              // 1차 직업: 모두 1차 스킬
+  if (skill.classId === cls.parent) return 1;
+  if (skill.classId === char.classId)  return 2;
+  return 1;
+}
 // 인덱스 = 목표 레벨(1~10), 값 = 필요 SP
 const SKILL_SP_COSTS = [0, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3];
 // 인덱스 = 스킬 레벨(1~10), 값 = 효과 배율 (점점 가속)

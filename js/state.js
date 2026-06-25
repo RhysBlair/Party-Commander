@@ -46,7 +46,8 @@ function createCharacter(assignedStage = 0) {
     equipment: { weapon: { id: 'beginner_sword', uid: 0, enhance: 0 }, armor: null, accessory: null, throwable: null, weapon2: null },
     skills: [],
     skillLevels: {},
-    skillPoints: 0,
+    skillPoints1: 0,
+    skillPoints2: 0,
     pet: null,
     assignedStage,
     selectedHpPotion: 'hp_s',              // 사용할 HP 물약 타입
@@ -393,13 +394,26 @@ function loadGame() {
       // warrior_strike → orb_strike 마이그레이션
       const wsIdx = (char.skills || []).indexOf('warrior_strike');
       if (wsIdx !== -1) char.skills[wsIdx] = 'orb_strike';
-      // skillLevels / skillPoints 구형 세이브 호환
+      // skillLevels 구형 세이브 호환
       if (!char.skillLevels) {
         char.skillLevels = {};
         for (const id of (char.skills || [])) char.skillLevels[id] = 1;
       }
-      if (char.skillPoints === undefined)
-        char.skillPoints = Math.floor((char.level - 1) / SKILL_SP_PER_LEVEL);
+      // skillPoints → skillPoints1/skillPoints2 마이그레이션
+      if (char.skillPoints1 === undefined) {
+        // 레벨 기반 총 획득 SP 계산 후 소모분 차감
+        let sp1 = calcSP1Earned(char.level);
+        let sp2 = calcSP2Earned(char.level);
+        for (const [skillId, lv] of Object.entries(char.skillLevels || {})) {
+          let spent = 0;
+          for (let i = 1; i <= lv; i++) spent += (SKILL_SP_COSTS[i] ?? 1);
+          if (getSkillTier(char, skillId) === 2) sp2 = Math.max(0, sp2 - spent);
+          else                                    sp1 = Math.max(0, sp1 - spent);
+        }
+        char.skillPoints1 = sp1;
+        char.skillPoints2 = sp2;
+        delete char.skillPoints;
+      }
       if (!char.nickname)
         char.nickname = NICKNAME_LIST[Math.floor(Math.random() * NICKNAME_LIST.length)];
       // 물약 시스템 마이그레이션
